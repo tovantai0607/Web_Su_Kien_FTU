@@ -1,0 +1,10 @@
+SUPABASE_URL=https://ifgtyslifgegwcguysbb.supabase.co
+SUPABASE_JWKS_URL=https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_PUBLISHABLE_KEY=replace_with_publishable_key
+SUPABASE_SECRET_KEY=replace_with_rotated_server_only_secret
+ALLOWED_ORIGIN=http://127.0.0.1:5173
+DEMO_MODE=false
+TURNSTILE_SECRET_KEY=replace_with_secret
+TURNSTILE_HOSTNAME=127.0.0.1
+RESEND_API_KEY=replace_with_resend_key
+EMAIL_FROM=FTUCharm <hello@your-verified-domain.example>

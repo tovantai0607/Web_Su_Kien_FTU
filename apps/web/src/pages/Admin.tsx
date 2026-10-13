@@ -1,0 +1,581 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  Newspaper,
+  Heart,
+  ShieldCheck,
+  Ticket,
+  Mail,
+  Flower2,
+  Check,
+  Settings,
+} from 'lucide-react';
+import {
+  Button,
+  Card,
+  Badge,
+  Input,
+  Field,
+  Modal,
+  ErrorState,
+  Pagination,
+  EmptyState,
+} from '@ftu/ui';
+import { PageTitle, DataState } from '../components/Content';
+import { api, preview } from '../lib/api';
+import { roles } from '@ftu/shared';
+import { useAuth } from '../lib/auth';
+type Row = Record<string, unknown>;
+const tabs = [
+  ['overview', 'Tổng quan', LayoutDashboard],
+  ['applications', 'Hồ sơ đăng ký', Users],
+  ['editions', 'Mùa thi', Flower2],
+  ['rounds', 'Vòng thi & vote', Heart],
+  ['timeline', 'Timeline', CalendarDays],
+  ['news', 'Tin tức', Newspaper],
+  ['sponsors', 'Nhà tài trợ', ShieldCheck],
+  ['tickets', 'Vé & check-in', Ticket],
+  ['emails', 'Email', Mail],
+  ['audit', 'Lịch sử', Settings],
+  ['roles', 'Phân quyền', ShieldCheck],
+] as const;
+const defaults: Record<string, Row> = {
+  editions: {
+    title: '',
+    slug: '',
+    theme: '',
+    year: 2026,
+    registration_open_at: null,
+    registration_close_at: null,
+    published: false,
+  },
+  rounds: {
+    edition_id: '',
+    title: '',
+    kind: 'preliminary',
+    position: 0,
+    cutoff: 50,
+    published: false,
+    vote_open_at: null,
+    vote_close_at: null,
+  },
+  timeline: {
+    edition_id: '',
+    title: '',
+    description: '',
+    position: 0,
+    starts_at: null,
+    ends_at: null,
+    published: false,
+  },
+  news: {
+    edition_id: '',
+    title: '',
+    slug: '',
+    excerpt: '',
+    body: '',
+    category: 'Tin tức',
+    published: false,
+  },
+  sponsors: { edition_id: '', name: '', tier: 'partner', url: 'https://', published: false },
+};
+export default function Admin() {
+  const { user } = useAuth();
+  const [tab, setTab] = useState('overview'),
+    [page, setPage] = useState(1),
+    [status, setStatus] = useState('pending'),
+    [editing, setEditing] = useState<Row | null>(null),
+    [values, setValues] = useState<Row>({}),
+    [error, setError] = useState(''),
+    [message, setMessage] = useState(''),
+    [busy, setBusy] = useState(false),
+    [review, setReview] = useState<Row | null>(null),
+    [note, setNote] = useState(''),
+    [reviewStatus, setReviewStatus] = useState('approved'),
+    [token, setToken] = useState(''),
+    [publishId, setPublishId] = useState(''),
+    [ids, setIds] = useState('');
+  const q = useQuery({
+    queryKey: ['admin', tab, page, status, user?.id],
+    queryFn: () =>
+      api<unknown>(
+        '/admin/' +
+          (tab === 'tickets' ? 'overview' : tab) +
+          (tab === 'applications' ? `?page=${page - 1}&status=${status}` : ''),
+      ),
+    enabled: !!user && !preview,
+    retry: false,
+  });
+  if (!user || preview)
+    return (
+      <div className="page-shell narrow">
+        <PageTitle
+          label="Dành cho ban tổ chức"
+          title="Quản trị an toàn."
+          description="Tài khoản được cấp quyền và xác thực hai bước mới có thể truy cập."
+        />
+        <Card>
+          <ShieldCheck size={42} strokeWidth={1} />
+          <p>
+            {preview
+              ? 'Bản xem trước không truy cập hồ sơ riêng tư hoặc cho phép thao tác quản trị.'
+              : 'Đăng nhập và xác minh MFA trong trang tài khoản để tiếp tục.'}
+          </p>
+          <Button asChild>
+            <Link to="/tai-khoan/dang-nhap">Mở tài khoản</Link>
+          </Button>
+        </Card>
+      </div>
+    );
+  const collection =
+    tab === 'applications'
+      ? ((q.data as { items: Row[]; total: number } | undefined)?.items ?? [])
+      : Array.isArray(q.data)
+        ? (q.data as Row[])
+        : [];
+  const summary = q.data as
+    { applications?: number; votes?: number; checked_in?: number } | undefined;
+  function edit(row?: Row) {
+    setEditing(row ?? {});
+    const source = row ?? defaults[tab];
+    setValues(
+      Object.fromEntries(Object.keys(defaults[tab]).map((k) => [k, source[k] ?? defaults[tab][k]])),
+    );
+    setError('');
+  }
+  async function save() {
+    setBusy(true);
+    setError('');
+    try {
+      await api('/admin/' + tab + (editing?.id ? '/' + editing.id : ''), {
+        method: editing?.id ? 'PATCH' : 'POST',
+        body: JSON.stringify(values),
+      });
+      setEditing(null);
+      setMessage('Đã lưu thay đổi.');
+      void q.refetch();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function action(path: string, body: unknown) {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await api<Row>(path, { method: 'POST', body: JSON.stringify(body) });
+      setMessage(
+        result.token
+          ? 'Vé đã cấp. Lưu mã duy nhất và gửi riêng cho người nhận: ' + result.token
+          : 'Thao tác đã hoàn tất.',
+      );
+      void q.refetch();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="admin-layout">
+      <aside className="admin-nav">
+        <h2>FTUCharm Studio</h2>
+        <p>Ban tổ chức</p>
+        {tabs.map(([value, label, Icon]) => (
+          <button
+            key={value}
+            className={value === tab ? 'active' : ''}
+            onClick={() => {
+              setTab(value);
+              setPage(1);
+              setMessage('');
+              setError('');
+            }}
+          >
+            <Icon size={19} />
+            {label}
+          </button>
+        ))}
+      </aside>
+      <div className="admin-main">
+        <PageTitle
+          title={tabs.find((t) => t[0] === tab)?.[1] ?? ''}
+          description="Thay đổi được xác minh quyền tại server và ghi vào lịch sử."
+        />
+        {error && <ErrorState message={error} />}
+        <p role="status" className="notice">
+          {message}
+        </p>
+        <DataState query={q} />
+        {tab === 'overview' && !q.isError && (
+          <div className="stat-grid">
+            {[
+              ['Hồ sơ', summary?.applications ?? 0],
+              ['Phiếu bầu', summary?.votes ?? 0],
+              ['Vé check-in', summary?.checked_in ?? 0],
+            ].map(([label, value]) => (
+              <Card key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </Card>
+            ))}
+          </div>
+        )}
+        {defaults[tab] && <Button onClick={() => edit()}>Thêm mới</Button>}
+        {tab === 'roles' && (
+          <RoleManagement busy={busy} onSave={(body) => void action('/admin/roles', body)} />
+        )}
+        {tab === 'applications' && (
+          <label className="field">
+            Trạng thái
+            <select
+              className="input"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+            >
+              {[
+                ['pending', 'Chờ duyệt'],
+                ['needs_changes', 'Cần bổ sung'],
+                ['approved', 'Đã duyệt'],
+                ['rejected', 'Từ chối'],
+              ].map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {collection?.length > 0 ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thông tin</th>
+                  <th>Trạng thái / chi tiết</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {collection.map((row) => (
+                  <tr key={String(row.id)}>
+                    <td>
+                      <strong>
+                        {String(
+                          row.full_name ??
+                            row.title ??
+                            row.name ??
+                            row.action ??
+                            row.template ??
+                            row.id,
+                        )}
+                      </strong>
+                      <small>{String(row.code ?? row.slug ?? row.created_at ?? '')}</small>
+                    </td>
+                    <td>
+                      <Badge>
+                        {String(
+                          row.status ?? row.kind ?? (row.published ? 'Đã công bố' : 'Bản nháp'),
+                        )}
+                      </Badge>
+                      {row.note ? <p>{String(row.note)}</p> : null}
+                    </td>
+                    <td>
+                      {defaults[tab] && (
+                        <Button size="small" variant="outline" onClick={() => edit(row)}>
+                          Chỉnh sửa
+                        </Button>
+                      )}
+                      {tab === 'applications' && (
+                        <Button
+                          size="small"
+                          variant="outline"
+                          onClick={() => {
+                            setReview(row);
+                            setNote('');
+                          }}
+                        >
+                          Xét duyệt
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : q.isSuccess && tab !== 'overview' && tab !== 'tickets' ? (
+          <EmptyState title="Chưa có dữ liệu trong mục này" />
+        ) : null}
+        {tab === 'applications' && (
+          <Pagination
+            page={page}
+            pages={Math.ceil(((q.data as { total: number } | undefined)?.total ?? 0) / 25)}
+            onChange={setPage}
+          />
+        )}
+        {tab === 'rounds' && (
+          <Card>
+            <h2>Công bố thí sinh qua vòng</h2>
+            <p>
+              Chỉ nhận hồ sơ đã duyệt, thuộc đúng mùa và không vượt cutoff. Danh sách không thể đổi
+              sau khi có phiếu.
+            </p>
+            <Field label="ID vòng thi">
+              <Input value={publishId} onChange={(e) => setPublishId(e.target.value)} />
+            </Field>
+            <Field label="ID thí sinh qua vòng (mỗi dòng một ID)">
+              <textarea
+                className="input"
+                rows={4}
+                value={ids}
+                onChange={(e) => setIds(e.target.value)}
+              />
+            </Field>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm('Công bố danh sách đã chọn cho vòng thi này?'))
+                  void action('/admin/rounds/' + publishId + '/publish', {
+                    contestant_ids: ids.split(/\s+/).filter(Boolean),
+                  });
+              }}
+            >
+              Công bố danh sách
+            </Button>
+            <div className="profile-actions">
+              <Button
+                variant="outline"
+                disabled={busy || !publishId}
+                onClick={() => {
+                  if (window.confirm('Mở bình chọn chung kết 10 phút ngay bây giờ?'))
+                    void action('/admin/rounds/' + publishId + '/open-voting', {});
+                }}
+              >
+                Mở bình chọn 10 phút
+              </Button>
+              <p className="fine-print">
+                Chỉ mở sau khi danh sách chung kết đã công bố và vé đã check-in. Thời gian do
+                database quyết định.
+              </p>
+            </div>
+          </Card>
+        )}
+        {tab === 'tickets' && (
+          <>
+            <Card>
+              <h2>Check-in vé</h2>
+              <Field label="Mã vé nhận từ QR">
+                <Input value={token} onChange={(e) => setToken(e.target.value)} />
+              </Field>
+              <Button
+                disabled={busy || !token}
+                onClick={() => void action('/admin/checkin', { token })}
+              >
+                <Check size={18} /> Xác nhận check-in
+              </Button>
+            </Card>
+            <IssueTicket busy={busy} onIssue={(body) => void action('/admin/tickets', body)} />
+          </>
+        )}
+        <Modal
+          open={editing !== null}
+          onOpenChange={(v) => {
+            if (!v) setEditing(null);
+          }}
+          title={editing?.id ? 'Chỉnh sửa nội dung' : 'Thêm nội dung'}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void save();
+            }}
+          >
+            <div className="form-grid">
+              {Object.entries(values).map(([key, value]) => (
+                <Field
+                  key={key}
+                  label={
+                    (
+                      {
+                        title: 'Tiêu đề',
+                        slug: 'Đường dẫn',
+                        theme: 'Chủ đề',
+                        year: 'Năm',
+                        edition_id: 'ID mùa thi',
+                        position: 'Thứ tự',
+                        cutoff: 'Số lượng qua vòng',
+                        published: 'Công bố',
+                        vote_open_at: 'Mở vote (UTC)',
+                        vote_close_at: 'Đóng vote (UTC)',
+                        body: 'Nội dung',
+                        name: 'Tên',
+                        description: 'Mô tả',
+                      } as Record<string, string>
+                    )[key] ?? key
+                  }
+                >
+                  {typeof value === 'boolean' ? (
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.checked }))}
+                    />
+                  ) : ['body', 'description', 'excerpt'].includes(key) ? (
+                    <textarea
+                      className="input"
+                      value={String(value ?? '')}
+                      onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+                    />
+                  ) : (
+                    <Input
+                      type={typeof value === 'number' ? 'number' : 'text'}
+                      value={String(value ?? '')}
+                      placeholder={key.endsWith('_at') ? '2026-12-20T12:00:00Z' : undefined}
+                      onChange={(e) =>
+                        setValues((v) => ({
+                          ...v,
+                          [key]:
+                            typeof value === 'number'
+                              ? Number(e.target.value)
+                              : key.endsWith('_at') && e.target.value === ''
+                                ? null
+                                : e.target.value,
+                        }))
+                      }
+                    />
+                  )}
+                </Field>
+              ))}
+            </div>
+            {error && <ErrorState message={error} />}
+            <Button disabled={busy}>Lưu thay đổi</Button>
+          </form>
+        </Modal>
+        <Modal
+          open={!!review}
+          onOpenChange={(v) => {
+            if (!v) setReview(null);
+          }}
+          title="Xét duyệt hồ sơ"
+        >
+          <h3>{String(review?.full_name ?? '')}</h3>
+          <p>{String(review?.email ?? '')}</p>
+          <p>{String((review?.contestants as Row)?.bio ?? '')}</p>
+          <Field label="Kết quả">
+            <select
+              className="input"
+              value={reviewStatus}
+              onChange={(e) => setReviewStatus(e.target.value)}
+            >
+              <option value="approved">Được duyệt</option>
+              <option value="needs_changes">Cần bổ sung</option>
+              <option value="rejected">Không đủ điều kiện</option>
+            </select>
+          </Field>
+          <Field label="Nội dung gửi thí sinh">
+            <textarea className="input" value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+          {error && <ErrorState message={error} />}
+          <Button
+            disabled={busy || note.length < 5}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await api('/admin/applications/' + review!.id + '/review', {
+                  method: 'PATCH',
+                  body: JSON.stringify({ status: reviewStatus, note }),
+                });
+                setReview(null);
+                void q.refetch();
+              } catch (e) {
+                setError((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Lưu kết quả & gửi thông báo
+          </Button>
+        </Modal>
+      </div>
+    </div>
+  );
+}
+function RoleManagement({ busy, onSave }: { busy: boolean; onSave: (body: unknown) => void }) {
+  const [userId, setUserId] = useState(''),
+    [role, setRole] = useState<string>('CONTENT_EDITOR');
+  return (
+    <Card>
+      <h2>Quyền theo vai trò</h2>
+      <p>Chỉ SUPER_ADMIN có MFA được cấp hoặc thu hồi quyền. Không thể xóa admin cuối cùng.</p>
+      <Field label="ID tài khoản">
+        <Input value={userId} onChange={(e) => setUserId(e.target.value)} />
+      </Field>
+      <Field label="Vai trò">
+        <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+          {roles.map((r) => (
+            <option key={r}>{r}</option>
+          ))}
+        </select>
+      </Field>
+      <Button
+        disabled={busy || !userId}
+        onClick={() => {
+          if (window.confirm('Cấp vai trò đã chọn cho tài khoản này?'))
+            onSave({ user_id: userId, role, enabled: true });
+        }}
+      >
+        Cấp quyền
+      </Button>
+      <Button
+        variant="outline"
+        disabled={busy || !userId}
+        onClick={() => {
+          if (window.confirm('Thu hồi vai trò đã chọn?'))
+            onSave({ user_id: userId, role, enabled: false });
+        }}
+      >
+        Thu hồi quyền
+      </Button>
+    </Card>
+  );
+}
+function IssueTicket({ busy, onIssue }: { busy: boolean; onIssue: (data: unknown) => void }) {
+  const [userId, setUserId] = useState(''),
+    [roundId, setRoundId] = useState(''),
+    [seat, setSeat] = useState('');
+  return (
+    <Card>
+      <h2>Cấp vé đã xác nhận</h2>
+      <p>
+        BTC chỉ cấp sau khi kiểm tra thanh toán hoặc quyền tham dự bên ngoài. Không có thanh toán tự
+        động trong phiên bản này.
+      </p>
+      <Field label="ID tài khoản người nhận">
+        <Input value={userId} onChange={(e) => setUserId(e.target.value)} />
+      </Field>
+      <Field label="ID vòng thi">
+        <Input value={roundId} onChange={(e) => setRoundId(e.target.value)} />
+      </Field>
+      <Field label="Ghế">
+        <Input value={seat} onChange={(e) => setSeat(e.target.value)} />
+      </Field>
+      <Button
+        disabled={busy}
+        onClick={() => onIssue({ user_id: userId, round_id: roundId, seat_label: seat })}
+      >
+        Cấp vé
+      </Button>
+    </Card>
+  );
+}

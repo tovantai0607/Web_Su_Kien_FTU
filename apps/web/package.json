@@ -1,0 +1,5 @@
+{
+  "name": "@ftu/web",
+  "private": true,
+  "type": "module"
+}

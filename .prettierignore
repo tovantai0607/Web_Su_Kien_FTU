@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-preview
+output
+test-results
+CODEX_SKILLS_SETUP_REPORT.md
+package-lock.json
