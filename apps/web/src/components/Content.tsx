@@ -5,6 +5,7 @@ import { Badge, Skeleton, ErrorState } from '@ftu/ui';
 import { api } from '../lib/api';
 import type { Contestant } from '@ftu/shared';
 import { AnimatedText } from './Motion';
+import { HoverPortrait } from './interface/MotionSystem';
 export function useContent<T>(path: string) {
   return useQuery({ queryKey: ['content', path], queryFn: () => api<T>(path) });
 }
@@ -39,7 +40,7 @@ export function ContestantCard({
 }) {
   return (
     <Link to={'/thi-sinh/' + contestant.slug} className={'contestant-card tone-' + (index % 4)}>
-      <div className="portrait">
+      <HoverPortrait>
         {contestant.photo_url ? (
           <img
             src={contestant.photo_url}
@@ -61,7 +62,7 @@ export function ContestantCard({
         <span className="portrait-link">
           <ArrowUpRight size={20} />
         </span>
-      </div>
+      </HoverPortrait>
       <div className="contestant-caption">
         <h3>{contestant.display_name}</h3>
         <p>{contestant.faculty}</p>

@@ -44,7 +44,7 @@ test('registration validation and reduced motion', async ({ page }) => {
     .getByLabel('Câu chuyện của bạn')
     .fill('Câu chuyện thử nghiệm để kiểm tra giao diện, không gửi dữ liệu thật.');
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
-  await expect(page.getByRole('heading', { name: 'Ba góc nhìn, một vẻ đẹp.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ảnh hồ sơ' })).toBeVisible();
   await page.getByRole('button', { name: 'Gửi hồ sơ' }).click();
   await expect(page.getByText('Cần 3 ảnh hồ sơ')).toBeVisible();
   await expect(page.getByLabel('Ảnh thẻ sinh viên FTU', { exact: true })).toBeVisible();
@@ -65,7 +65,7 @@ test('tribute, sponsor slots and motion control are accessible', async ({ page }
 });
 test('voting stays closed without configured final round', async ({ page }) => {
   await page.goto('/binh-chon');
-  await expect(page.getByRole('heading', { name: 'Một phiếu. Một dấu ấn.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bình chọn', level: 1 })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Chưa có lượt bình chọn công khai' }),
   ).toBeVisible();
@@ -85,7 +85,19 @@ test('admin is guarded, gallery dialog and keyboard work', async ({ page }) => {
 });
 test('core public pages pass WCAG AA automated checks', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const path of ['/', '/dang-ky', '/thi-sinh', '/binh-chon', '/admin']) {
+  for (const path of [
+    '/',
+    '/dang-ky',
+    '/thi-sinh',
+    '/binh-chon',
+    '/admin',
+    '/ve',
+    '/thu-vien',
+    '/tai-khoan/dang-nhap',
+    '/tai-khoan/dang-ky',
+    '/tai-khoan/quen-mat-khau',
+    '/tai-khoan/dat-lai-mat-khau',
+  ]) {
     await page.goto(path);
     await page.locator('h1').waitFor();
     const scan = await new AxeBuilder({ page })
@@ -93,6 +105,38 @@ test('core public pages pass WCAG AA automated checks', async ({ page }) => {
       .analyze();
     expect(scan.violations, path).toEqual([]);
   }
+});
+
+test('reference hero copy and ticket purchase remain honest', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('h1')).toContainText('FTUCHARM');
+  await expect(page.locator('.hero-description')).toHaveText(
+    'Có một vẻ đẹp chỉ thuộc về bạn.Có một sân khấu chờ bạn viết nên câu chuyện.',
+  );
+  await expect(page.getByRole('link', { name: 'Đăng ký tỏa sáng' })).toHaveAttribute(
+    'href',
+    '/dang-ky',
+  );
+  await expect(page.getByRole('timer')).toHaveCount(0);
+  await page.goto('/ve');
+  await expect(page.getByRole('button', { name: 'Chưa mở thanh toán' })).toBeDisabled();
+  await expect(page.getByText('Hình minh họa, chưa phải sơ đồ chính thức.')).toBeVisible();
+});
+
+test('gallery supports keyboard, slide status and lightbox dismissal', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/thu-vien');
+  const gallery = page.getByRole('region', { name: 'Thư viện FTUCharm' });
+  await gallery.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(gallery.getByRole('status')).toHaveText('2 / 2');
+  await expect(gallery.getByRole('button', { name: 'Ảnh tiếp theo' })).toBeDisabled();
+  await page.keyboard.press('ArrowLeft');
+  await expect(gallery.getByRole('status')).toHaveText('1 / 2');
+  await gallery.getByRole('button', { name: /Mở tác phẩm/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 test('320px layout and public routes render', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
@@ -109,6 +153,9 @@ test('320px layout and public routes render', async ({ page }) => {
     '/quyen-rieng-tu',
     '/the-le',
     '/tai-khoan/dang-nhap',
+    '/tai-khoan/dang-ky',
+    '/tai-khoan/quen-mat-khau',
+    '/tai-khoan/dat-lai-mat-khau',
   ]) {
     await page.goto(path);
     await page.locator('h1').waitFor();
@@ -117,4 +164,44 @@ test('320px layout and public routes render', async ({ page }) => {
       path,
     ).toBe(true);
   }
+});
+
+test('account signup has confirmation, password visibility and no preview write', async ({
+  page,
+}) => {
+  await page.goto('/tai-khoan/dang-ky');
+  await page.getByLabel('Email', { exact: true }).fill('preview@example.test');
+  await page.getByLabel('Mật khẩu', { exact: true }).fill('Cụm từ dài 2026');
+  await page.getByLabel('Nhập lại mật khẩu', { exact: true }).fill('different');
+  await page.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
+  await expect(page.getByText('Mật khẩu chưa khớp.')).toBeVisible();
+  await page.getByRole('button', { name: 'Hiện mật khẩu', exact: true }).click();
+  await expect(page.getByLabel('Mật khẩu', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByLabel('Nhập lại mật khẩu', { exact: true }).fill('Cụm từ dài 2026');
+  await page.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
+  await expect(page.getByText('Bản xem trước không tạo tài khoản.')).toBeVisible();
+});
+
+test('crown responds to scroll and becomes static when motion is paused', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.stage-crown img').waitFor();
+  await expect(page.locator('.stage-crown img')).toHaveJSProperty('complete', true);
+  const before = await page
+    .locator('.crown-scroll')
+    .evaluate((el) => getComputedStyle(el).transform);
+  await page.mouse.wheel(0, 350);
+  await page.waitForTimeout(500);
+  const after = await page
+    .locator('.crown-scroll')
+    .evaluate((el) => getComputedStyle(el).transform);
+  expect(after).not.toBe(before);
+  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  expect(
+    await page.locator('.stage-crown').evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(
+    await page.locator('.crown-scroll').evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
 });

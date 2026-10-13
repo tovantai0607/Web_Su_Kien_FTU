@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { preview } from '../lib/api';
 type TurnstileAPI = {
   render: (el: HTMLElement, options: Record<string, unknown>) => string;
   remove: (id: string) => void;
@@ -20,8 +21,11 @@ export function Turnstile({
   const callback = useRef(onToken);
   callback.current = onToken;
   const sitekey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const [retry, setRetry] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const enabled = !preview && sitekey && sitekey !== 'replace_with_site_key';
   useEffect(() => {
-    if (!sitekey || sitekey === 'replace_with_site_key') return;
+    if (!enabled) return;
     let id: string | undefined,
       cancelled = false;
     scriptReady ??= new Promise((resolve, reject) => {
@@ -32,7 +36,11 @@ export function Turnstile({
       const script = document.createElement('script');
       script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
       script.onload = () => resolve();
-      script.onerror = reject;
+      script.onerror = () => {
+        script.remove();
+        scriptReady = undefined;
+        reject(new Error('captcha unavailable'));
+      };
       document.head.appendChild(script);
     });
     scriptReady
@@ -41,22 +49,41 @@ export function Turnstile({
           id = window.turnstile?.render(ref.current, {
             sitekey,
             action,
+            theme: 'light',
+            size: 'flexible',
             callback: (v: string) => callback.current(v),
             'expired-callback': () => callback.current(''),
             'error-callback': () => callback.current(''),
           });
       })
-      .catch(() => callback.current(''));
+      .catch(() => {
+        if (!cancelled) {
+          callback.current('');
+          setFailed(true);
+        }
+      });
     return () => {
       cancelled = true;
       if (id) window.turnstile?.remove(id);
     };
-  }, [action, sitekey]);
+  }, [action, sitekey, enabled, retry]);
   return (
     <div ref={ref}>
-      {!sitekey || sitekey === 'replace_with_site_key' ? (
-        <p className="fine-print">Xác minh chống spam sẽ xuất hiện khi BTC hoàn tất cấu hình.</p>
+      {!enabled ? (
+        <p className="fine-print">{preview ? 'Bản xem trước' : 'Xác minh chưa sẵn sàng.'}</p>
       ) : null}
+      {failed && (
+        <button
+          type="button"
+          className="text-link"
+          onClick={() => {
+            setFailed(false);
+            setRetry((v) => v + 1);
+          }}
+        >
+          Thử lại xác minh
+        </button>
+      )}
     </div>
   );
 }

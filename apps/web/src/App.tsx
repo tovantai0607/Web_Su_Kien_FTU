@@ -17,6 +17,7 @@ import Home from './pages/Home';
 import { useAuth } from './lib/auth';
 import { MotionPage } from './components/Motion';
 import { officialFacebook } from './config/site-content';
+import { InterfaceMotion } from './components/interface/MotionSystem';
 const PublicPages = lazy(() => import('./pages/PublicPages'));
 const Registration = lazy(() => import('./pages/Registration'));
 const Account = lazy(() => import('./pages/Account'));
@@ -33,6 +34,15 @@ function ScrollReset() {
       '/binh-chon': 'Bình chọn chung kết',
       '/ve': 'Thông tin vé',
       '/timeline': 'Hành trình',
+      '/gioi-thieu': 'Về FTUCharm',
+      '/tin-tuc': 'Tin tức',
+      '/thu-vien': 'Thư viện',
+      '/nha-tai-tro': 'Nhà tài trợ',
+      '/tai-khoan/dang-nhap': 'Đăng nhập',
+      '/tai-khoan/dang-ky': 'Tạo tài khoản',
+      '/tai-khoan/quen-mat-khau': 'Quên mật khẩu',
+      '/tai-khoan/dat-lai-mat-khau': 'Đặt lại mật khẩu',
+      '/tai-khoan/ho-so': 'Tài khoản',
       '/admin': 'Quản trị',
     };
     document.title = `${title[pathname] ?? 'Khám phá'} • FTUCharm`;
@@ -49,23 +59,18 @@ export default function App() {
     document.documentElement.dataset.motion = motionPaused ? 'off' : 'on';
   }, [motionPaused]);
   return (
-    <>
+    <InterfaceMotion paused={motionPaused}>
       <ScrollReset />
       <div className="reading-progress" aria-hidden="true" />
       <a className="skip-link" href="#main">
         Đến nội dung chính
       </a>
-      {preview && (
-        <div className="preview-bar">
-          Bản xem trước · Lịch và hồ sơ minh họa · Chưa nhận đăng ký thật
-        </div>
-      )}
+      {preview && <div className="preview-bar">Bản xem trước · Chưa nhận đăng ký thật</div>}
       <header className="site-header">
         <Link to="/" className="brand" aria-label="FTUCharm, trang chủ">
           <Crown size={27} strokeWidth={1.3} />
           <span>
             ftu<span className="brand-italic">charm</span>
-            <small>Duyên dáng Ngoại thương</small>
           </span>
         </Link>
         <nav
@@ -84,12 +89,12 @@ export default function App() {
           <NavLink to="/tin-tuc">Tin tức</NavLink>
         </nav>
         <div className="header-actions">
-          <Link className="account-link" to="/tai-khoan/ho-so">
+          <Link className="account-link" to={user ? '/tai-khoan/ho-so' : '/tai-khoan/dang-nhap'}>
             {user ? 'Tài khoản' : 'Đăng nhập'}
           </Link>
           <Button asChild size="small">
             <Link to="/dang-ky">
-              Đăng ký <ArrowUpRight size={16} />
+              Dự thi <ArrowUpRight size={16} />
             </Link>
           </Button>
           <button
@@ -127,21 +132,9 @@ export default function App() {
         </MotionPage>
       </main>
       <footer>
-        <div className="footer-invitation">
-          <Crown size={34} strokeWidth={1} />
-          <span>
-            Vẻ đẹp được tiếp nối.
-            <br />
-            <strong>Hành trình được viết bởi bạn.</strong>
-          </span>
-          <Link to="/dang-ky" className="button button-outline">
-            Trở thành một phần của FTUCharm <ArrowUpRight size={18} />
-          </Link>
-        </div>
         <div className="footer-top">
           <Link className="footer-brand" to="/">
             ftu<i>charm</i>
-            <small>Nơi vẻ đẹp, tri thức và bản lĩnh cùng tỏa sáng.</small>
           </Link>
           <div>
             <h3>Khám phá</h3>
@@ -156,7 +149,7 @@ export default function App() {
             <Link to="/tin-tuc">Tin tức</Link>
           </div>
           <div>
-            <h3>Kết nối với FTUCharm</h3>
+            <h3>Kết nối</h3>
             <a href={officialFacebook} target="_blank" rel="noreferrer">
               Fanpage chính thức <ArrowUpRight size={16} />
             </a>
@@ -224,6 +217,6 @@ export default function App() {
       >
         <ArrowUp size={19} />
       </button>
-    </>
+    </InterfaceMotion>
   );
 }
