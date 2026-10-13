@@ -31,6 +31,7 @@ function ScrollReset() {
       '/dang-ky': 'Đăng ký thí sinh',
       '/thi-sinh': 'Thí sinh',
       '/binh-chon': 'Bình chọn chung kết',
+      '/ve': 'Thông tin vé',
       '/timeline': 'Hành trình',
       '/admin': 'Quản trị',
     };
@@ -78,6 +79,7 @@ export default function App() {
           <NavLink to="/gioi-thieu">Về FTUCharm</NavLink>
           <NavLink to="/timeline">Hành trình</NavLink>
           <NavLink to="/thi-sinh">Thí sinh</NavLink>
+          <NavLink to="/ve">Vé</NavLink>
           <NavLink to="/binh-chon">Bình chọn</NavLink>
           <NavLink to="/tin-tuc">Tin tức</NavLink>
         </nav>

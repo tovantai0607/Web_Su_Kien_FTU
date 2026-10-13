@@ -63,7 +63,7 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       ),
     ).rejects.toThrow('FORBIDDEN');
   });
-  it('simultaneous retries create only one vote and replay returns its ID', async () => {
+  it('queued retries create only one legacy vote and replay returns its ID', async () => {
     const results = await Promise.all(
       Array.from({ length: 20 }, () =>
         db.query<{ cast_vote: { id: string } }>('select public.cast_vote($1,$2,$3,$4)', [

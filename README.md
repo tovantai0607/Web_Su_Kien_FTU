@@ -54,6 +54,8 @@ Vé điện tử trong bản này được BTC cấp thủ công; chưa tích h�
 
 Giao diện mới có hiệu ứng chữ, chuyển trang, cuộn, điều khiển dừng chuyển động, tri ân Lê Phương Nghi (2025) và khu logo tài trợ. Xem [cách thêm logo](docs/sponsors.md).
 
+Migration thứ sáu chưa áp remote; cần PostgreSQL 15+. Giai đoạn 02 của người thứ hai đã bổ sung schema bán vé, ghế, giao dịch và vote theo hạng mục cùng kiểm thử database local. Contract mới dùng vé đúng vòng, không cần check-in, một phiếu mỗi vé mỗi hạng mục; phiếu legacy chưa phân loại được bảo toàn và chặn vote mới của vé đó. HTTP/UI mới chưa tích hợp. Khi có cấu hình phiên/hạng mục mới, RPC vote cũ từ chối để tránh áp quy tắc cũ; xem [báo cáo database](docs/database-sales-voting.md) và [kế hoạch người thứ hai](docs/implementation-plan-person-2.md).
+
 ## Cấu trúc
 
 `apps/web` giao diện, `apps/api` Worker, `packages/ui` components dùng chung, `packages/shared` types/Zod, `supabase/migrations` SQL, `tests` QA, `docs` contracts/operations. Không có module cũ hay code người khác bị ghi đè.

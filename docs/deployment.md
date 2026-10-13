@@ -27,6 +27,8 @@ Bootstrap quyền (chỉ database đã xác định): insert user_roles cho UUID
 
 Migration ảnh thẻ bổ sung cột và ràng buộc; hồ sơ cũ giữ nguyên, hồ sơ mới phải có ảnh thẻ. Giữ đăng ký đóng cho đến khi frontend và backend hỗ trợ `purpose=student_card` được triển khai cùng nhau.
 
+Mã nguồn còn có migration thứ sáu `20261013143000_ftucharm_sales_voting.sql` được hợp nhất từ main, chưa áp remote. Schema này cho luồng vé/vote theo hạng mục chưa tích hợp API/UI; xem `database-sales-voting.md` trước khi triển khai.
+
 ## Rollback
 
 Giữ artifact/Worker version đã pass. Nếu rollback về client trước tính năng thẻ sinh viên, đóng đăng ký trước: RPC mới từ chối hồ sơ thiếu thẻ. Chuẩn bị compensating migration có review nếu thực sự cần hoàn tác quy tắc; không xóa ảnh/hồ sơ. Rollback code không rollback database/R2. Migration ưu tiên additive/backward-compatible; không DROP bảng để rollback; review compensating migration và restore backup vào môi trường riêng trước khi chuyển lại. Tắt registration/vote window đúng quy trình nếu có incident; tránh deploy thay đổi lớn ngay trước chung kết. Monitor outbox retry/failed, auth403, vote409, slow queries/locks, CPU/errors và storage quota.
