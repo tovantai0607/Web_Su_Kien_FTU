@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import { demoEdition, demoTimeline, demoContestants, demoNews, type Edition } from '@ftu/shared';
+import {
+  demoEdition,
+  demoTimeline,
+  demoContestants,
+  demoNews,
+  demoSalesCatalog,
+  type Edition,
+} from '@ftu/shared';
 import { createAuthStorage } from './auth-policy';
 export const preview = import.meta.env.VITE_PREVIEW_MODE === 'true';
 const url = import.meta.env.VITE_SUPABASE_URL,
@@ -25,6 +32,8 @@ export const supabase =
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (preview && (!options.method || options.method === 'GET')) {
     const route = path.split('?')[0];
+    if (route === '/events') return demoSalesCatalog() as T;
+    if (route.startsWith('/events/')) return demoSalesCatalog(route.split('/')[2]) as T;
     const fixtures: Record<string, unknown> = {
       '/editions/current': demoEdition,
       '/editions': [demoEdition],

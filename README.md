@@ -60,6 +60,8 @@ Migration thứ sáu chưa áp remote; cần PostgreSQL 15+. Giai đoạn 02 c�
 
 ## Cấu trúc
 
+Giai đoạn 03 đã có catalog/detail `/ve`, sơ đồ và giữ/giải phóng ghế có TTL qua API/transaction. Xem [bằng chứng và giới hạn](docs/ticket-inventory-stage-03.md). Migration operations thứ bảy cùng migration schema bán vé thứ sáu chưa áp remote trong lượt này. Preview có giá/ghế/lịch minh họa và cho chọn thử; giữ ghế thật cần môi trường live/test đã cấu hình. Checkout/thanh toán chưa triển khai.
+
 `apps/web` giao diện, `apps/api` Worker, `packages/ui` components dùng chung, `packages/shared` types/Zod, `supabase/migrations` SQL, `tests` QA, `docs` contracts/operations. Không có module cũ hay code người khác bị ghi đè.
 
 Xem [API](docs/api.md), [security](docs/security.md), [triển khai](docs/deployment.md), [skills](docs/skills-applied.md) và [thiết kế](docs/design-system.md). GitHub Actions chỉ kiểm tra, không deploy. Fanpage được giữ đúng link người dùng cung cấp; nội dung chính thức chưa xác minh do Facebook chặn tự động.

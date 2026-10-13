@@ -1,16 +1,8 @@
 import { lazy, Suspense, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  Flower2,
-  CalendarDays,
-  ArrowUpRight,
-  Ticket,
-  Armchair,
-  ShoppingBag,
-  LockKeyhole,
-} from 'lucide-react';
+import { Flower2, CalendarDays, ArrowUpRight } from 'lucide-react';
 import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Skeleton } from '@ftu/ui';
-import type { TimelineEvent, Contestant, News, Edition } from '@ftu/shared';
+import type { TimelineEvent, Contestant, News } from '@ftu/shared';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
 import SponsorWall from '../components/SponsorWall';
 import Tribute from '../components/Tribute';
@@ -247,69 +239,6 @@ function Gallery() {
     </div>
   );
 }
-function Tickets() {
-  const q = useContent<Edition | null>('/editions/current');
-  return (
-    <div className="page-shell">
-      <PageTitle title="Vé" description="Lịch mở bán sẽ được BTC công bố." />
-      <div className="ticket-layout">
-        {['Bán kết', 'Chung kết'].map((name) => (
-          <Card key={name} className="ticket-card">
-            <Ticket size={36} strokeWidth={1} />
-            <Badge>Lịch mở bán chưa công bố</Badge>
-            <h2>Đêm {name.toLowerCase()}</h2>
-            <small>
-              {q.data?.title ?? 'FTUCharm'} • Giá vé, sơ đồ ghế và ngày tổ chức do BTC công bố.
-            </small>
-            <Button variant="outline" asChild>
-              <a
-                href="https://www.facebook.com/ftucharm.duyendangngoaithuong"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Theo dõi thông báo <ArrowUpRight size={18} />
-              </a>
-            </Button>
-          </Card>
-        ))}
-      </div>
-      <div className="ticket-planning">
-        <section className="seat-preview" aria-labelledby="seat-title">
-          <div className="seat-stage" aria-hidden="true">
-            FTUCHARM
-          </div>
-          <div className="seat-illustration" aria-hidden="true">
-            {Array.from({ length: 32 }, (_, i) => (
-              <Armchair key={i} size={23} strokeWidth={1.2} />
-            ))}
-          </div>
-          <h2 id="seat-title">Sơ đồ ghế sắp công bố</h2>
-          <p>Vị trí và hạng vé sẽ hiển thị khi mở bán.</p>
-          <small>Hình minh họa, chưa phải sơ đồ chính thức.</small>
-        </section>
-        <Card className="ticket-summary">
-          <ShoppingBag size={26} strokeWidth={1.3} />
-          <h2>Vé của bạn</h2>
-          <p>Chưa có vé được chọn.</p>
-          <ol className="checkout-steps">
-            <li>Chọn đêm thi</li>
-            <li>Chọn ghế</li>
-            <li>Thanh toán</li>
-          </ol>
-          <Button disabled>
-            <LockKeyhole size={16} /> Chưa mở thanh toán
-          </Button>
-          <Link className="text-link" to="/tai-khoan/dang-nhap">
-            Đăng nhập tài khoản nhận vé
-          </Link>
-        </Card>
-      </div>
-      <p className="fine-print">
-        Website chưa mở thanh toán. Vé đủ điều kiện bình chọn phải được cấp và check-in bởi BTC.
-      </p>
-    </div>
-  );
-}
 function About() {
   return (
     <div className="page-shell">
@@ -410,7 +339,6 @@ export default function PublicPages() {
   if (path.startsWith('/tin-tuc')) return <NewsPage slug={path.split('/')[2]} />;
   if (path === '/nha-tai-tro') return <Sponsors />;
   if (path === '/thu-vien') return <Gallery />;
-  if (path === '/ve') return <Tickets />;
   if (path === '/gioi-thieu') return <About />;
   if (path === '/the-le' || path === '/quyen-rieng-tu')
     return <Legal privacy={path === '/quyen-rieng-tu'} />;

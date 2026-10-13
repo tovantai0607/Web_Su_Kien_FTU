@@ -2,9 +2,13 @@
 
 Ngày đối chiếu: 13/10/2026. Lượt đầu thực hiện giai đoạn 01; người dùng sau đó yêu cầu tiếp tục giai đoạn 02 và chốt bảo toàn phiếu legacy. Nhật ký giai đoạn 01 bên dưới giữ bằng chứng tại thời điểm khảo sát; kết quả giai đoạn 02 ở mục 9.
 
+Lượt giai đoạn 03: người dùng yêu cầu lấy main mới nhất rồi triển khai tồn kho/trang vé. Đã clone và cập nhật tới `1515317`; kết quả tại mục 10. Các mục 1–9 là lịch sử nghiệm thu trước đó; upstream đã đổi tên migration sales sang `20261013143000_ftucharm_sales_voting.sql`.
+
 **Trạng thái: hoàn tất giai đoạn 01 ngày 13/10/2026.** Nghiệp vụ và contract đã được người dùng xác nhận; bảng Word đã đánh X ô 01, tổng 1/12, tiếp theo 02. Bằng chứng kiểm tra ở mục 7. Phương án kỹ thuật ở giai đoạn sau vẫn là đề xuất triển khai, không phải chức năng đã hoạt động. Không bắt đầu giai đoạn 02 trong lượt này.
 
-**Trạng thái hiện tại: hoàn tất 02/12, tiếp theo 03.** Giai đoạn 02 đã có migration, rollback và kiểm thử schema local; Word đã đánh X ô 02. Chưa triển khai các API/UI thuộc giai đoạn 03–12. Bằng chứng ở mục 9.
+**Trạng thái hiện tại: hoàn tất 03/12, tiếp theo 04.** Word đã đánh X 01–03. Giai đoạn 03 có catalog/detail, inventory/holds và kiểm chứng local; chưa triển khai checkout/thanh toán. Bằng chứng ở mục 10.
+
+Giai đoạn 03 đã nghiệm thu sau checks và render/QA Word. Không bắt đầu 04.
 
 ## 1. Baseline và bằng chứng khảo sát
 
@@ -286,3 +290,13 @@ Người dùng đã yêu cầu “tiến hành bước tiếp theo”, xác nh�
 Điều kiện giai đoạn 02 đã đạt: migration local/test thực thi; quyền, ràng buộc, bảo toàn dữ liệu và rollback có bằng chứng. Không có quyết định nghiệp vụ chặn giai đoạn này; cấu hình thực và workload giữ lịch chốt ở giai đoạn tương ứng. Không bắt đầu giai đoạn 03 trong lượt này.
 
 Đã cập nhật `tiến độn.docx` sau khi checks đạt: chỉ ô `progress-02` chuyển checked=1/hiển thị X và dòng tổng chuyển 1/12 thành **2/12**, tiếp theo **03**. Đủ 12 controls, chỉ 01–02 checked; các ZIP parts khác giữ nguyên bytes. Bản trước/sau đều 4 trang, đã xem cả 4 trang sau; ảnh trang 2–4 trùng pixel hoàn toàn bản trước. Render bằng Word 16.0 read-only export và Poppler bundled vì runtime không có LibreOffice. File bàn giao đúng bytes bản đã render. SHA-256 cuối: `50A53470C9AE18EA7D5A7B2403E0B5530DB145B15402AB31F030D988A3CC2B77`. Backup và ảnh QA giữ ngoài repository.
+
+## 10. Bàn giao giai đoạn 03
+
+Theo yêu cầu mới, đã clone main mới nhất vào `D:\WED_sk_FTU-latest-20261013` và fast-forward workspace chính từ `6cf6aef` lên `15153171671f1edd9420cf997381d92be52d0d4b`. Thực hiện trên nhánh local `codex/stage-03-ticket-inventory`; giữ AGENTS.md và skill/tools local. Không chuyển sang giai đoạn 04.
+
+Đã xây catalog/detail `/ve`, trước giờ bán vẫn xem giá/sơ đồ; trạng thái và countdown theo server. Có API/RPC hold/read/release/expiry, khóa/idempotency/snapshot/TTL, cron dọn hết hạn và strict validation. Primitive hold tạo order nền theo schema 02 để tái sử dụng ở 04; chưa xây checkout/payment. Đã bỏ trang vé tĩnh trùng và giữ luminous theme mới. Xem [báo cáo giai đoạn 03](ticket-inventory-stage-03.md) cho các file/contract, giới hạn và rollback.
+
+Checks đạt: lint/typecheck/build/preview/format/secret/whitespace; 82 tests (65 DB), 20 E2E. PostgreSQL 16.15 local xác nhận 20 connections thực tranh ghế cuối chỉ một thành công, không oversell; retry giữ cùng order/TTL; đảo thứ tự seats không deadlock; expiry/cancel trả kho một lần; queued request qua giờ đóng bị từ chối. Production-build mobile đọc DB test thật kiểm tra availability, trạng thái UPCOMING/SOLD_OUT/CLOSED, lỗi mạng/retry và không tràn ngang. Không suy ra tải 500–1.000 từ các tests này. Auth principal/transport dùng fixture trong HTTP integration; chưa thử Supabase/Auth thật hoặc áp remote migration.
+
+Word đầu vào hash `50A53470C9AE18EA7D5A7B2403E0B5530DB145B15402AB31F030D988A3CC2B77`. Chỉ sửa checkbox `progress-03` và dòng tổng thành **3/12**, tiếp theo **04**; 12 controls còn nguyên, chỉ 01–03 checked. Các ZIP parts ngoài document.xml giữ nguyên bytes; reverse compare chỉ hai thay đổi được phép. Trước/sau 4 trang, đã xem tất cả trang; ảnh 2–4 trùng pixel, không có lỗi layout mới. Render bằng Word 16.0 read-only export và Poppler bundled, bàn giao đúng bytes bản đã kiểm tra. Hash cuối **`23FA412C981E2070F0871D2912297D5725CA55297248A5C8843D212206A1F877`**. QA/backup ngoài repo; PostgreSQL test đã dừng, preview 5173 giữ chạy.

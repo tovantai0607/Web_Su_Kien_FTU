@@ -84,6 +84,7 @@ test('admin is guarded, gallery dialog and keyboard work', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 test('core public pages pass WCAG AA automated checks', async ({ page }) => {
+  test.setTimeout(60000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const path of [
     '/',
@@ -92,6 +93,8 @@ test('core public pages pass WCAG AA automated checks', async ({ page }) => {
     '/binh-chon',
     '/admin',
     '/ve',
+    '/ve/ban-ket-demo',
+    '/ve/chung-ket-demo',
     '/thu-vien',
     '/tai-khoan/dang-nhap',
     '/tai-khoan/dang-ky',
@@ -106,6 +109,30 @@ test('core public pages pass WCAG AA automated checks', async ({ page }) => {
     expect(scan.violations, path).toEqual([]);
   }
 });
+test('ticket details remain viewable before sale opens, without reserving', async ({ page }) => {
+  await page.goto('/ve');
+  await page.getByRole('link', { name: 'Xem chi tiết' }).first().click();
+  await expect(page).toHaveURL(/\/ve\/ban-ket-demo$/);
+  await expect(
+    page.getByRole('heading', { name: 'Đêm bán kết · Minh họa', exact: true, level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText('Sắp mở bán', { exact: true })).toBeVisible();
+  await expect(page.locator('.sales-seat:enabled')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+});
+test('ticket seat selection supports keyboard and stops at ten in preview', async ({ page }) => {
+  await page.goto('/ve/chung-ket-demo');
+  const seats = page.locator('.sales-seat:enabled');
+  await seats.first().focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(1);
+  for (let i = 0; i < 9; i++)
+    await page.locator('.sales-seat[aria-pressed="false"]:enabled').first().click();
+  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(10);
+  await expect(page.locator('.sales-seat[aria-pressed="false"]:enabled')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 
 test('reference hero copy and ticket purchase remain honest', async ({ page }) => {
   await page.goto('/');
@@ -119,8 +146,9 @@ test('reference hero copy and ticket purchase remain honest', async ({ page }) =
   );
   await expect(page.getByRole('timer')).toHaveCount(0);
   await page.goto('/ve');
-  await expect(page.getByRole('button', { name: 'Chưa mở thanh toán' })).toBeDisabled();
-  await expect(page.getByText('Hình minh họa, chưa phải sơ đồ chính thức.')).toBeVisible();
+  await page.getByRole('link', { name: 'Xem chi tiết' }).last().click();
+  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+  await expect(page.locator('.sales-seat:enabled').first()).toBeVisible();
 });
 
 test('gallery supports keyboard, slide status and lightbox dismissal', async ({ page }) => {
