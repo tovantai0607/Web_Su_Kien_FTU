@@ -18,7 +18,7 @@ Mở http://127.0.0.1:5173. Bản preview dùng fixture được đánh dấu; k
 
 1. Copy `.env.example` thành `.env.local`. Điền publishable key, Turnstile site key và đặt `VITE_PREVIEW_MODE=false`. Secret chỉ đặt trong `apps/api/.dev.vars` hoặc Workers secret, tuyệt đối không dùng tiền tố VITE_.
 2. Đổi Supabase secret đã xuất hiện trong chat. Không có secret thật trong repository. URL/JWKS đã được kiểm tra read-only; API schema `contest_editions` trả 404 ngày 13/10/2026.
-3. Áp 3 migration trong `supabase/migrations/` **vào database local/test đã xác định**, rồi chạy kiểm tra RLS/fixtures và review trước khi áp staging. Không seed fixture preview lên production.
+3. Áp các migration trong `supabase/migrations/` theo thứ tự tên **vào database local/test đã xác định**, rồi chạy kiểm tra RLS/fixtures và review trước khi áp staging. Migration thứ tư cần PostgreSQL 15+; xem [schema và rollback bán vé/vote](docs/database-sales-voting.md). Không seed fixture preview lên production.
 4. Copy `apps/api/.dev.vars.example` thành `.dev.vars` trong thư mục đó. Điền key server mới, origin chính xác, Turnstile hostname/action, Resend domain đã xác minh. Không gửi key trong chat.
 5. Thêm R2 private bucket binding `MEDIA` và Images binding `IMAGES` vào Wrangler khi đã tạo tài nguyên đúng account/environment. Upload sẽ từ chối khi thiếu binding, không lưu ảnh chưa sanitize.
 6. Tạo tài khoản xác minh email; bật Supabase captcha, email confirmation, password policy và signing key ES256/RS256 (JWKS). Bootstrap SUPER_ADMIN trong môi trường thử bằng SQL quản trị sau khi xác định UUID tài khoản. Sau đó quản trị qua tài khoản MFA aal2.
@@ -51,6 +51,8 @@ npm run test:load
 - Email Resend outbox có claim/lease, retry backoff, idempotency provider và HTML escape. Các giá trị cấu hình thiếu sẽ fail closed.
 
 Vé điện tử trong bản này được BTC cấp thủ công; chưa tích hợp payment provider, giữ ghế thanh toán/webhook tự động. Không thể mở bán/thanh toán thật trước khi bổ sung provider và kiểm thử. Gallery hiện minh họa bố cục; cần workflow công bố ảnh chính thức, storage public derivative và quyền tác giả. Không gắn sponsor giả hoặc ảnh người không phải thí sinh.
+
+Giai đoạn 02 của người thứ hai đã bổ sung schema bán vé, ghế, giao dịch và vote theo hạng mục cùng kiểm thử database local. Contract mới dùng vé đúng vòng, không cần check-in, một phiếu mỗi vé mỗi hạng mục; phiếu legacy chưa phân loại được bảo toàn và chặn vote mới của vé đó. HTTP/UI mới chưa tích hợp. Khi có cấu hình phiên/hạng mục mới, RPC vote cũ từ chối để tránh áp quy tắc cũ; xem [báo cáo database](docs/database-sales-voting.md) và [kế hoạch người thứ hai](docs/implementation-plan-person-2.md).
 
 ## Cấu trúc
 
