@@ -30,6 +30,7 @@ import { api, preview } from '../lib/api';
 import { roles } from '@ftu/shared';
 import { useAuth } from '../lib/auth';
 import PrivateMedia from '../components/PrivateMedia';
+import AdminOverview from '../components/AdminOverview';
 type Row = Record<string, unknown>;
 const tabs = [
   ['overview', 'Tổng quan', LayoutDashboard],
@@ -199,6 +200,7 @@ export default function Admin() {
           <button
             key={value}
             className={value === tab ? 'active' : ''}
+            aria-current={value === tab ? 'page' : undefined}
             onClick={() => {
               setTab(value);
               setPage(1);
@@ -217,24 +219,11 @@ export default function Admin() {
           description="Thay đổi được xác minh quyền tại server và ghi vào lịch sử."
         />
         {error && <ErrorState message={error} />}
-        <p role="status" className="notice">
+        <p role="status" className={message ? 'notice admin-notification' : 'sr-only'}>
           {message}
         </p>
         <DataState query={q} />
-        {tab === 'overview' && !q.isError && (
-          <div className="stat-grid">
-            {[
-              ['Hồ sơ', summary?.applications ?? 0],
-              ['Phiếu bầu', summary?.votes ?? 0],
-              ['Vé check-in', summary?.checked_in ?? 0],
-            ].map(([label, value]) => (
-              <Card key={label}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-              </Card>
-            ))}
-          </div>
-        )}
+        {tab === 'overview' && q.isSuccess && <AdminOverview summary={summary} />}
         {defaults[tab] && <Button onClick={() => edit()}>Thêm mới</Button>}
         {tab === 'roles' && (
           <RoleManagement busy={busy} onSave={(body) => void action('/admin/roles', body)} />

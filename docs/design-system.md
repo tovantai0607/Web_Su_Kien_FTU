@@ -1,5 +1,7 @@
 # FTUCharm • Design system
 
+Update 13/10/2026: giao diện hiện hành dùng hệ pastel #E88EAD / #FFF9FC, Playfair Display + Manrope, hero FTUCHARM đúng ảnh tham chiếu, Motion và Embla. Token, nguồn component, trạng thái dữ liệu và kiểm thử tại [bản nâng cấp frontend](frontend-upgrade.md). [Báo cáo auth](ui-auth-refresh.md) ghi lần sửa bảo mật trước đó. Phần dưới là lịch sử thiết kế, không phải token hiện hành.
+
 Direction: sân khấu ánh ngọc trai, lavender–hồng–xanh theo banner Lê Phương Nghi người dùng cung cấp. Hero chia hai cột với wordmark serif lớn và vương miện SVG; orbit, ánh sáng và sao tạo chiều sâu. Không thêm thư viện animation. Áp dụng chung cho trang công khai, đăng ký, tài khoản và quản trị.
 
 Colors: canvas #FAF8FF, ink #332644, accent #724081, lavender #DAD9FB, pink #EDBFDF. Nền gradient mềm, chữ tối và CTA tím đậm. Không dùng chữ trắng nhỏ trên nền pastel. Token/overrides ở `apps/web/src/luminous.css`.

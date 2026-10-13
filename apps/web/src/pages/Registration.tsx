@@ -131,28 +131,13 @@ export default function Registration() {
     );
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Bắt đầu hành trình"
-        title="Sẵn sàng để nở rộ?"
-        description="Dành cho nữ sinh Đại học Ngoại thương. Kể câu chuyện của bạn và bắt đầu hành trình tỏa sáng."
-      />
+      <PageTitle title="Đăng ký dự thi" description="Dành cho nữ sinh Đại học Ngoại thương." />
       <DataState query={edition} />
       <div className="registration-layout">
         <aside>
           <div className="registration-art">
             <Flower2 size={70} strokeWidth={0.5} />
-            <h2>
-              Be you.
-              <br />
-              <i>Be brilliant.</i>
-            </h2>
-            <p>
-              Một hồ sơ.
-              <br />
-              Một cơ hội.
-              <br />
-              Một phiên bản mới.
-            </p>
+            <h2>Hồ sơ dự thi</h2>
           </div>
           <div className="security-note">
             <ShieldCheck size={22} />
@@ -162,13 +147,13 @@ export default function Registration() {
             </div>
           </div>
           <Link className="text-link" to="/the-le">
-            Đọc thể lệ trước khi đăng ký
+            Xem thể lệ
           </Link>
         </aside>
         <Card className="registration-form">
           {!preview && !user ? (
             <>
-              <h2>Đăng nhập để lưu hồ sơ an toàn.</h2>
+              <h2>Đăng nhập để gửi hồ sơ.</h2>
               <p>Tài khoản cần xác minh email trước khi gửi đăng ký.</p>
               <Button asChild>
                 <Link to="/tai-khoan/dang-nhap">Đăng nhập / tạo tài khoản</Link>
@@ -249,7 +234,7 @@ export default function Registration() {
                 )}
                 {step === 2 && (
                   <>
-                    <h2>Ba góc nhìn, một vẻ đẹp.</h2>
+                    <h2>Ảnh hồ sơ</h2>
                     <p>Ba ảnh hồ sơ và một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB mỗi ảnh.</p>
                     <div className="upload-grid">
                       {['Chân dung', 'Bán thân', 'Toàn thân'].map((label, i) => (
