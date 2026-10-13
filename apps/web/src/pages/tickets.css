@@ -1,0 +1,468 @@
+.sales-page {
+  --seat-gap: 8px;
+}
+.page-shell.sales-page {
+  max-width: 1480px;
+  padding-inline: clamp(20px, 4vw, 60px);
+}
+.sales-schedule {
+  margin-block: 20px;
+  color: var(--muted);
+}
+.sales-schedule p {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  overflow-wrap: anywhere;
+}
+.sales-schedule svg {
+  flex: none;
+  margin-top: 3px;
+}
+.sales-event-card h2 {
+  margin-top: 20px;
+}
+.sale-notice {
+  margin-block: 24px;
+}
+.sale-notice p {
+  margin-top: 12px;
+}
+.sales-clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sales-prices {
+  padding: 0;
+  list-style: none;
+  margin-block: 24px;
+}
+.sales-prices li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sales-prices small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.sales-back {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 24px;
+}
+.sales-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+}
+.sales-seat-section,
+.sales-summary {
+  min-width: 0;
+}
+.sales-summary {
+  padding: 28px;
+  background: #fff9;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+}
+.sales-summary h2 {
+  font-size: 30px;
+  margin-bottom: 16px;
+}
+.sales-summary h3 {
+  font-size: 22px;
+  margin-block: 20px 12px;
+}
+.sales-summary p {
+  margin-block: 12px;
+}
+.sales-summary .button {
+  margin-block: 12px;
+}
+.sales-seat {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--rose);
+  border-radius: 12px;
+  color: var(--rose);
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.sales-seat.is-selected {
+  color: white;
+  background: var(--rose);
+}
+.sales-seat:disabled {
+  cursor: default;
+}
+.sales-seat.seat-held,
+.sales-seat.seat-sold,
+.sales-seat.seat-unavailable {
+  color: var(--muted);
+  border-color: var(--border);
+  background: #e7e2ed;
+  text-decoration: line-through;
+}
+.sales-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  padding-block: 16px;
+  border-block: 1px solid var(--border);
+}
+.sales-conditions {
+  margin-top: 24px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.sales-conditions p {
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .sales-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .sales-summary {
+    padding: 24px;
+  }
+}
+@media (max-width: 1250px) {
+  .sales-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 420px) {
+  .sales-summary {
+    padding: 20px;
+  }
+  .sales-prices li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sales-events .sales-event-card {
+    padding-inline: 22px;
+  }
+}
+
+.cinema-seat-map {
+  color: #eef1f8;
+  background: #131b2c;
+  border: 1px solid #273550;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 18px 38px #232a4314;
+}
+.cinema-map-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+.cinema-map-heading h2 {
+  color: inherit;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.cinema-map-heading p,
+.cinema-scroll-hint {
+  color: #c4cedf;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.cinema-zoom {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cinema-zoom button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #eff3fa;
+  background: #26334c;
+  border: 1px solid #52617b;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cinema-zoom button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.cinema-zoom span {
+  font-size: 12px;
+  min-width: 38px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cinema-tier-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-block: 20px 12px;
+}
+.cinema-tier {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.cinema-tier i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--tier-color);
+}
+.tier-1 {
+  --tier-color: #f6ce7e;
+}
+.tier-2 {
+  --tier-color: #87d3e8;
+}
+.cinema-tier strong {
+  font-weight: 500;
+  color: #d0daeb;
+}
+.cinema-scroll-hint {
+  margin-bottom: 20px;
+}
+.cinema-scroll {
+  max-width: 100%;
+  overflow: auto;
+  padding-block: 4px 20px;
+  scrollbar-color: #8190ac #202e46;
+  scrollbar-width: thin;
+}
+.cinema-hall {
+  min-width: max-content;
+  width: 100%;
+  padding: 4px;
+}
+.cinema-stage {
+  position: relative;
+  height: 92px;
+  margin-inline: auto;
+  width: min(70%, 600px);
+}
+.cinema-stage svg {
+  display: block;
+  width: 100%;
+  height: 75px;
+}
+.cinema-stage path {
+  fill: #1d2941;
+  stroke: #b4c2db;
+  stroke-width: 1.3;
+}
+.cinema-stage > span {
+  position: absolute;
+  inset: 27px 0 auto;
+  color: #f4f6fb;
+  text-align: center;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+.cinema-orientation {
+  display: flex;
+  justify-content: space-around;
+  margin: 0 26px 18px;
+  color: #aebed4;
+  font-size: 11px;
+}
+.cinema-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-block: 8px;
+}
+.cinema-row-name {
+  display: block;
+  width: 18px;
+  flex: none;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c4cedf;
+}
+.cinema-row-seats {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 5px;
+}
+.cinema-seat-slot {
+  width: var(--seat-size);
+  height: var(--seat-size);
+  flex: none;
+}
+.cinema-seat-slot.has-aisle {
+  margin-left: 22px;
+}
+.cinema-empty-seat {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cinema-seat.sales-seat {
+  position: relative;
+  width: var(--seat-size);
+  height: var(--seat-size);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 7px 7px 5px 5px;
+  border-color: var(--tier-color);
+  color: var(--tier-color);
+  background: #202a3d;
+  font-size: var(--seat-font-size);
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+.cinema-seat.tier-1 {
+  background: #342e26;
+}
+.cinema-seat.tier-2 {
+  background: #233540;
+}
+.cinema-chair {
+  position: absolute;
+  width: var(--seat-icon-size);
+  height: var(--seat-icon-size);
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  stroke-width: 1.5;
+}
+.cinema-seat-number {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  line-height: 1.2;
+}
+.cinema-seat.is-selected {
+  color: #24192e;
+  background: #eeb6d7;
+  border-color: #ffe1f3;
+}
+.cinema-seat-check {
+  position: absolute;
+  right: 1px;
+  top: 2px;
+}
+.cinema-seat.seat-held {
+  color: #b5c1d8;
+  background: #3b465f;
+  border-color: #8b9cb8;
+  text-decoration: none;
+}
+.cinema-seat.seat-sold,
+.cinema-seat.seat-unavailable {
+  color: #a0abc0;
+  background: #1b2639;
+  border-color: #4a5872;
+}
+.cinema-seat.seat-sold .cinema-seat-number,
+.cinema-seat.seat-unavailable .cinema-seat-number {
+  text-decoration: line-through;
+}
+.cinema-seat:enabled:hover {
+  filter: brightness(1.2);
+}
+.cinema-seat:focus-visible,
+.cinema-zoom button:focus-visible,
+.cinema-scroll:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+.cinema-cross-aisle {
+  margin-block: 22px;
+  text-align: center;
+  color: #aebed4;
+  font-size: 11px;
+  border-block: 1px dashed #43516a;
+  padding-block: 6px;
+}
+.cinema-exits {
+  display: flex;
+  justify-content: space-between;
+  margin: 22px 30px 0;
+  color: #acdaca;
+  font-size: 11px;
+}
+.cinema-state-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding-block: 18px;
+  border-block: 1px solid #3a4761;
+  font-size: 12px;
+}
+.cinema-state-key span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+.cinema-state-key i {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid #a9b4c8;
+}
+.cinema-state-key .key-free {
+  background: #342e26;
+  border-color: #f6ce7e;
+}
+.cinema-state-key .key-selected {
+  background: #eeb6d7;
+}
+.cinema-state-key .key-held {
+  background: #627392;
+}
+.cinema-state-key .key-sold {
+  background: #233047;
+}
+.cinema-availability {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-top: 14px;
+  color: #c4cedf;
+  font-size: 12px;
+}
+.cinema-availability p {
+  margin: 0;
+  color: inherit;
+}
+@media (max-width: 600px) {
+  .cinema-seat-map {
+    padding: 18px;
+  }
+  .cinema-map-heading h2 {
+    font-size: 25px;
+  }
+  .cinema-tier-key {
+    gap: 10px;
+  }
+  .cinema-tier {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}

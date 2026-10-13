@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Flower2, CalendarDays, ArrowUpRight, Ticket } from 'lucide-react';
+import { Flower2, CalendarDays, ArrowUpRight } from 'lucide-react';
 import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Modal } from '@ftu/ui';
-import type { TimelineEvent, Contestant, News, Edition } from '@ftu/shared';
+import type { TimelineEvent, Contestant, News } from '@ftu/shared';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
 import SponsorWall from '../components/SponsorWall';
 import Tribute from '../components/Tribute';
@@ -232,47 +232,6 @@ function Gallery() {
     </div>
   );
 }
-function Tickets() {
-  const q = useContent<Edition | null>('/editions/current');
-  return (
-    <div className="page-shell">
-      <PageTitle
-        label="Đêm hội FTUCharm"
-        title="Hẹn bạn dưới ánh đèn sân khấu."
-        description="Vé bán kết và chung kết được mở theo từng chặng của mùa thi."
-      />
-      <div className="ticket-layout">
-        {['Bán kết', 'Chung kết'].map((name, i) => (
-          <Card key={name} className="ticket-card">
-            <Ticket size={36} strokeWidth={1} />
-            <Badge>Lịch mở bán chưa công bố</Badge>
-            <h2>Đêm {name.toLowerCase()}</h2>
-            <p>
-              {i
-                ? 'Chứng kiến khoảnh khắc tỏa sáng và bình chọn cho thí sinh bạn yêu thích.'
-                : 'Đồng hành cùng những gương mặt trên chặng đường đến chung kết.'}
-            </p>
-            <small>
-              {q.data?.title ?? 'FTUCharm'} • Giá vé, sơ đồ ghế và ngày tổ chức do BTC công bố.
-            </small>
-            <Button variant="outline" asChild>
-              <a
-                href="https://www.facebook.com/ftucharm.duyendangngoaithuong"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Theo dõi thông báo <ArrowUpRight size={18} />
-              </a>
-            </Button>
-          </Card>
-        ))}
-      </div>
-      <p className="fine-print">
-        Website chưa mở thanh toán. Vé đủ điều kiện bình chọn phải được cấp và check-in bởi BTC.
-      </p>
-    </div>
-  );
-}
 function About() {
   return (
     <div className="page-shell">
@@ -381,7 +340,6 @@ export default function PublicPages() {
   if (path.startsWith('/tin-tuc')) return <NewsPage slug={path.split('/')[2]} />;
   if (path === '/nha-tai-tro') return <Sponsors />;
   if (path === '/thu-vien') return <Gallery />;
-  if (path === '/ve') return <Tickets />;
   if (path === '/gioi-thieu') return <About />;
   if (path === '/the-le' || path === '/quyen-rieng-tu')
     return <Legal privacy={path === '/quyen-rieng-tu'} />;

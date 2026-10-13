@@ -1,5 +1,13 @@
 # API contracts
 
+## Catalog và giữ ghế giai đoạn 03
+
+`GET /api/events` và `/api/events/:identifier` (UUID hoặc slug, optional `edition=UUID`) trả `{data:{server_time,events}}`. Chỉ event thuộc mùa/vòng published; xem detail được trước/sau giờ bán. Có categories/giá/tồn kho, detail thêm seat states; không trả holder/hash. Clock/quyền giữ ghế do server quyết định.
+
+`POST /api/events/:id/holds`: Auth email xác minh, Origin và rate limiter chung, `Idempotency-Key: UUID`, JSON strict `{seat_ids: UUID[]}` từ 1–10 distinct. Không nhận owner/giá/status. Trả `{data:{id,event_id,status,quantity,total_vnd,expires_at,server_time,items}}`; snapshot/hold nguyên tử, retry không gia hạn. `GET /api/me/holds/:id` và `POST /api/me/holds/:id/release` với JSON `{}` chỉ owner; sai owner trả 404. Closed/unavailable/idempotency conflict 409, input sai 400, chưa auth 401, rate limit 429, chưa cấu hình 503.
+
+Order trong hold là bản ghi nền cho inventory; checkout và public orders API thuộc giai đoạn 04. Chi tiết constraints, cron, rollback và kiểm chứng trong [báo cáo giai đoạn 03](ticket-inventory-stage-03.md).
+
 Hono, `/api`. Thành công `{ data: ... }`, lỗi `{ error: message }`. JSON tối đa 64KiB; upload JPEG/PNG <=5MiB. Query `edition` phải UUID. List công khai tối đa 200/1000; frontend phân trang thí sinh 8/trang; admin hồ sơ 25/trang.
 
 ## Public (RLS / publishable key)

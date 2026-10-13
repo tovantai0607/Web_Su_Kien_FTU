@@ -20,6 +20,8 @@ import {
   demoTimeline,
   demoContestants,
   demoNews,
+  demoSalesCatalog,
+  salesHoldSchema,
 } from '@ftu/shared';
 import {
   authenticate,
@@ -114,6 +116,12 @@ function dbError(error: { message: string; code?: string } | null) {
     INVALID_CUTOFF: [400, 'Danh sách vượt số lượng qua vòng hoặc có thí sinh trùng.'],
     LAST_ADMIN: [409, 'Không thể thu hồi quản trị viên cuối cùng.'],
     NOT_FOUND: [404, 'Không tìm thấy dữ liệu.'],
+    EVENT_NOT_FOUND: [404, 'Không tìm thấy sự kiện đã công bố.'],
+    HOLD_NOT_FOUND: [404, 'Không tìm thấy lượt giữ ghế của bạn.'],
+    SALE_CLOSED: [409, 'Sự kiện chưa mở bán hoặc đã đóng bán.'],
+    SEAT_UNAVAILABLE: [409, 'Ghế vừa được giữ hoặc không còn bán. Chọn ghế khác.'],
+    INVALID_SEAT_SELECTION: [400, 'Chọn từ 1 đến 10 ghế khác nhau.'],
+    INVALID_IDEMPOTENCY_KEY: [400, 'Thiếu mã chống gửi trùng.'],
   };
   const matched = Object.entries(codes).find(([key]) => error.message.includes(key));
   if (matched) throw new HTTPException(matched[1][0] as 400, { message: matched[1][1] });
@@ -280,6 +288,7 @@ for (const path of [
   '/api/votes',
   '/api/media/*',
   '/api/contestants/apply',
+  '/api/events/:id/holds',
 ]) {
   app.use(path, async (c, next) => {
     c.set('principal', await authenticate(c.req.raw, c.env));
@@ -300,6 +309,66 @@ app.use('/api/*', async (c, next) => {
   const { success } = await c.env.RATE_LIMITER.limit({ key });
   if (!success) return c.json({ error: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.' }, 429);
   await next();
+});
+app.get('/api/events', async (c) => {
+  const edition = queryEdition(c);
+  if (demo(c)) return ok(c, demoSalesCatalog());
+  const { data, error } = await service(c.env).rpc('sales_catalog', { p_edition: edition ?? null });
+  dbError(error);
+  return ok(c, data);
+});
+app.get('/api/events/:identifier', async (c) => {
+  const identifier = c.req.param('identifier');
+  if (!uuid.safeParse(identifier).success && !/^[a-z0-9-]{1,100}$/.test(identifier))
+    throw new HTTPException(400, { message: 'Mã sự kiện không hợp lệ.' });
+  const edition = queryEdition(c);
+  if (demo(c)) {
+    const data = demoSalesCatalog(identifier);
+    if (!data.events.length) throw new HTTPException(404, { message: 'Không tìm thấy sự kiện.' });
+    return ok(c, data);
+  }
+  const { data, error } = await service(c.env).rpc('sales_catalog', {
+    p_edition: edition ?? null,
+    p_event: uuid.safeParse(identifier).success ? identifier : null,
+    p_slug: uuid.safeParse(identifier).success ? null : identifier,
+  });
+  dbError(error);
+  if (!data?.events?.length) throw new HTTPException(404, { message: 'Không tìm thấy sự kiện.' });
+  return ok(c, data);
+});
+app.post('/api/events/:id/holds', async (c) => {
+  const event = rowId(c);
+  const input = await parse(c, salesHoldSchema);
+  const key = c.req.header('Idempotency-Key');
+  if (!uuid.safeParse(key).success)
+    throw new HTTPException(400, { message: 'Thiếu mã chống gửi trùng.' });
+  const selected = [...input.seat_ids].sort();
+  const { data, error } = await service(c.env).rpc('reserve_sales_seats', {
+    p_user: c.get('principal').id,
+    p_event: event,
+    p_seats: selected,
+    p_key: key,
+    p_hash: await digest(JSON.stringify({ event_id: event, seat_ids: selected })),
+  });
+  dbError(error);
+  return ok(c, data);
+});
+app.get('/api/me/holds/:id', async (c) => {
+  const { data, error } = await service(c.env).rpc('read_sales_hold', {
+    p_user: c.get('principal').id,
+    p_order: rowId(c),
+  });
+  dbError(error);
+  return ok(c, data);
+});
+app.post('/api/me/holds/:id/release', async (c) => {
+  await parse(c, z.object({}).strict());
+  const { data, error } = await service(c.env).rpc('release_sales_hold', {
+    p_user: c.get('principal').id,
+    p_order: rowId(c),
+  });
+  dbError(error);
+  return ok(c, data);
 });
 app.post('/api/contestants/apply', async (c) => {
   const input = await parse(c, applicationSchema);
@@ -660,6 +729,15 @@ app.get('*', async (c) =>
 export default {
   fetch: app.fetch,
   scheduled: (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
-    if (env.DEMO_MODE !== 'true') ctx.waitUntil(sendOutbox(env));
+    if (env.DEMO_MODE !== 'true') {
+      ctx.waitUntil(sendOutbox(env));
+      ctx.waitUntil(
+        Promise.resolve(service(env).rpc('expire_sales_holds', { p_limit: 100 })).then(
+          ({ error }) => {
+            if (error) console.error('Sales hold expiry failed');
+          },
+        ),
+      );
+    }
   },
 };

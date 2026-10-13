@@ -85,7 +85,16 @@ test('admin is guarded, gallery dialog and keyboard work', async ({ page }) => {
 });
 test('core public pages pass WCAG AA automated checks', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const path of ['/', '/dang-ky', '/thi-sinh', '/binh-chon', '/admin']) {
+  for (const path of [
+    '/',
+    '/dang-ky',
+    '/thi-sinh',
+    '/binh-chon',
+    '/admin',
+    '/ve',
+    '/ve/ban-ket-demo',
+    '/ve/chung-ket-demo',
+  ]) {
     await page.goto(path);
     await page.locator('h1').waitFor();
     const scan = await new AxeBuilder({ page })
@@ -93,6 +102,30 @@ test('core public pages pass WCAG AA automated checks', async ({ page }) => {
       .analyze();
     expect(scan.violations, path).toEqual([]);
   }
+});
+test('ticket details remain viewable before sale opens, without reserving', async ({ page }) => {
+  await page.goto('/ve');
+  await page.getByRole('link', { name: 'Xem chi tiết' }).first().click();
+  await expect(page).toHaveURL(/\/ve\/ban-ket-demo$/);
+  await expect(
+    page.getByRole('heading', { name: 'Đêm bán kết · Minh họa', exact: true, level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText('Sắp mở bán', { exact: true })).toBeVisible();
+  await expect(page.locator('.sales-seat:enabled')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+});
+test('ticket seat selection supports keyboard and stops at ten in preview', async ({ page }) => {
+  await page.goto('/ve/chung-ket-demo');
+  const seats = page.locator('.sales-seat:enabled');
+  await seats.first().focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(1);
+  for (let i = 0; i < 9; i++)
+    await page.locator('.sales-seat[aria-pressed="false"]:enabled').first().click();
+  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(10);
+  await expect(page.locator('.sales-seat[aria-pressed="false"]:enabled')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('320px layout and public routes render', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
