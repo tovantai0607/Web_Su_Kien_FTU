@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 let db: PGlite;
 const edition = '11111111-1111-4111-8111-111111111111',
   otherEdition = '11111111-1111-4111-8111-111111111112',
@@ -14,11 +14,9 @@ beforeAll(async () => {
   await db.exec(
     `create schema auth;create role anon;create role authenticated;create role service_role bypassrls;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
   );
-  for (const file of [
-    '202610130001_ftucharm.sql',
-    '202610130002_management.sql',
-    '202610130003_vote_window.sql',
-  ]) {
+  for (const file of (await readdir('supabase/migrations'))
+    .filter((f) => f.endsWith('.sql'))
+    .sort()) {
     const sql = (await readFile('supabase/migrations/' + file, 'utf8')).replace(
       'create extension if not exists pgcrypto;',
       '',
@@ -61,7 +59,7 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       ),
     ).rejects.toThrow('FORBIDDEN');
   });
-  it('simultaneous retries create only one vote and replay returns its ID', async () => {
+  it('queued retries create only one legacy vote and replay returns its ID', async () => {
     const results = await Promise.all(
       Array.from({ length: 20 }, () =>
         db.query<{ cast_vote: { id: string } }>('select public.cast_vote($1,$2,$3,$4)', [
