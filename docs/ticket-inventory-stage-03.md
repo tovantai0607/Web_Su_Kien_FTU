@@ -1,5 +1,11 @@
 # Tồn kho và trang vé giai đoạn 03
 
+## Kiểm tra bản hợp nhất trước khi đẩy GitHub
+
+Theo yêu cầu đẩy nhánh và gộp main ngày 13/10/2026, đã fetch main tại `1c2b6ed` và hợp nhất vào `codex/stage-03-ticket-inventory`. Giữ giao diện pastel/bảo mật tài khoản từ main, API catalog/giữ ghế và sơ đồ tương tác của giai đoạn 03. Xử lý ba xung đột tại API frontend, PublicPages và E2E; trang vé tĩnh được thay bằng routes Tickets đã có. Không đưa AGENTS.md local, skill/ hoặc tools/ có sẵn vào commit.
+
+Typecheck, lint, secret scan, production build, preview build và Worker dry-run đều đạt. **103/103 tests, 10 files** đạt bằng `npm test -- --maxWorkers=2`; **28/28 E2E** desktop/mobile đạt. Lượt chạy đồng thời đầu tiên bị timeout khởi tạo ba worker Vitest; chạy lại giới hạn hai worker thành công. Quét accessibility nay gồm cả chi tiết vé và trang tài khoản nên đặt timeout riêng 60 giây; lần chạy cuối đạt desktop/mobile, không bỏ kiểm tra. Dry-run chỉ kiểm tra đóng gói, không deploy hoặc chạy migration từ xa. Không thực thi giai đoạn 04.
+
 ## Rà soát lỗi và dọn cache sau cập nhật sơ đồ
 
 Ngày 13/10/2026, theo yêu cầu kiểm tra bug/dọn file rác: `npm run check` đạt typecheck, **82/82 tests** và production build; lint đạt; full E2E **20/20** desktop/mobile đạt sau bản sơ đồ mới. Chưa phát hiện lỗi trong các ca đã chạy. Không chạy lại benchmark hoặc kết nối database từ xa trong lượt này.

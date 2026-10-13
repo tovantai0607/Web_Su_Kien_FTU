@@ -3,29 +3,19 @@ import type { Sponsor } from '@ftu/shared';
 import { SectionHeading } from '@ftu/ui';
 import { DataState, useContent } from './Content';
 import { sponsorLogos } from '../config/site-content';
+import { Marquee } from './interface/Marquee';
 
 export default function SponsorWall() {
   const sponsors = useContent<Sponsor[]>('/sponsors');
   const items = [...sponsorLogos, ...(sponsors.data ?? [])];
   return (
     <section className="section sponsor-section" id="dong-hanh">
-      <SectionHeading
-        kicker="Cùng nhau viết tiếp hành trình"
-        title="Những người bạn đồng hành."
-        description="Trân trọng sự đồng hành và những giá trị cùng lan tỏa tại FTUCharm."
-      />
+      <SectionHeading title="Đồng hành" />
       <DataState query={sponsors} />
       {items.length > 0 ? (
-        <div className="sponsor-wall">
+        <Marquee>
           {items.map((s) => (
-            <a
-              className="sponsor-tile"
-              href={s.url}
-              key={s.id}
-              target="_blank"
-              rel="noreferrer"
-              data-reveal
-            >
+            <a className="sponsor-tile" href={s.url} key={s.id} target="_blank" rel="noreferrer">
               {s.logo_url ? (
                 <img src={s.logo_url} alt={s.name} loading="lazy" width="240" height="100" />
               ) : (
@@ -43,7 +33,7 @@ export default function SponsorWall() {
               </span>
             </a>
           ))}
-        </div>
+        </Marquee>
       ) : (
         <div
           className="sponsor-wall sponsor-placeholders"
@@ -70,7 +60,7 @@ export default function SponsorWall() {
         target="_blank"
         rel="noreferrer"
       >
-        Kết nối đồng hành cùng FTUCharm <ArrowUpRight size={18} />
+        Liên hệ tài trợ <ArrowUpRight size={18} />
       </a>
     </section>
   );

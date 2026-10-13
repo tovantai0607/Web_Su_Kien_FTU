@@ -9,6 +9,7 @@ dist-preview/
 .dev.vars.*
 !.dev.vars.example
 playwright-report/
+.playwright-cli/
 test-results/
 coverage/
 *.log

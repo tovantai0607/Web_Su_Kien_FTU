@@ -15,7 +15,22 @@ export default defineConfig(({ command, mode }) => ({
           : 'false'),
     ),
   },
-  build: { outDir: '../../dist', emptyOutDir: true, sourcemap: false },
+  build: {
+    outDir: '../../dist',
+    emptyOutDir: true,
+    sourcemap: false,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          // Keep the existing SDK separately cacheable across visual-only releases.
+          groups:
+            process.env.VITE_PREVIEW_MODE === 'true'
+              ? []
+              : [{ name: 'supabase-vendor', test: /node_modules[\\/]@supabase[\\/]/ }],
+        },
+      },
+    },
+  },
   server: { port: 5173, proxy: { '/api': 'http://127.0.0.1:8787' } },
   resolve: {
     alias: {

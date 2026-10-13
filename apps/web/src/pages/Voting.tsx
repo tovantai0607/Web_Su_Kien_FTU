@@ -8,6 +8,7 @@ import { PageTitle, useContent, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Turnstile } from '../components/Turnstile';
+import { AnimatedGroup } from '../components/interface/MotionSystem';
 export default function Voting() {
   const { user } = useAuth();
   const rounds = useContent<Round[]>('/rounds');
@@ -87,11 +88,7 @@ export default function Voting() {
   }
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Bình chọn đêm chung kết"
-        title="Một phiếu. Một dấu ấn."
-        description="Dành sự yêu mến cho vẻ đẹp chạm đến bạn."
-      />
+      <PageTitle title="Bình chọn" />
       <div className="vote-status">
         <div>
           <Badge>{isOpen ? 'Bình chọn đang mở' : 'Chờ khoảnh khắc chung kết'}</Badge>
@@ -115,6 +112,7 @@ export default function Voting() {
         </p>
       </div>
       <DataState query={rounds} />
+      {round && <DataState query={voting} />}
       {!current && !rounds.isPending && !rounds.isError && (
         <EmptyState title="Chưa có lượt bình chọn công khai">
           BTC sẽ mở lượt tại đêm chung kết. Bạn có thể khám phá các gương mặt trước khi chọn.
@@ -135,9 +133,33 @@ export default function Voting() {
         </Card>
       )}
       {user && isOpen && <FieldTicket tickets={eligible} value={ticket} onChange={setTicket} />}
-      <div className="contestant-grid vote-grid">
+      {user && isOpen && (
+        <>
+          <DataState query={tickets} />
+          <DataState query={ownVotes} />
+        </>
+      )}
+      {user &&
+        ownVotes.data?.some((vote) =>
+          tickets.data?.some((t) => t.id === vote.ticket_id && t.round_id === current?.id),
+        ) && (
+          <p className="notice vote-recorded" role="status">
+            <Check size={18} /> Bạn đã có phiếu được ghi nhận trong lượt này.
+          </p>
+        )}
+      <AnimatedGroup className="contestant-grid vote-grid">
         {voting.data?.contestants.map((c) => (
           <Card key={c.id}>
+            {c.photo_url && (
+              <img
+                className="vote-portrait"
+                src={c.photo_url}
+                alt={c.display_name}
+                width="420"
+                height="560"
+                loading="lazy"
+              />
+            )}
             <Badge>#{c.number}</Badge>
             <h2>{c.display_name}</h2>
             <p>{c.faculty}</p>
@@ -153,7 +175,7 @@ export default function Voting() {
             </Button>
           </Card>
         ))}
-      </div>
+      </AnimatedGroup>
       <Modal
         open={!!selected}
         onOpenChange={(v) => {
@@ -162,11 +184,11 @@ export default function Voting() {
         title={success ? 'Phiếu của bạn đã được ghi nhận.' : 'Xác nhận lựa chọn'}
       >
         {success ? (
-          <div className="success-card">
+          <AnimatedGroup className="success-card vote-success">
             <Check size={40} />
             <p>Cảm ơn bạn đã đồng hành cùng FTUCharm.</p>
             <Button onClick={() => setSelected(null)}>Hoàn tất</Button>
-          </div>
+          </AnimatedGroup>
         ) : (
           <>
             <p>

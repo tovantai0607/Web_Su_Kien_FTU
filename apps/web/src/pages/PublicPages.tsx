@@ -1,20 +1,17 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Flower2, CalendarDays, ArrowUpRight } from 'lucide-react';
-import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Modal } from '@ftu/ui';
+import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Skeleton } from '@ftu/ui';
 import type { TimelineEvent, Contestant, News } from '@ftu/shared';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
 import SponsorWall from '../components/SponsorWall';
 import Tribute from '../components/Tribute';
+const PhotoCarousel = lazy(() => import('../components/interface/PhotoCarousel'));
 function Timeline() {
   const q = useContent<TimelineEvent[]>('/timeline');
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Hành trình FTUCharm"
-        title="Từ khởi đầu đến rực rỡ."
-        description="11 chặng đường. Những trải nghiệm để trở thành phiên bản tự tin nhất của chính bạn."
-      />
+      <PageTitle title="Hành trình" />
       <DataState query={q} />
       <div className="full-timeline">
         {[...(q.data ?? [])]
@@ -64,11 +61,7 @@ function Contestants() {
   );
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Gương mặt FTUCharm"
-        title="Mỗi vẻ đẹp, một câu chuyện."
-        description="Khám phá những cô gái với tri thức, tài năng và dấu ấn riêng."
-      />
+      <PageTitle title="Thí sinh" />
       <div className="filter-row">
         <SearchBar
           value={search}
@@ -95,6 +88,11 @@ function Contestants() {
           </select>
         </label>
       </div>
+      {!q.isPending && !q.isError && (
+        <p className="results-count" role="status">
+          {filtered.length} thí sinh{search || stage !== 'all' ? ' phù hợp' : ''}
+        </p>
+      )}
       <DataState query={q} />
       <div className="contestant-grid">
         {filtered.slice((page - 1) * 8, page * 8).map((c, i) => (
@@ -121,7 +119,24 @@ function ContestantProfile({ slug }: { slug: string }) {
             Quay lại danh sách
           </Link>
           <div className="profile-layout">
-            <ContestantCard contestant={q.data} />
+            {q.data.photo_url ? (
+              <Suspense fallback={<Skeleton />}>
+                <PhotoCarousel
+                  label={`Ảnh ${q.data.display_name}`}
+                  photos={[
+                    {
+                      src: q.data.photo_url,
+                      alt: q.data.display_name,
+                      caption: `Thí sinh #${q.data.number}`,
+                      width: 420,
+                      height: 560,
+                    },
+                  ]}
+                />
+              </Suspense>
+            ) : (
+              <ContestantCard contestant={q.data} />
+            )}
             <div>
               <Badge>Thí sinh #{q.data.number}</Badge>
               <PageTitle title={q.data.display_name} description={q.data.faculty} />
@@ -151,10 +166,7 @@ function NewsPage({ slug }: { slug?: string }) {
   const post = q.data?.find((p) => p.slug === slug);
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Nhịp đập FTUCharm"
-        title={post?.title ?? 'Những câu chuyện trên hành trình.'}
-      />
+      <PageTitle title={post?.title ?? 'Tin tức'} />
       <DataState query={q} />
       {slug ? (
         post ? (
@@ -163,7 +175,7 @@ function NewsPage({ slug }: { slug?: string }) {
             <p className="lead">{post.excerpt}</p>
             <p>{post.body}</p>
             <Link className="text-link" to="/tin-tuc">
-              Khám phá tin khác <ArrowUpRight size={18} />
+              Tin khác <ArrowUpRight size={18} />
             </Link>
           </article>
         ) : !q.isPending ? (
@@ -181,7 +193,7 @@ function NewsPage({ slug }: { slug?: string }) {
                   <h2>{p.title}</h2>
                   <p>{p.excerpt}</p>
                   <Link className="text-link" to={'/tin-tuc/' + p.slug}>
-                    Đọc câu chuyện <ArrowUpRight size={18} />
+                    Đọc thêm <ArrowUpRight size={18} />
                   </Link>
                 </Card>
               ))}
@@ -194,52 +206,43 @@ function NewsPage({ slug }: { slug?: string }) {
 function Sponsors() {
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Đồng hành cùng FTUCharm"
-        title="Cùng tạo nên những điều rực rỡ."
-        description="Không gian dành cho những thương hiệu và đơn vị chung tay cùng cuộc thi."
-      />
+      <PageTitle title="Nhà tài trợ" />
       <SponsorWall />
     </div>
   );
 }
 function Gallery() {
-  const [open, setOpen] = useState(false);
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Thư viện"
-        title="Khoảnh khắc của thanh xuân."
-        description="Bộ ảnh theo từng vòng thi sẽ được BTC công bố tại đây."
-      />
-      <button className="gallery-image" onClick={() => setOpen(true)}>
-        <img
-          src="/images/silk-bloom.webp"
-          alt="Mở tác phẩm hoa lụa trang trí minh họa"
-          width="1536"
-          height="1024"
-          loading="lazy"
+      <PageTitle title="Thư viện" description="Ảnh chính thức sẽ được công bố tại đây." />
+      <Suspense fallback={<Skeleton />}>
+        <PhotoCarousel
+          label="Thư viện FTUCharm"
+          photos={[
+            {
+              src: '/images/silk-bloom.webp',
+              alt: 'tác phẩm hoa lụa trang trí minh họa',
+              caption: 'Tác phẩm minh họa AI',
+              width: 1536,
+              height: 1024,
+            },
+            {
+              src: '/images/le-phuong-nghi-2025.webp',
+              alt: 'Lê Phương Nghi – Hoa khôi Duyên dáng Ngoại thương 2025',
+              caption: 'Dấu ấn FTUCharm 2025',
+              width: 1958,
+              height: 745,
+            },
+          ]}
         />
-        <span>Bloom in your own way • Tác phẩm minh họa AI</span>
-      </button>
-      <Modal open={open} onOpenChange={setOpen} title="Tác phẩm trang trí minh họa">
-        <img
-          className="lightbox-image"
-          src="/images/silk-bloom.webp"
-          alt="Hoa lụa hồng minh họa, không phải ảnh cuộc thi"
-        />
-      </Modal>
+      </Suspense>
     </div>
   );
 }
 function About() {
   return (
     <div className="page-shell">
-      <PageTitle
-        label="Về FTUCharm"
-        title="Vẻ đẹp mang dấu ấn riêng."
-        description="Duyên dáng Ngoại thương • Vẻ đẹp, tri thức và bản lĩnh."
-      />
+      <PageTitle title="Về FTUCharm" />
       <div className="about-layout">
         <img
           src="/images/silk-bloom.webp"
@@ -249,16 +252,12 @@ function About() {
         />
         <article className="prose">
           <Flower2 size={42} strokeWidth={1} />
-          <h2>Trưởng thành từ những trải nghiệm.</h2>
+          <h2>Duyên dáng Ngoại thương</h2>
           <p>
-            FTUCharm là nơi những người trẻ tự tin kể câu chuyện của mình. Hành trình đi qua sơ
-            khảo, training, hoạt động truyền thông, bán kết và chung kết.
+            Cuộc thi dành cho nữ sinh Đại học Ngoại thương, với các vòng sơ khảo, đào tạo, bán kết
+            và chung kết.
           </p>
-          <p>Mỗi chặng là cơ hội để học hỏi, kết nối, thể hiện tài năng và nuôi dưỡng bản lĩnh.</p>
-          <p>
-            Thông tin mùa thi, đơn vị tổ chức và thể lệ chính thức sẽ được ban tổ chức công bố. Theo
-            dõi fanpage để cập nhật thông tin đã xác nhận.
-          </p>
+          <p>Theo dõi fanpage để cập nhật lịch và thể lệ chính thức.</p>
           <a
             className="text-link"
             href="https://www.facebook.com/ftucharm.duyendangngoaithuong"

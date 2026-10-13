@@ -1,5 +1,7 @@
 # FTUCharm • Duyên dáng Ngoại thương
 
+Giao diện mới: nội dung gọn hơn, font Manrope, vương miện ngọc trai và hiệu ứng theo cuộn trên desktop/mobile. Tài khoản có xác minh email, CAPTCHA, MFA, khôi phục/đổi mật khẩu và đăng xuất mọi thiết bị. Xem [báo cáo và cấu hình Auth còn thiếu](docs/ui-auth-refresh.md); bản local hiện vẫn là preview.
+
 Website sân khấu ngọc trai lavender–hồng–xanh, responsive và reduced-motion; React/Vite/TypeScript + Hono Workers + Supabase. **Đã áp 5 migration lên Supabase thử nghiệm ngày 13/10/2026; chưa triển khai backend production.**
 
 ## Chạy bản xem trước

@@ -7,14 +7,21 @@ import {
   demoSalesCatalog,
   type Edition,
 } from '@ftu/shared';
+import { createAuthStorage } from './auth-policy';
 export const preview = import.meta.env.VITE_PREVIEW_MODE === 'true';
 const url = import.meta.env.VITE_SUPABASE_URL,
   key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const supabase =
-  url && key && key !== 'replace_with_publishable_key'
+  !preview && url && key && key !== 'replace_with_publishable_key'
     ? createClient(url, key, {
         auth: {
-          persistSession: false,
+          // Custom storage keeps tokens in memory, and persists only temporary PKCE verifiers.
+          persistSession: true,
+          storage: createAuthStorage({
+            getItem: (k) => window.localStorage.getItem(k),
+            setItem: (k, v) => window.localStorage.setItem(k, v),
+            removeItem: (k) => window.localStorage.removeItem(k),
+          }),
           autoRefreshToken: true,
           detectSessionInUrl: true,
           flowType: 'pkce',

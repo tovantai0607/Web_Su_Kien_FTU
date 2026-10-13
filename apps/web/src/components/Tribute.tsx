@@ -5,12 +5,8 @@ export default function Tribute() {
     <section className="tribute-section" id="dau-an-2025" aria-labelledby="tribute-title">
       <div className="tribute-heading" data-reveal>
         <Crown size={30} strokeWidth={1} />
-        <p>Dấu ấn rực rỡ · FTUCharm 2025</p>
-        <h2 id="tribute-title">
-          Một vương miện.
-          <br />
-          Ngàn cảm hứng tiếp nối.
-        </h2>
+        <p>FTUCharm 2025</p>
+        <h2 id="tribute-title">Dấu ấn 2025</h2>
       </div>
       <figure className="tribute-banner" data-reveal>
         <img
@@ -25,12 +21,9 @@ export default function Tribute() {
             <span>Hoa khôi Duyên dáng Ngoại thương 2025</span>
             <h3>Lê Phương Nghi</h3>
           </div>
-          <p>
-            Trân trọng dấu ấn của một hành trình đã qua. Tiếp nối niềm tự hào và cảm hứng cho những
-            vẻ đẹp Ngoại thương.
-          </p>
+
           <a className="text-link" href={officialFacebook} target="_blank" rel="noreferrer">
-            Theo dõi hành trình <ArrowUpRight size={18} />
+            Fanpage <ArrowUpRight size={18} />
           </a>
         </figcaption>
       </figure>

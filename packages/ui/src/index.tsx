@@ -50,18 +50,20 @@ export function Field({
   hint?: string;
 }) {
   const id = useId();
+  const controlId = isValidElement(children) ? ((children.props as { id?: string }).id ?? id) : id;
   const hintId = id + '-hint',
     errorId = id + '-error';
   const describedBy = [hint ? hintId : '', error ? errorId : ''].filter(Boolean).join(' ');
   const control = isValidElement(children)
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id: controlId,
         'aria-describedby': describedBy || undefined,
         'aria-invalid': error ? true : undefined,
       })
     : children;
   return (
-    <label className="field">
-      <span>{label}</span>
+    <div className="field">
+      <label htmlFor={controlId}>{label}</label>
       {control}
       {hint && <small id={hintId}>{hint}</small>}
       {error && (
@@ -69,7 +71,7 @@ export function Field({
           {error}
         </span>
       )}
-    </label>
+    </div>
   );
 }
 export function Badge({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -137,7 +139,7 @@ export function Spinner() {
   );
 }
 export function Skeleton() {
-  return <div className="skeleton" aria-label="Đang tải nội dung" />;
+  return <div className="skeleton" role="status" aria-label="Đang tải nội dung" />;
 }
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
