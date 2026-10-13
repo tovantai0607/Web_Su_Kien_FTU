@@ -1,11 +1,15 @@
 # FTUCharm • Design system
 
-Direction: sân khấu editorial, hoa lụa tượng trưng cho sự trưởng thành. Hero lệch tâm, chữ lớn và đường cong hoa; các section xen nền sáng/rose, timeline như đường diễn; ảnh trang trí do AI tạo, không giả ảnh cuộc thi/thí sinh.
+Direction: sân khấu ánh ngọc trai, lavender–hồng–xanh theo banner Lê Phương Nghi người dùng cung cấp. Hero chia hai cột với wordmark serif lớn và vương miện SVG; orbit, ánh sáng và sao tạo chiều sâu. Không thêm thư viện animation. Áp dụng chung cho trang công khai, đăng ký, tài khoản và quản trị.
 
-Colors theo brief: canvas #FFF9FB, surface #FFF, soft #FCE7EF, rose #E9A8BF, accent #B85C7A, ink #2F2930, muted #625963, border #F0DDE4. CTA dùng rose đậm #913B59 để đạt contrast text trắng; màu hồng nhạt dùng làm surface.
+Colors: canvas #FAF8FF, ink #332644, accent #724081, lavender #DAD9FB, pink #EDBFDF. Nền gradient mềm, chữ tối và CTA tím đậm. Không dùng chữ trắng nhỏ trên nền pastel. Token/overrides ở `apps/web/src/luminous.css`.
 
 Playfair Display / Be Vietnam Pro, self-hosted variable fonts có Vietnamese; display 60–100px desktop / 44px mobile, body >=16px. Spacing 8/16/24/40/64/96. Cấu trúc hero + timeline + spotlight + lời mời, tránh các card đồng nhất ở mọi section.
 
-Motion: mở màn hoa/heading 900ms, hover 220ms, page transition 260ms, timeline progress theo lựa chọn; reduced motion tắt animation. Không chạy animation lớn vô hạn, không delay hiển thị nội dung cho screen reader.
+Motion: chữ xuất hiện theo từ, route fade/translate, section reveal bằng IntersectionObserver, progress theo cuộn khi trình duyệt hỗ trợ, hover/focus và feedback form/menu/modal. Vương miện và sao chuyển động nhẹ; footer có nút dừng chuyển động. `prefers-reduced-motion` hoặc lựa chọn dừng tắt animation, reveal ẩn và cuộn mượt. Screen reader đọc nguyên câu; focus vào nội dung sẽ làm phần đó hiện ngay.
+
+Trang chủ có đủ 11 mốc, tri ân Hoa khôi Duyên dáng Ngoại thương 2025 Lê Phương Nghi bằng banner gốc được nén WebP, và bốn vị trí nhà tài trợ chờ công bố. Không bịa logo hoặc tiểu sử. Thêm logo theo [hướng dẫn](sponsors.md).
+
+Tham khảo bố cục hero, hồ sơ, bình chọn và điều hướng từ [Hoa khôi Sinh viên Việt Nam 2026](https://hoakhoisinhvienvietnam2026.1vote.vn/), [Miss Grand Vietnam](https://missgrandvietnam.1vote.vn/) và [Hoa khôi Sinh viên](https://hoakhoisinhvien.vn/). Thiết kế và code FTUCharm riêng; không lấy dữ liệu thí sinh từ các website tham khảo.
 
 UI UX search có match serif Playfair và pastel; gợi ý Soft UI/SaaS không hoàn toàn phù hợp pageant nên chỉ dùng guidance accessibility, typography, feedback; bản brief quyết định palette và bố cục. Không dùng testimonials khi chưa có chứng thực thật.

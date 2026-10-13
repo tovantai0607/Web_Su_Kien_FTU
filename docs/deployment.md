@@ -1,6 +1,6 @@
 # Local, staging và production
 
-Chưa triển khai. `wrangler deploy --dry-run` chỉ kiểm tra bundle/config, không ghi tài nguyên từ xa. GitHub Actions chỉ checks.
+Supabase thử nghiệm đã áp 5 migration ngày 13/10/2026, được người dùng xác nhận chưa có dữ liệu thật. Backend Workers chưa triển khai. `wrangler deploy --dry-run` chỉ kiểm tra bundle/config. GitHub Actions chỉ checks.
 
 ## Cấu hình
 
@@ -19,13 +19,17 @@ Chạy build/typecheck/test/browser/Worker dry-run; review migration và thông 
 
 ## Migration
 
-3 migration theo thứ tự, có transaction. Dùng migration history tool để không chạy lại CREATE TABLE đã thực thi. Không xóa/reset database để xử lý lỗi. Bản test PGlite chỉ bỏ dòng CREATE EXTENSION pgcrypto (gen_random_uuid builtin); các bảng, constraints, grants, RLS và functions chạy thật trong engine PostgreSQL nhúng.
+5 migration theo thứ tự, có transaction. Version local đã đồng bộ lịch sử remote: 20261013132515, 20261013132526, 20261013132538, 20261013132724, 20261013141222. Dùng migration history tool để không chạy lại CREATE TABLE đã thực thi. Không xóa/reset database để xử lý lỗi. Bản test PGlite chỉ bỏ dòng CREATE EXTENSION pgcrypto (gen_random_uuid builtin); các bảng, constraints, grants, RLS và functions chạy thật trong engine PostgreSQL nhúng.
+
+Seed staging tạo 1 edition nháp, 11 mốc timeline, 3 vòng nháp và 3 danh mục. Không có ngày chính thức; đăng ký và vote đóng. Cutoff 50 là trần tạm thời cho mỗi vòng, phải chỉnh theo chỉ tiêu BTC trước publish. Không tạo tài khoản/thí sinh/vé/phiếu giả. Seed đã kiểm tra chạy hai lần không trùng dữ liệu.
 
 Bootstrap quyền (chỉ database đã xác định): insert user_roles cho UUID của tài khoản quản trị đã xác minh, role SUPER_ADMIN; không đưa UUID thật vào repo. Sau bootstrap cấp/revoke qua endpoint MFA. Người dùng không tự ghi role qua Data API.
 
+Migration ảnh thẻ bổ sung cột và ràng buộc; hồ sơ cũ giữ nguyên, hồ sơ mới phải có ảnh thẻ. Giữ đăng ký đóng cho đến khi frontend và backend hỗ trợ `purpose=student_card` được triển khai cùng nhau.
+
 ## Rollback
 
-Giữ artifact/Worker version đã pass. Rollback code không rollback database/R2. Migration ưu tiên additive/backward-compatible; không DROP bảng để rollback; review compensating migration và restore backup vào môi trường riêng trước khi chuyển lại. Tắt registration/vote window đúng quy trình nếu có incident; tránh deploy thay đổi lớn ngay trước chung kết. Monitor outbox retry/failed, auth403, vote409, slow queries/locks, CPU/errors và storage quota.
+Giữ artifact/Worker version đã pass. Nếu rollback về client trước tính năng thẻ sinh viên, đóng đăng ký trước: RPC mới từ chối hồ sơ thiếu thẻ. Chuẩn bị compensating migration có review nếu thực sự cần hoàn tác quy tắc; không xóa ảnh/hồ sơ. Rollback code không rollback database/R2. Migration ưu tiên additive/backward-compatible; không DROP bảng để rollback; review compensating migration và restore backup vào môi trường riêng trước khi chuyển lại. Tắt registration/vote window đúng quy trình nếu có incident; tránh deploy thay đổi lớn ngay trước chung kết. Monitor outbox retry/failed, auth403, vote409, slow queries/locks, CPU/errors và storage quota.
 
 ## Outbox
 

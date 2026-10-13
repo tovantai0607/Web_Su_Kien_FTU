@@ -14,6 +14,10 @@ Admin CMS/review/checkin/tickets/RBAC dùng transaction và audit; audit không 
 
 ## Trước sử dụng thật
 
+Ảnh thẻ sinh viên bắt buộc trong hồ sơ mới, riêng biệt với ba ảnh portfolio. RPC kiểm tra mục đích ảnh, ownership và edition trước khi gắn vào hồ sơ; composite FK giữ ownership/edition nhất quán. ID thẻ chỉ lưu trong `contestant_private`, không có trong `contestant_media` hoặc public profile. Reviewer có MFA tải ảnh qua API no-store bằng Bearer; UI chỉ tải khi bấm xem và thu hồi object URL khi đóng. Việc là sinh viên FTU cần BTC xác minh từ hồ sơ, không tự suy ra chỉ bằng một ảnh upload.
+
+Logo nhà tài trợ chỉ nhận đường dẫn cùng origin dưới `/images/sponsors/` với đuôi ảnh được cho phép; không nhận URL ảnh bên ngoài hoặc SVG. Upload thẻ thật và Auth/MFA thực tế vẫn cần kiểm thử staging sau khi cấu hình R2/Images.
+
 - [ ] Thay secret đã lộ; cấu hình server-only key, đúng origin, đúng issuer/signing key và session policy.
 - [ ] Apply/review migrations local/test rồi staging, kiểm tra Data API grants/RLS bằng token anon/user/admin thật.
 - [ ] Email confirmation/captcha/password policy và MFA cho mọi staff/admin; bootstrap admin qua UUID đã xác minh.

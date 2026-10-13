@@ -10,11 +10,15 @@ describe('contracts & safety', () => {
       full_name: 'Thí sinh thử',
       email: 'test@example.com',
       phone: '0912345678',
-      university: 'Ngoại thương',
       faculty: 'Kinh tế',
       bio: 'Một câu chuyện có đầy đủ ba mươi ký tự.',
       talents: '',
-      media_ids: [id, id, id],
+      media_ids: [
+        id,
+        '22222222-2222-4222-8222-222222222222',
+        '33333333-3333-4333-8333-333333333333',
+      ],
+      student_card_media_id: '44444444-4444-4444-8444-444444444444',
       consent: true,
       turnstile_token: 'token',
     };
@@ -23,6 +27,14 @@ describe('contracts & safety', () => {
     expect(applicationSchema.safeParse({ ...data, user_id: id }).success).toBe(false);
     expect(applicationSchema.safeParse({ ...data, role: 'SUPER_ADMIN' }).success).toBe(false);
     expect(applicationSchema.safeParse({ ...data, consent: false }).success).toBe(false);
+    expect(applicationSchema.safeParse({ ...data, university: 'Other university' }).success).toBe(
+      false,
+    );
+    expect(applicationSchema.safeParse({ ...data, student_card_media_id: undefined }).success).toBe(
+      false,
+    );
+    expect(applicationSchema.safeParse({ ...data, student_card_media_id: id }).success).toBe(false);
+    expect(applicationSchema.safeParse({ ...data, media_ids: [id, id, id] }).success).toBe(false);
   });
   it('vote contract rejects forged user identity and missing token', () => {
     expect(

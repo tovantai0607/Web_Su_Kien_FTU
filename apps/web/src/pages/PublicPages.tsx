@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Flower2, CalendarDays, ArrowUpRight, Ticket } from 'lucide-react';
 import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Modal } from '@ftu/ui';
-import type { TimelineEvent, Contestant, News, Sponsor, Edition } from '@ftu/shared';
+import type { TimelineEvent, Contestant, News, Edition } from '@ftu/shared';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
+import SponsorWall from '../components/SponsorWall';
+import Tribute from '../components/Tribute';
 function Timeline() {
   const q = useContent<TimelineEvent[]>('/timeline');
   return (
@@ -190,39 +192,14 @@ function NewsPage({ slug }: { slug?: string }) {
   );
 }
 function Sponsors() {
-  const q = useContent<Sponsor[]>('/sponsors');
   return (
     <div className="page-shell">
       <PageTitle
-        label="Cùng nhau tạo dấu ấn"
-        title="Những người bạn đồng hành."
-        description="Cảm ơn các đơn vị chung tay tạo nên hành trình FTUCharm."
+        label="Đồng hành cùng FTUCharm"
+        title="Cùng tạo nên những điều rực rỡ."
+        description="Không gian dành cho những thương hiệu và đơn vị chung tay cùng cuộc thi."
       />
-      <DataState query={q} />
-      <div className="article-grid">
-        {q.data?.map((s) => (
-          <Card key={s.id}>
-            <Badge>{s.tier}</Badge>
-            <h2>{s.name}</h2>
-            <a className="text-link" href={s.url} target="_blank" rel="noreferrer">
-              Website chính thức <ArrowUpRight size={18} />
-            </a>
-          </Card>
-        ))}
-      </div>
-      {q.data?.length === 0 && (
-        <EmptyState title="Danh sách đối tác sẽ được công bố">
-          Để tìm hiểu cơ hội đồng hành, vui lòng kết nối với BTC qua fanpage chính thức.
-        </EmptyState>
-      )}
-      <a
-        className="text-link"
-        href="https://www.facebook.com/ftucharm.duyendangngoaithuong"
-        target="_blank"
-        rel="noreferrer"
-      >
-        Kết nối với ban tổ chức <ArrowUpRight size={18} />
-      </a>
+      <SponsorWall />
     </div>
   );
 }
@@ -333,6 +310,7 @@ function About() {
           </a>
         </article>
       </div>
+      <Tribute />
     </div>
   );
 }
@@ -350,7 +328,9 @@ function Legal({ privacy }: { privacy: boolean }) {
             <p>
               Họ tên, email, điện thoại, thông tin học tập, giới thiệu và ảnh được dùng để tiếp
               nhận, xét duyệt và liên hệ thí sinh. Hồ sơ mới nộp được giữ riêng tư. Chỉ thông tin
-              được duyệt và cho phép công bố xuất hiện công khai.
+              được duyệt và cho phép công bố xuất hiện công khai. Ảnh thẻ sinh viên chỉ phục vụ xác
+              minh tư cách sinh viên FTU, được giới hạn cho chủ hồ sơ và người xét duyệt có quyền;
+              không công bố trên hồ sơ thí sinh.
             </p>
             <h2>Quyền của bạn</h2>
             <p>
@@ -369,13 +349,14 @@ function Legal({ privacy }: { privacy: boolean }) {
           <>
             <h2>Điều kiện đăng ký</h2>
             <p>
-              Điều kiện về trường, độ tuổi, giấy tờ và đối tượng dự thi sẽ được BTC công bố. Website
-              không tự đặt điều kiện tuyển chọn.
+              Cuộc thi dành riêng cho nữ sinh Đại học Ngoại thương (FTU). Ảnh thẻ sinh viên được BTC
+              đối chiếu khi xét duyệt. Những điều kiện khác được công bố trong thể lệ chính thức.
             </p>
             <h2>Hồ sơ & vòng thi</h2>
             <p>
-              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu và ba ảnh. Kết quả được BTC xét
-              duyệt và công bố theo từng vòng. Số thí sinh qua vòng được cấu hình theo mùa.
+              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu, ba ảnh hồ sơ và ảnh thẻ sinh viên
+              FTU. Kết quả được BTC xét duyệt và công bố theo từng vòng. Số thí sinh qua vòng được
+              cấu hình theo mùa.
             </p>
             <h2>Bình chọn chung kết</h2>
             <p>

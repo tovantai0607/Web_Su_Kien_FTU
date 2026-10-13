@@ -29,6 +29,7 @@ import { PageTitle, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { roles } from '@ftu/shared';
 import { useAuth } from '../lib/auth';
+import PrivateMedia from '../components/PrivateMedia';
 type Row = Record<string, unknown>;
 const tabs = [
   ['overview', 'Tổng quan', LayoutDashboard],
@@ -81,7 +82,14 @@ const defaults: Record<string, Row> = {
     category: 'Tin tức',
     published: false,
   },
-  sponsors: { edition_id: '', name: '', tier: 'partner', url: 'https://', published: false },
+  sponsors: {
+    edition_id: '',
+    name: '',
+    tier: 'partner',
+    url: 'https://',
+    logo_url: '',
+    published: false,
+  },
 };
 export default function Admin() {
   const { user } = useAuth();
@@ -419,6 +427,8 @@ export default function Admin() {
                         vote_close_at: 'Đóng vote (UTC)',
                         body: 'Nội dung',
                         name: 'Tên',
+                        logo_url: 'Logo (/images/sponsors/ten-logo.webp)',
+                        url: 'Website nhà tài trợ',
                         description: 'Mô tả',
                       } as Record<string, string>
                     )[key] ?? key
@@ -471,6 +481,16 @@ export default function Admin() {
           <h3>{String(review?.full_name ?? '')}</h3>
           <p>{String(review?.email ?? '')}</p>
           <p>{String((review?.contestants as Row)?.bio ?? '')}</p>
+          {review && (
+            <PrivateMedia
+              key={String(review.id)}
+              id={
+                typeof review.student_card_media_id === 'string'
+                  ? review.student_card_media_id
+                  : null
+              }
+            />
+          )}
           <Field label="Kết quả">
             <select
               className="input"

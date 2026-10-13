@@ -4,6 +4,7 @@ import { ArrowUpRight, Crown, Flower2 } from 'lucide-react';
 import { Badge, Skeleton, ErrorState } from '@ftu/ui';
 import { api } from '../lib/api';
 import type { Contestant } from '@ftu/shared';
+import { AnimatedText } from './Motion';
 export function useContent<T>(path: string) {
   return useQuery({ queryKey: ['content', path], queryFn: () => api<T>(path) });
 }
@@ -80,7 +81,9 @@ export function PageTitle({
   return (
     <div className="page-title">
       {label && <Badge>{label}</Badge>}
-      <h1>{title}</h1>
+      <h1>
+        <AnimatedText text={title} />
+      </h1>
       {description && <p>{description}</p>}
     </div>
   );

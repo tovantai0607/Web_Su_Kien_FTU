@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 let db: PGlite;
 const edition = '11111111-1111-4111-8111-111111111111',
   otherEdition = '11111111-1111-4111-8111-111111111112',
@@ -14,11 +14,10 @@ beforeAll(async () => {
   await db.exec(
     `create schema auth;create role anon;create role authenticated;create role service_role bypassrls;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
   );
-  for (const file of [
-    '202610130001_ftucharm.sql',
-    '202610130002_management.sql',
-    '202610130003_vote_window.sql',
-  ]) {
+  await db.exec('alter default privileges grant execute on functions to anon, authenticated;');
+  for (const file of (await readdir('supabase/migrations'))
+    .filter((file) => file.endsWith('.sql'))
+    .sort()) {
     const sql = (await readFile('supabase/migrations/' + file, 'utf8')).replace(
       'create extension if not exists pgcrypto;',
       '',
@@ -46,6 +45,9 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       db.query(`select public.cast_vote('${user}','${round}','${ticket}','${candidate}')`),
     ).rejects.toThrow();
     await expect(db.query('select user_id from public.contestants')).rejects.toThrow();
+    await expect(
+      db.query(`select public.has_role('${admin}',array['SUPER_ADMIN'])`),
+    ).rejects.toThrow();
     await db.exec('reset role;');
   });
   it('public data respects unpublished edition', async () => {
@@ -133,6 +135,11 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
   });
   it('registration transaction saves private profile, consent and one outbox message; idempotent retry', async () => {
     const media = Array.from({ length: 3 }, () => crypto.randomUUID());
+    const studentCard = crypto.randomUUID();
+    await db.query(
+      "insert into public.media_assets(id,edition_id,user_id,object_key,mime,bytes,purpose) values($1::uuid,$2,$3,$1::text,'image/webp',100,'student_card')",
+      [studentCard, edition, user],
+    );
     for (const id of media)
       await db.query(
         'insert into public.media_assets(id,edition_id,user_id,object_key,mime,bytes) values($1,$2,$3,$4,$5,100)',
@@ -143,14 +150,46 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       full_name: 'TEST ONLY',
       email: 'test@example.test',
       phone: '0912345678',
-      university: 'TEST',
       faculty: 'Test',
       bio: 'Test bio',
       talents: '',
       media_ids: media,
+      student_card_media_id: studentCard,
       consent: true,
     };
     const key = crypto.randomUUID();
+    await expect(
+      db.query('select public.apply_contestant($1,$2,$3,$4)', [
+        user,
+        { ...data, student_card_media_id: null },
+        key,
+        'hash',
+      ]),
+    ).rejects.toThrow('INVALID_STUDENT_CARD');
+    await expect(
+      db.query('select public.apply_contestant($1,$2,$3,$4)', [
+        user,
+        { ...data, student_card_media_id: media[0] },
+        key,
+        'hash',
+      ]),
+    ).rejects.toThrow('INVALID_STUDENT_CARD');
+    await db.query('update public.media_assets set user_id=$1 where id=$2', [admin, studentCard]);
+    await expect(
+      db.query('select public.apply_contestant($1,$2,$3,$4)', [user, data, key, 'hash']),
+    ).rejects.toThrow('INVALID_STUDENT_CARD');
+    await db.query('update public.media_assets set user_id=$1,purpose=$3 where id=$2', [
+      user,
+      studentCard,
+      'portfolio',
+    ]);
+    await expect(
+      db.query('select public.apply_contestant($1,$2,$3,$4)', [user, data, key, 'hash']),
+    ).rejects.toThrow('INVALID_STUDENT_CARD');
+    await db.query('update public.media_assets set purpose=$1 where id=$2', [
+      'student_card',
+      studentCard,
+    ]);
     const r = await db.query<{ apply_contestant: { id: string } }>(
       'select public.apply_contestant($1,$2,$3,$4)',
       [user, data, key, 'hash'],
@@ -162,6 +201,23 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       'hash',
     ]);
     expect(again.rows).toEqual(r.rows);
+    expect(
+      (
+        await db.query<{ university: string; student_card_media_id: string }>(
+          'select university,student_card_media_id from public.contestant_private where id=$1',
+          [r.rows[0].apply_contestant.id],
+        )
+      ).rows[0],
+    ).toEqual({ university: 'Đại học Ngoại thương', student_card_media_id: studentCard });
+    expect(
+      (await db.query('select * from public.contestant_media where media_id=$1', [studentCard]))
+        .rows,
+    ).toHaveLength(0);
+    await db.exec('set role anon;');
+    await expect(
+      db.query('select student_card_media_id from public.contestant_private'),
+    ).rejects.toThrow();
+    await db.exec('reset role;');
     expect(
       (
         await db.query<{ n: number }>(

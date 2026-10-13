@@ -102,6 +102,7 @@ function dbError(error: { message: string; code?: string } | null) {
     REGISTRATION_CLOSED: [409, 'Đăng ký chưa mở hoặc đã kết thúc.'],
     IDEMPOTENCY_CONFLICT: [409, 'Yêu cầu trùng có nội dung khác.'],
     INVALID_MEDIA: [400, 'Ảnh hồ sơ không hợp lệ.'],
+    INVALID_STUDENT_CARD: [400, 'Cần ảnh thẻ sinh viên FTU hợp lệ, thuộc hồ sơ của bạn.'],
     VOTE_CLOSED: [409, 'Bình chọn chưa mở hoặc đã kết thúc.'],
     TICKET_NOT_ELIGIBLE: [403, 'Vé chưa check-in hoặc không thuộc tài khoản của bạn.'],
     CONTESTANT_NOT_ELIGIBLE: [409, 'Thí sinh không thuộc lượt bình chọn này.'],
@@ -380,6 +381,10 @@ app.get('/api/me/notifications', async (c) => {
   return ok(c, data);
 });
 app.post('/api/media/upload', async (c) => {
+  const purpose = z
+    .enum(['portfolio', 'student_card'])
+    .safeParse(c.req.query('purpose') ?? 'portfolio');
+  if (!purpose.success) throw new HTTPException(400, { message: 'Loại ảnh không hợp lệ.' });
   if (!c.env.IMAGES || !c.env.MEDIA)
     throw new HTTPException(503, { message: 'Lưu trữ ảnh chưa được cấu hình.' });
   const edition = c.req.query('edition');
@@ -435,6 +440,7 @@ app.post('/api/media/upload', async (c) => {
       object_key: key,
       mime: 'image/webp',
       bytes: bytes.byteLength,
+      purpose: purpose.data,
     });
   if (error) {
     await c.env.MEDIA.delete(key);

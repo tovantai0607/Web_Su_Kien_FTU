@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowDown,
-  ArrowUpRight,
-  Sparkles,
-  CalendarDays,
-  Ticket,
-  Heart,
-  Flower2,
-} from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Crown, CalendarDays, Ticket, Heart, Flower2 } from 'lucide-react';
 import { Badge, Button, SectionHeading, EmptyState } from '@ftu/ui';
 import type { Edition, TimelineEvent, Contestant, News } from '@ftu/shared';
 import { useContent, DataState, ContestantCard } from '../components/Content';
+import { AnimatedText, StageCrown } from '../components/Motion';
+import Tribute from '../components/Tribute';
+import SponsorWall from '../components/SponsorWall';
 export default function Home() {
   const edition = useContent<Edition | null>('/editions/current');
   const timeline = useContent<TimelineEvent[]>('/timeline');
@@ -22,64 +17,77 @@ export default function Home() {
   const current = events[step];
   return (
     <>
-      <section className="hero">
-        <img
-          className="hero-art"
-          src="/images/silk-bloom.webp"
-          alt=""
-          width="1536"
-          height="1024"
-          fetchPriority="high"
-        />
-        <div className="hero-wash" />
-        <div className="hero-content">
-          <div className="hero-label">
-            <span className="tiny-flower">
-              <Flower2 size={17} />
+      <section className="luminous-hero">
+        <div className="aurora aurora-one" aria-hidden="true" />
+        <div className="aurora aurora-two" aria-hidden="true" />
+        <div className="starfield" aria-hidden="true">
+          {Array.from({ length: 18 }, (_, i) => (
+            <span
+              key={i}
+              style={{
+                left: `${(i * 37) % 100}%`,
+                top: `${(i * 23) % 95}%`,
+                animationDelay: `${i * 0.31}s`,
+              }}
+            >
+              ✦
             </span>
-            Duyên dáng Ngoại thương<em>Vẻ đẹp • Tri thức • Bản lĩnh</em>
+          ))}
+        </div>
+        <div className="hero-topline">
+          <span>Dành cho nữ sinh Đại học Ngoại thương</span>
+          <span>Vẻ đẹp · Tri thức · Bản lĩnh</span>
+        </div>
+        <div className="luminous-hero-grid">
+          <div className="luminous-copy">
+            <p className="hero-edition">
+              <Crown size={20} strokeWidth={1.2} /> Hành trình tỏa sáng của bạn
+            </p>
+            <h1>
+              <AnimatedText text="Duyên dáng Ngoại thương" />
+            </h1>
+            <div className="hero-wordmark" aria-hidden="true">
+              FTU<span>CHARM</span>
+            </div>
+            <p className="hero-description">
+              Có một vẻ đẹp chỉ thuộc về bạn.
+              <br />
+              Có một sân khấu chờ bạn viết nên câu chuyện.
+            </p>
+            <div className="hero-buttons">
+              <Button asChild>
+                <Link to="/dang-ky">
+                  Đăng ký tỏa sáng <ArrowUpRight size={18} />
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/thi-sinh">Khám phá thí sinh</Link>
+              </Button>
+            </div>
+            <p className="hero-theme">
+              {edition.data?.theme || 'Nơi vẻ đẹp, tri thức và bản lĩnh cùng tỏa sáng.'}
+            </p>
           </div>
-          <h1>
-            Duyên dáng
-            <br />
-            <i>từ bên trong.</i>
-          </h1>
-          <p>
-            Mỗi vẻ đẹp là một câu chuyện.
-            <br />
-            Hãy để câu chuyện của bạn bắt đầu tại FTUCharm.
-          </p>
-          <div className="hero-buttons">
-            <Button asChild>
-              <Link to="/dang-ky">
-                Bắt đầu hành trình <ArrowUpRight size={18} />
-              </Link>
-            </Button>
-            <Button variant="ghost" asChild>
-              <Link to="/gioi-thieu">
-                Khám phá FTUCharm{' '}
-                <span className="round-arrow">
-                  <ArrowUpRight size={17} />
-                </span>
-              </Link>
-            </Button>
-          </div>
-          <div className="hero-footnote">
-            <span className="line" /> {edition.data?.theme ?? 'Vẻ đẹp khởi nguồn từ chính bạn'}
+          <div className="crown-stage" aria-hidden="true">
+            <div className="stage-halo" />
+            <div className="stage-ring ring-one" />
+            <div className="stage-ring ring-two" />
+            <StageCrown />
+            <span className="stage-script">Your light. Your story.</span>
+            <div className="stage-plinth" />
           </div>
         </div>
-        <div className="hero-seal">
-          <Sparkles size={24} strokeWidth={1} />
+        <div className="hero-bottomline">
+          <a href="#hanh-trinh" className="luminous-scroll">
+            <span className="scroll-orb">
+              <ArrowDown size={17} />
+            </span>
+            Khám phá hành trình
+          </a>
           <span>
-            Bloom
-            <br />
-            in your own way
+            50 thí sinh dự kiến <b>✦</b> 11 chặng tỏa sáng
           </span>
         </div>
-        <a className="scroll-cue" href="#hanh-trinh">
-          Cuộn để khám phá <ArrowDown size={16} />
-        </a>
-        <div className="hero-side-note">A journey to your brightest self</div>
       </section>
       <div className="values-strip">
         <span>Vẻ đẹp của tri thức</span>
@@ -102,7 +110,7 @@ export default function Home() {
         {events.length > 0 ? (
           <div className="journey-layout">
             <div className="journey-map">
-              {events.slice(0, 4).map((event, i) => (
+              {events.map((event, i) => (
                 <button
                   key={event.id}
                   className={i === step ? 'journey-stop active' : 'journey-stop'}
@@ -120,7 +128,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div className="journey-feature">
+            <div className="journey-feature" key={step}>
               <div className="feature-icon">
                 <CalendarDays size={25} strokeWidth={1.4} />
               </div>
@@ -142,50 +150,7 @@ export default function Home() {
           </EmptyState>
         ) : null}
       </section>
-      <section className="intro-section">
-        <div className="intro-visual">
-          <img
-            src="/images/silk-bloom.webp"
-            alt="Tác phẩm hoa lụa trang trí"
-            loading="lazy"
-            width="1536"
-            height="1024"
-          />
-          <div className="intro-caption">
-            Không chỉ tỏa sáng.
-            <br />
-            <i>Mà còn là chính mình.</i>
-          </div>
-        </div>
-        <div className="intro-copy">
-          <p className="eyebrow">Về FTUCharm</p>
-          <h2>
-            Nơi vẻ đẹp
-            <br />
-            gặp <i>bản lĩnh.</i>
-          </h2>
-          <p>
-            FTUCharm – Duyên dáng Ngoại thương là hành trình để những người trẻ khám phá giá trị của
-            chính mình, tự tin thể hiện và cùng nhau trưởng thành.
-          </p>
-          <p>Một sân khấu cho vẻ đẹp. Một cơ hội cho tri thức. Một dấu ấn cho tuổi trẻ.</p>
-          <Link className="text-link" to="/gioi-thieu">
-            Câu chuyện FTUCharm <ArrowUpRight size={18} />
-          </Link>
-          <div className="intro-values">
-            <span>
-              <strong>50</strong>Thí sinh dự kiến
-            </span>
-            <span>
-              <strong>11</strong>Chặng hành trình
-            </span>
-            <span>
-              <Heart size={28} strokeWidth={1} />
-              Một dấu ấn riêng
-            </span>
-          </div>
-        </div>
-      </section>
+      <Tribute />
       <section className="section spotlight">
         <SectionHeading
           kicker="Những vẻ đẹp đang nở rộ"
@@ -261,6 +226,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      <SponsorWall />
       <section className="join-section">
         <Flower2 size={45} strokeWidth={0.8} />
         <h2>

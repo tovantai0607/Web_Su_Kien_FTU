@@ -7,6 +7,7 @@ for (const [name, width, height] of [
   ['mobile', 390, 844],
 ]) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('http://127.0.0.1:5173/');
   await page.waitForTimeout(1400);
   await page.screenshot({ path: `output/qa/${name}.png`, fullPage: name === 'mobile' });

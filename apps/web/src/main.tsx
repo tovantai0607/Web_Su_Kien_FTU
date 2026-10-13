@@ -9,6 +9,7 @@ import '@fontsource/be-vietnam-pro/400.css';
 import '@fontsource/be-vietnam-pro/500.css';
 import '@fontsource/be-vietnam-pro/600.css';
 import './styles.css';
+import './luminous.css';
 const client = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: false } },
 });

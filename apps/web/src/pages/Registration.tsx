@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Check, ImagePlus, ShieldCheck, Flower2 } from 'lucide-react';
+import { ArrowRight, Check, ImagePlus, ShieldCheck, Flower2, IdCard } from 'lucide-react';
 import { applicationSchema, type ApplicationInput, type Edition } from '@ftu/shared';
 import { Button, Field, Input, Card, Badge, ErrorState } from '@ftu/ui';
 import { PageTitle, useContent, DataState } from '../components/Content';
@@ -25,11 +25,11 @@ export default function Registration() {
       full_name: '',
       email: user?.email ?? '',
       phone: '',
-      university: 'Đại học Ngoại thương',
       faculty: '',
       bio: '',
       talents: '',
       media_ids: [],
+      student_card_media_id: '',
       turnstile_token: '',
     },
   });
@@ -48,16 +48,25 @@ export default function Registration() {
       if (preview) id = crypto.randomUUID();
       else {
         id = (
-          await api<{ id: string }>('/media/upload?edition=' + edition.data?.id, {
-            method: 'POST',
-            body: file,
-            headers: { 'Content-Type': file.type },
-          })
+          await api<{ id: string }>(
+            '/media/upload?edition=' +
+              edition.data?.id +
+              '&purpose=' +
+              (index === 3 ? 'student_card' : 'portfolio'),
+            {
+              method: 'POST',
+              body: file,
+              headers: { 'Content-Type': file.type },
+            },
+          )
         ).id;
       }
-      const ids = [...form.getValues('media_ids')];
-      ids[index] = id;
-      form.setValue('media_ids', ids);
+      if (index === 3) form.setValue('student_card_media_id', id, { shouldValidate: true });
+      else {
+        const ids = [...form.getValues('media_ids')];
+        ids[index] = id;
+        form.setValue('media_ids', ids, { shouldValidate: true });
+      }
       setFiles((f) => {
         const next = [...f];
         next[index] = file.name;
@@ -96,7 +105,7 @@ export default function Registration() {
   );
   async function next() {
     const fields: (keyof ApplicationInput)[][] = [
-      ['full_name', 'email', 'phone', 'university', 'faculty'],
+      ['full_name', 'email', 'phone', 'faculty'],
       ['bio', 'talents'],
     ];
     if (await form.trigger(fields[step])) setStep((v) => v + 1);
@@ -125,7 +134,7 @@ export default function Registration() {
       <PageTitle
         label="Bắt đầu hành trình"
         title="Sẵn sàng để nở rộ?"
-        description="Kể cho chúng tôi câu chuyện của bạn. Chặng đường rực rỡ bắt đầu từ đây."
+        description="Dành cho nữ sinh Đại học Ngoại thương. Kể câu chuyện của bạn và bắt đầu hành trình tỏa sáng."
       />
       <DataState query={edition} />
       <div className="registration-layout">
@@ -180,7 +189,7 @@ export default function Registration() {
                   {error && <ErrorState message={error} />}
                 </div>
                 {step === 0 && (
-                  <div className="form-grid">
+                  <div className="form-grid form-panel">
                     <Field label="Họ và tên" error={errors.full_name?.message}>
                       <Input
                         autoComplete="name"
@@ -204,16 +213,13 @@ export default function Registration() {
                         aria-invalid={!!errors.phone}
                       />
                     </Field>
-                    <Field label="Trường" error={errors.university?.message}>
-                      <Input {...form.register('university')} />
-                    </Field>
                     <Field label="Khoa / ngành học" error={errors.faculty?.message}>
                       <Input {...form.register('faculty')} />
                     </Field>
                     <div className="form-hint">
-                      <Badge>Thu thập tối thiểu</Badge>
+                      <Badge>Sinh viên FTU</Badge>
                       <p>
-                        Không yêu cầu ngày sinh hay mã sinh viên khi BTC chưa xác định cần thiết.
+                        Chuẩn bị ảnh thẻ sinh viên để BTC xác minh tư cách tham gia ở bước cuối.
                       </p>
                     </div>
                   </div>
@@ -244,13 +250,10 @@ export default function Registration() {
                 {step === 2 && (
                   <>
                     <h2>Ba góc nhìn, một vẻ đẹp.</h2>
-                    <p>
-                      Ảnh JPEG/PNG, tối đa 5 MB mỗi ảnh. Tránh gửi giấy tờ tùy thân hay thông tin
-                      nhạy cảm trong ảnh.
-                    </p>
+                    <p>Ba ảnh hồ sơ và một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB mỗi ảnh.</p>
                     <div className="upload-grid">
                       {['Chân dung', 'Bán thân', 'Toàn thân'].map((label, i) => (
-                        <label className="upload-box" key={label}>
+                        <label className={'upload-box' + (files[i] ? ' has-file' : '')} key={label}>
                           <ImagePlus size={28} strokeWidth={1} />
                           <strong>{label}</strong>
                           <span>{files[i] ?? 'Chọn ảnh'}</span>
@@ -267,6 +270,39 @@ export default function Registration() {
                     {errors.media_ids && (
                       <p role="alert" className="field-error">
                         {errors.media_ids.message}
+                      </p>
+                    )}
+                    <label
+                      className={'upload-box student-card-upload' + (files[3] ? ' has-file' : '')}
+                    >
+                      <IdCard size={35} strokeWidth={1} />
+                      <strong>Ảnh thẻ sinh viên FTU</strong>
+                      <span>{files[3] ?? 'Chọn ảnh mặt thẻ có họ tên và thông tin trường'}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        aria-label="Ảnh thẻ sinh viên FTU"
+                        aria-describedby="student-card-hint student-card-error"
+                        aria-invalid={!!errors.student_card_media_id}
+                        disabled={uploading || (!preview && !user)}
+                        onChange={(e) => void upload(3, e.target.files?.[0])}
+                      />
+                    </label>
+                    <p id="student-card-hint" className="fine-print">
+                      Ảnh thẻ chỉ dùng để xác minh sinh viên FTU, được giữ riêng tư và không xuất
+                      hiện trên trang thí sinh. Có thể che thông tin không cần thiết; giữ rõ họ tên,
+                      tên trường và mã sinh viên.
+                    </p>
+                    <p
+                      id="student-card-error"
+                      className="field-error"
+                      role={errors.student_card_media_id ? 'alert' : undefined}
+                    >
+                      {errors.student_card_media_id?.message}
+                    </p>
+                    {uploading && (
+                      <p className="upload-progress" role="status">
+                        Đang xử lý ảnh…
                       </p>
                     )}
                     <label className="checkbox-label">

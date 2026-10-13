@@ -15,3 +15,4 @@ coverage/
 .DS_Store
 CODEX_SKILLS_SETUP_REPORT.md
 output/
+supabase/.temp/

@@ -31,6 +31,7 @@ test('contestant search works and private contact information never appears', as
 test('registration validation and reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/dang-ky');
+  await expect(page.getByLabel('Trường', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
   await expect(page.getByText('Nhập họ tên đầy đủ')).toBeVisible();
   await page.getByLabel('Họ và tên').fill('Thí sinh thử nghiệm');
@@ -46,7 +47,21 @@ test('registration validation and reduced motion', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Ba góc nhìn, một vẻ đẹp.' })).toBeVisible();
   await page.getByRole('button', { name: 'Gửi hồ sơ' }).click();
   await expect(page.getByText('Cần 3 ảnh hồ sơ')).toBeVisible();
+  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU', { exact: true })).toBeVisible();
+  await expect(page.getByText('Cần ảnh thẻ sinh viên FTU', { exact: true })).toBeVisible();
   await expect(page.getByText('Hồ sơ đã được tiếp nhận.', { exact: true })).toHaveCount(0);
+});
+
+test('tribute, sponsor slots and motion control are accessible', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Lê Phương Nghi', exact: true })).toBeAttached();
+  await expect(page.locator('.sponsor-placeholders .sponsor-tile')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  await expect(page.getByRole('link', { name: 'Facebook FTUCharm', exact: true })).toHaveAttribute(
+    'href',
+    'https://www.facebook.com/ftucharm.duyendangngoaithuong',
+  );
 });
 test('voting stays closed without configured final round', async ({ page }) => {
   await page.goto('/binh-chon');
@@ -69,6 +84,7 @@ test('admin is guarded, gallery dialog and keyboard work', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 test('core public pages pass WCAG AA automated checks', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const path of ['/', '/dang-ky', '/thi-sinh', '/binh-chon', '/admin']) {
     await page.goto(path);
     await page.locator('h1').waitFor();

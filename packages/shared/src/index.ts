@@ -17,15 +17,22 @@ export const applicationSchema = z
     full_name: z.string().trim().min(2, 'Nhập họ tên đầy đủ').max(100),
     email: z.string().email('Email chưa hợp lệ').max(254),
     phone: z.string().regex(/^(\+84|0)[0-9]{9,10}$/, 'Số điện thoại chưa hợp lệ'),
-    university: z.string().trim().min(2).max(150),
     faculty: z.string().trim().min(2).max(150),
     bio: z.string().trim().min(30, 'Giới thiệu ít nhất 30 ký tự').max(2000),
     talents: z.string().trim().max(1000),
-    media_ids: z.array(uuid).length(3, 'Cần 3 ảnh hồ sơ'),
+    media_ids: z
+      .array(uuid)
+      .length(3, 'Cần 3 ảnh hồ sơ')
+      .refine((ids) => new Set(ids).size === ids.length, 'Ba ảnh hồ sơ phải khác nhau'),
+    student_card_media_id: z.string().uuid('Cần ảnh thẻ sinh viên FTU'),
     consent: z.literal(true, { error: 'Bạn cần chấp nhận thể lệ và thông báo dữ liệu' }),
     turnstile_token: z.string().min(1).max(2048),
   })
-  .strict();
+  .strict()
+  .refine((data) => !data.media_ids.includes(data.student_card_media_id), {
+    message: 'Ảnh thẻ sinh viên phải khác ảnh hồ sơ',
+    path: ['student_card_media_id'],
+  });
 export const voteSchema = z
   .object({
     round_id: uuid,
@@ -111,6 +118,15 @@ export const sponsorSchema = z
     name: z.string().min(2).max(120),
     tier: z.enum(['diamond', 'gold', 'silver', 'partner']),
     url: z.string().url().startsWith('https://'),
+    logo_url: z
+      .string()
+      .regex(
+        /^\/images\/sponsors\/[a-zA-Z0-9_-]+\.(?:webp|png|jpe?g|avif)$/,
+        'Dùng đường dẫn /images/sponsors/ten-logo.webp',
+      )
+      .or(z.literal(''))
+      .nullable()
+      .optional(),
     published: z.boolean(),
   })
   .strict();
@@ -170,7 +186,14 @@ export type News = {
   category: string;
   published: boolean;
 };
-export type Sponsor = { id: string; name: string; tier: string; url: string; published: boolean };
+export type Sponsor = {
+  id: string;
+  name: string;
+  tier: string;
+  url: string;
+  logo_url?: string | null;
+  published: boolean;
+};
 export type Ticket = {
   id: string;
   edition_id: string;
