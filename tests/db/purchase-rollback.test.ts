@@ -17,6 +17,9 @@ it('rolls back only an unused release and preserves common season data; reapplic
     const before = (await db.query('select id,title,year from public.contest_editions order by id'))
       .rows;
     await db.exec(
+      await readFile('supabase/rollbacks/20261014160311_google_sheets_purchase_edits.sql', 'utf8'),
+    );
+    await db.exec(
       await readFile('supabase/rollbacks/20261014120000_supplement_purchases.sql', 'utf8'),
     );
     expect(
@@ -24,6 +27,9 @@ it('rolls back only an unused release and preserves common season data; reapplic
     ).toEqual(before);
     await db.exec(
       await readFile('supabase/migrations/20261014120000_supplement_purchases.sql', 'utf8'),
+    );
+    await db.exec(
+      await readFile('supabase/migrations/20261014160311_google_sheets_purchase_edits.sql', 'utf8'),
     );
     await db.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
     await expect(

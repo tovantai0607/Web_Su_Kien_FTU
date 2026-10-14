@@ -11,6 +11,8 @@ Xác nhận mới nhất ngày14/10/2026 sau gộp Git `8115e0f`: SUPER_ADMIN c�
 
 ## Quy tắc quyết định
 
+Yêu cầu Google Sheets mới ngày14/10/2026 bổ sung ngoại lệ cho quản trị: sửa tất cả cột nghiệp vụ qua bảng Data, giữ tài khoản sở hữu khi đổi email liên hệ. Cho phép giảm số vé chỉ khi không thấp hơn số UUID vé khác nhau đã vote; giữ vé đã vote/phiếu cũ, chỉ vô hiệu vé dư chưa vote trong transaction có audit và kiểm tra quota/revision. Đây không phải API hủy/hoàn tiền của khách. Không áp câu “không thu hồi” bên dưới để chặn ngoại lệ đã chốt này. Đọc [contract và trạng thái triển khai](../../../docs/google-sheets-sync-plan-20261014.md); không coi source/local tests hoặc bảng DEMO là đồng bộ Google–Supabase đã hoạt động. Bảng/thư mục đã hạn chế, website chưa deploy và migration mới chưa áp remote.
+
 - Thực hiện đúng luồng: loại/cụm vé và combo → bảy thông tin người mua → Tiếp tục xem QR → Tiếp tục gửi ảnh minh chứng → Hoàn tất lưu database.
 - Giao diện tách từng bước: xác nhận vé/số lượng/combo mới hiện form thông tin; xác nhận thông tin mới hiện QR; tiếp tục mới hiện upload. Có xem trước và đổi ảnh đã chọn trên máy trước khi bấm Hoàn tất. Không coi chọn ảnh hoặc xác nhận bước đầu là đã lưu đơn/cấp vé.
 - QR và bước minh chứng hiển thị đồng hồ MM:SS nổi bật cho cửa sổ30 phút; đổi bước không khởi động lại. Hết giờ ẩn QR/form và yêu cầu đặt lại. Đơn thật lấy hạn/server_time của database; đồng hồ DEMO chỉ minh họa, không tạo giữ vé thật.

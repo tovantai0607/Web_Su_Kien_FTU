@@ -72,7 +72,7 @@ app.use('/api/*', (c, next) =>
   bodyLimit({
     maxSize:
       c.req.path === '/api/media/upload' ||
-      /^\/api\/purchases\/[a-f0-9-]+\/evidence$/.test(c.req.path)
+      /^\/api\/(?:purchases|admin\/sheets\/purchases)\/[a-f0-9-]+\/evidence$/.test(c.req.path)
         ? 5 * 1024 * 1024
         : 64 * 1024,
     onError: (c) => c.json({ error: 'Tệp hoặc yêu cầu quá lớn.' }, 413),
@@ -295,7 +295,7 @@ app.get('/api/voting/:id', async (c) => {
     .in('id', entries?.map((e) => e.contestant_id) ?? [])
     .eq('published', true);
   dbError(cerr);
-  const [categories, sessions] = await Promise.all([
+  const [categories, sessions, participation] = await Promise.all([
     db
       .from('vote_categories')
       .select('id,round_id,code,name,gender')
@@ -309,9 +309,12 @@ app.get('/api/voting/:id', async (c) => {
       .order('open_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    db.rpc('read_vote_participation', { p_round: id }),
   ]);
   dbError(categories.error);
   dbError(sessions.error);
+  // Preserve the existing rollout until the additive migration is applied.
+  if (participation.error && participation.error.code !== 'PGRST202') dbError(participation.error);
   const eligible = sessions.data
     ? await db
         .from('vote_eligible_contestants')
@@ -324,6 +327,7 @@ app.get('/api/voting/:id', async (c) => {
     contestants,
     categories: categories.data,
     session: sessions.data,
+    participation: participation.data ?? null,
     eligible: eligible.data,
     server_time: new Date().toISOString(),
   });
@@ -883,6 +887,13 @@ export default {
         Promise.resolve(service(env).rpc('expire_sales_holds', { p_limit: 100 })).then(
           ({ error }) => {
             if (error) console.error('Sales hold expiry failed');
+          },
+        ),
+      );
+      ctx.waitUntil(
+        Promise.resolve(service(env).rpc('close_due_vote_sessions', { p_limit: 100 })).then(
+          ({ error }) => {
+            if (error && error.code !== 'PGRST202') console.error('Vote deadline closure failed');
           },
         ),
       );
