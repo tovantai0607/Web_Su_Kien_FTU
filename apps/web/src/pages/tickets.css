@@ -67,7 +67,7 @@
 }
 .sales-summary {
   padding: 28px;
-  background: #fff9;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
 }
@@ -92,7 +92,7 @@
   border: 1px solid var(--rose);
   border-radius: 12px;
   color: var(--rose);
-  background: white;
+  background: var(--surface);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -102,8 +102,8 @@
   font-size: 13px;
 }
 .sales-seat.is-selected {
-  color: white;
-  background: var(--rose);
+  color: var(--ink);
+  background: var(--primary);
 }
 .sales-seat:disabled {
   cursor: default;
@@ -113,7 +113,7 @@
 .sales-seat.seat-unavailable {
   color: var(--muted);
   border-color: var(--border);
-  background: #e7e2ed;
+  background: var(--section);
   text-decoration: line-through;
 }
 .sales-total {
@@ -160,12 +160,12 @@
 }
 
 .cinema-seat-map {
-  color: #eef1f8;
-  background: #131b2c;
-  border: 1px solid #273550;
+  color: #f8eeee;
+  background: #2c1314;
+  border: 1px solid #502728;
   border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 18px 38px #232a4314;
+  box-shadow: 0 18px 38px #43232414;
 }
 .cinema-map-heading {
   display: flex;
@@ -181,7 +181,7 @@
 }
 .cinema-map-heading p,
 .cinema-scroll-hint {
-  color: #c4cedf;
+  color: #dfc4c5;
   font-size: 12px;
   line-height: 1.7;
 }
@@ -195,9 +195,9 @@
   height: 44px;
   display: grid;
   place-items: center;
-  color: #eff3fa;
-  background: #26334c;
-  border: 1px solid #52617b;
+  color: #faefef;
+  background: #4c2627;
+  border: 1px solid #7b5253;
   border-radius: 10px;
   cursor: pointer;
 }
@@ -237,7 +237,7 @@
 }
 .cinema-tier strong {
   font-weight: 500;
-  color: #d0daeb;
+  color: #ebd0d1;
 }
 .cinema-scroll-hint {
   margin-bottom: 20px;
@@ -246,7 +246,7 @@
   max-width: 100%;
   overflow: auto;
   padding-block: 4px 20px;
-  scrollbar-color: #8190ac #202e46;
+  scrollbar-color: #ac8182 #462021;
   scrollbar-width: thin;
 }
 .cinema-hall {
@@ -266,14 +266,14 @@
   height: 75px;
 }
 .cinema-stage path {
-  fill: #1d2941;
-  stroke: #b4c2db;
+  fill: #411d1e;
+  stroke: #dbb4b5;
   stroke-width: 1.3;
 }
 .cinema-stage > span {
   position: absolute;
   inset: 27px 0 auto;
-  color: #f4f6fb;
+  color: #fbf4f4;
   text-align: center;
   font-size: 17px;
   letter-spacing: 1px;
@@ -282,7 +282,7 @@
   display: flex;
   justify-content: space-around;
   margin: 0 26px 18px;
-  color: #aebed4;
+  color: #d4aeaf;
   font-size: 11px;
 }
 .cinema-row {
@@ -298,7 +298,7 @@
   text-align: center;
   font-size: 12px;
   font-weight: 600;
-  color: #c4cedf;
+  color: #dfc4c5;
 }
 .cinema-row-seats {
   display: flex;
@@ -329,7 +329,7 @@
   border-radius: 7px 7px 5px 5px;
   border-color: var(--tier-color);
   color: var(--tier-color);
-  background: #202a3d;
+  background: #3d2021;
   font-size: var(--seat-font-size);
   overflow: hidden;
   font-variant-numeric: tabular-nums;
@@ -338,7 +338,7 @@
   background: #342e26;
 }
 .cinema-seat.tier-2 {
-  background: #233540;
+  background: #402324;
 }
 .cinema-chair {
   position: absolute;
@@ -358,9 +358,9 @@
   line-height: 1.2;
 }
 .cinema-seat.is-selected {
-  color: #24192e;
-  background: #eeb6d7;
-  border-color: #ffe1f3;
+  color: #2e191a;
+  background: #eeb6b8;
+  border-color: #fae6e7;
 }
 .cinema-seat-check {
   position: absolute;
@@ -368,16 +368,16 @@
   top: 2px;
 }
 .cinema-seat.seat-held {
-  color: #b5c1d8;
-  background: #3b465f;
-  border-color: #8b9cb8;
+  color: #d8b5b6;
+  background: #5f3b3c;
+  border-color: #b88b8c;
   text-decoration: none;
 }
 .cinema-seat.seat-sold,
 .cinema-seat.seat-unavailable {
-  color: #a0abc0;
-  background: #1b2639;
-  border-color: #4a5872;
+  color: #c0a0a1;
+  background: #391b1c;
+  border-color: #724a4b;
 }
 .cinema-seat.seat-sold .cinema-seat-number,
 .cinema-seat.seat-unavailable .cinema-seat-number {
@@ -395,9 +395,9 @@
 .cinema-cross-aisle {
   margin-block: 22px;
   text-align: center;
-  color: #aebed4;
+  color: #d4aeaf;
   font-size: 11px;
-  border-block: 1px dashed #43516a;
+  border-block: 1px dashed #6a4344;
   padding-block: 6px;
 }
 .cinema-exits {
@@ -412,7 +412,7 @@
   flex-wrap: wrap;
   gap: 12px 20px;
   padding-block: 18px;
-  border-block: 1px solid #3a4761;
+  border-block: 1px solid #613a3b;
   font-size: 12px;
 }
 .cinema-state-key span {
@@ -424,27 +424,27 @@
   width: 13px;
   height: 13px;
   border-radius: 3px;
-  border: 1px solid #a9b4c8;
+  border: 1px solid #c8a9aa;
 }
 .cinema-state-key .key-free {
   background: #342e26;
   border-color: #f6ce7e;
 }
 .cinema-state-key .key-selected {
-  background: #eeb6d7;
+  background: #eeb6b8;
 }
 .cinema-state-key .key-held {
-  background: #627392;
+  background: #926264;
 }
 .cinema-state-key .key-sold {
-  background: #233047;
+  background: #472324;
 }
 .cinema-availability {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 24px;
   margin-top: 14px;
-  color: #c4cedf;
+  color: #dfc4c5;
   font-size: 12px;
 }
 .cinema-availability p {

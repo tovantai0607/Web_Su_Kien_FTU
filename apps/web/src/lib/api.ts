@@ -3,7 +3,8 @@ import {
   demoEdition,
   demoTimeline,
   demoContestants,
-  demoNews,
+  demoFinalRound,
+  demoVoting,
   demoSalesCatalog,
   type Edition,
 } from '@ftu/shared';
@@ -39,15 +40,13 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       '/editions': [demoEdition],
       '/timeline': demoTimeline,
       '/contestants': demoContestants,
-      '/news': demoNews,
-      '/rounds': [],
+      '/rounds': [demoFinalRound],
       '/sponsors': [],
     };
     if (route in fixtures) return fixtures[route] as T;
+    if (route === '/voting/' + demoFinalRound.id) return demoVoting() as T;
     if (route.startsWith('/contestants/'))
       return (demoContestants.find((s) => s.slug === route.split('/').at(-1)) ?? null) as T;
-    if (route.startsWith('/news/'))
-      return (demoNews.find((s) => s.slug === route.split('/').at(-1)) ?? null) as T;
   }
   if (preview && options.method && options.method !== 'GET')
     throw new Error('Bản xem trước không lưu hồ sơ hoặc phiếu bầu.');

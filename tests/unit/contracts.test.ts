@@ -11,6 +11,10 @@ describe('contracts & safety', () => {
       email: 'test@example.com',
       phone: '0912345678',
       faculty: 'Kinh tế',
+      cohort: 'K63',
+      class_name: 'Anh 1',
+      height_cm: 168,
+      gender: 'female',
       bio: 'Một câu chuyện có đầy đủ ba mươi ký tự.',
       talents: '',
       media_ids: [

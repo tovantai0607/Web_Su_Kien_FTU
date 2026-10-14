@@ -5,12 +5,12 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import {
   applicationSchema,
+  contestantAdminSchema,
   voteSchema,
   reviewSchema,
   editionSchema,
   roundSchema,
   timelineSchema,
-  newsSchema,
   sponsorSchema,
   profileUpdateSchema,
   checkinSchema,
@@ -19,7 +19,8 @@ import {
   demoEdition,
   demoTimeline,
   demoContestants,
-  demoNews,
+  demoFinalRound,
+  demoVoting,
   demoSalesCatalog,
   salesHoldSchema,
 } from '@ftu/shared';
@@ -39,7 +40,7 @@ import { sendOutbox } from './outbox';
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export const app = new Hono<AppEnv>();
 const publicFields =
-  'id,edition_id,slug,display_name,number,faculty,bio,talents,stage,photo_url,published';
+  'id,edition_id,slug,display_name,number,cohort,class_name,height_cm,gender,faculty,bio,talents,stage,photo_url,published';
 app.use(
   '*',
   secureHeaders({
@@ -106,6 +107,23 @@ function dbError(error: { message: string; code?: string } | null) {
     INVALID_MEDIA: [400, 'Ảnh hồ sơ không hợp lệ.'],
     INVALID_STUDENT_CARD: [400, 'Cần ảnh thẻ sinh viên FTU hợp lệ, thuộc hồ sơ của bạn.'],
     VOTE_CLOSED: [409, 'Bình chọn chưa mở hoặc đã kết thúc.'],
+    VOTING_CATEGORY_REQUIRED: [
+      400,
+      'Vui lòng chọn hạng mục nam hoặc nữ và tải lại lượt bình chọn.',
+    ],
+    CONTESTANT_CATEGORY_MISMATCH: [400, 'Thí sinh không thuộc hạng mục đã chọn.'],
+    VOTING_NOT_CONFIGURED: [
+      409,
+      'Cần công bố ít nhất một thí sinh hợp lệ cho mỗi hạng mục nam và nữ.',
+    ],
+    LEGACY_VOTE_RECONCILIATION_REQUIRED: [
+      409,
+      'Vé có phiếu cũ cần BTC đối soát trước khi tiếp tục.',
+    ],
+    LEGACY_TICKET_MAPPING_REQUIRED: [
+      409,
+      'Vé cần được BTC liên kết với sự kiện trước khi bình chọn.',
+    ],
     TICKET_NOT_ELIGIBLE: [403, 'Vé chưa check-in hoặc không thuộc tài khoản của bạn.'],
     CONTESTANT_NOT_ELIGIBLE: [409, 'Thí sinh không thuộc lượt bình chọn này.'],
     ALREADY_VOTED: [409, 'Vé này đã bình chọn.'],
@@ -193,9 +211,8 @@ app.get('/api/editions/current', async (c) => {
 });
 for (const [path, table, fixture] of [
   ['timeline', 'timeline_events', demoTimeline],
-  ['news', 'news_posts', demoNews],
   ['sponsors', 'sponsors', []],
-  ['rounds', 'contest_rounds', []],
+  ['rounds', 'contest_rounds', [demoFinalRound]],
 ] as const) {
   app.get('/api/' + path, async (c) => {
     if (demo(c)) return ok(c, fixture);
@@ -208,21 +225,6 @@ for (const [path, table, fixture] of [
     return ok(c, data);
   });
 }
-app.get('/api/news/:slug', async (c) => {
-  if (demo(c)) return ok(c, demoNews.find((n) => n.slug === c.req.param('slug')) ?? null);
-  const edition = await publicEdition(c);
-  if (!edition) return ok(c, null);
-  const { data, error } = await readClient(c.env)
-    .from('news_posts')
-    .select('*')
-    .eq('published', true)
-    .eq('slug', c.req.param('slug'))
-    .eq('edition_id', edition)
-    .limit(1)
-    .maybeSingle();
-  dbError(error);
-  return ok(c, data);
-});
 app.get('/api/contestants', async (c) => {
   if (demo(c)) return ok(c, demoContestants);
   let q = readClient(c.env)
@@ -255,8 +257,7 @@ app.get('/api/contestants/:slug', async (c) => {
 });
 app.get('/api/voting/:id', async (c) => {
   const id = rowId(c);
-  if (demo(c))
-    return ok(c, { round: null, contestants: [], server_time: new Date().toISOString() });
+  if (demo(c)) return ok(c, demoVoting());
   const db = readClient(c.env);
   const { data: round, error } = await db
     .from('contest_rounds')
@@ -279,7 +280,38 @@ app.get('/api/voting/:id', async (c) => {
     .in('id', entries?.map((e) => e.contestant_id) ?? [])
     .eq('published', true);
   dbError(cerr);
-  return ok(c, { round, contestants, server_time: new Date().toISOString() });
+  const [categories, sessions] = await Promise.all([
+    db
+      .from('vote_categories')
+      .select('id,round_id,code,name,gender')
+      .eq('round_id', id)
+      .order('code'),
+    db
+      .from('vote_sessions')
+      .select('id,round_id,state,open_at,close_at')
+      .eq('round_id', id)
+      .eq('published', true)
+      .order('open_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  dbError(categories.error);
+  dbError(sessions.error);
+  const eligible = sessions.data
+    ? await db
+        .from('vote_eligible_contestants')
+        .select('category_id,contestant_id')
+        .eq('session_id', sessions.data.id)
+    : { data: [], error: null };
+  dbError(eligible.error);
+  return ok(c, {
+    round,
+    contestants,
+    categories: categories.data,
+    session: sessions.data,
+    eligible: eligible.data,
+    server_time: new Date().toISOString(),
+  });
 });
 // Authenticate all private endpoints. Roles come from DB, never user_metadata or the request body.
 for (const path of [
@@ -391,13 +423,19 @@ app.post('/api/contestants/apply', async (c) => {
 });
 app.post('/api/votes', async (c) => {
   const input = await parse(c, voteSchema);
+  if (!!input.category_id !== !!input.session_id)
+    throw new HTTPException(400, { message: 'Thiếu hạng mục hoặc lượt bình chọn.' });
   await verifyTurnstile(input.turnstile_token, c.env, 'vote', c.req.header('CF-Connecting-IP'));
-  const { data, error } = await service(c.env).rpc('cast_vote', {
-    p_user: c.get('principal').id,
-    p_round: input.round_id,
-    p_ticket: input.ticket_id,
-    p_contestant: input.contestant_id,
-  });
+  const { data, error } = await service(c.env).rpc(
+    input.category_id ? 'cast_category_vote' : 'cast_vote',
+    {
+      p_user: c.get('principal').id,
+      p_round: input.round_id,
+      p_ticket: input.ticket_id,
+      p_contestant: input.contestant_id,
+      ...(input.category_id ? { p_category: input.category_id, p_session: input.session_id } : {}),
+    },
+  );
   dbError(error);
   return ok(c, data);
 });
@@ -406,7 +444,7 @@ app.get('/api/me/application', async (c) => {
   const { data, error } = await db
     .from('contestant_private')
     .select(
-      'id,code,status,note,created_at,full_name,email,phone,contestants!contestant_private_id_fkey(faculty,bio,talents)',
+      'id,code,status,note,created_at,full_name,email,phone,contestants!contestant_private_id_fkey(faculty,bio,talents,cohort,class_name,height_cm,gender)',
     )
     .eq('user_id', c.get('principal').id)
     .order('created_at', { ascending: false });
@@ -434,7 +472,7 @@ app.get('/api/me/tickets', async (c) => {
 app.get('/api/me/votes', async (c) => {
   const { data, error } = await service(c.env)
     .from('votes')
-    .select('id,round_id,ticket_id,contestant_id')
+    .select('id,round_id,ticket_id,contestant_id,category_id,session_id')
     .eq('user_id', c.get('principal').id);
   dbError(error);
   return ok(c, data);
@@ -573,7 +611,7 @@ app.get('/api/admin/applications', async (c) => {
   let q = service(c.env)
     .from('contestant_private')
     .select(
-      '*,contestants!contestant_private_id_fkey(faculty,bio,talents,contestant_media(media_id,kind))',
+      '*,contestants!contestant_private_id_fkey(faculty,bio,talents,cohort,class_name,height_cm,gender,number,contestant_media(media_id,kind))',
       { count: 'exact' },
     )
     .order('created_at', { ascending: false })
@@ -584,6 +622,38 @@ app.get('/api/admin/applications', async (c) => {
   const { data, error, count } = await q;
   dbError(error);
   return ok(c, { items: data, total: count });
+});
+app.get('/api/admin/contestant-profiles', async (c) => {
+  await authorize(c.get('principal'), c.env, ['CONTEST_REVIEWER']);
+  const { data, error } = await service(c.env)
+    .from('contestants')
+    .select(publicFields)
+    .order('created_at', { ascending: false })
+    .limit(1000);
+  dbError(error);
+  return ok(c, data);
+});
+app.patch('/api/admin/contestant-profiles/:id', async (c) => {
+  const input = await parse(c, contestantAdminSchema);
+  const p = c.get('principal');
+  const { data, error } = await service(c.env).rpc('update_contestant_details', {
+    p_actor: p.id,
+    p_aal: p.aal,
+    p_id: rowId(c),
+    p_data: input,
+  });
+  dbError(error);
+  return ok(c, data);
+});
+app.post('/api/admin/rounds/:id/prepare-categories', async (c) => {
+  const p = c.get('principal');
+  const { data, error } = await service(c.env).rpc('prepare_gender_voting', {
+    p_actor: p.id,
+    p_aal: p.aal,
+    p_round: rowId(c),
+  });
+  dbError(error);
+  return ok(c, data);
 });
 app.patch('/api/admin/applications/:id/review', async (c) => {
   const input = await parse(c, reviewSchema);
@@ -601,7 +671,6 @@ const resources = [
   ['editions', 'contest_editions', editionSchema, 'CONTENT_EDITOR'],
   ['rounds', 'contest_rounds', roundSchema, 'VOTE_MANAGER'],
   ['timeline', 'timeline_events', timelineSchema, 'CONTENT_EDITOR'],
-  ['news', 'news_posts', newsSchema, 'CONTENT_EDITOR'],
   ['sponsors', 'sponsors', sponsorSchema, 'CONTENT_EDITOR'],
 ] as const;
 for (const [name, table, schema, role] of resources) {

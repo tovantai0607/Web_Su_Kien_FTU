@@ -1,23 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import {
-  Crown,
-  Menu,
-  X,
-  ArrowUpRight,
-  ArrowUp,
-  Camera,
-  MessageCircle,
-  Pause,
-  Play,
-} from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowUp, Camera, MessageCircle, Pause, Play } from 'lucide-react';
 import { Button, Spinner } from '@ftu/ui';
 import { preview } from './lib/api';
 import Home from './pages/Home';
 import { useAuth } from './lib/auth';
 import { MotionPage } from './components/Motion';
 import { officialFacebook } from './config/site-content';
-import { InterfaceMotion } from './components/interface/MotionSystem';
+import { InterfaceMotion, useSystemReducedMotion } from './components/interface/MotionSystem';
 const PublicPages = lazy(() => import('./pages/PublicPages'));
 const Registration = lazy(() => import('./pages/Registration'));
 const Account = lazy(() => import('./pages/Account'));
@@ -36,7 +26,6 @@ function ScrollReset() {
       '/ve': 'Thông tin vé',
       '/timeline': 'Hành trình',
       '/gioi-thieu': 'Về FTUCharm',
-      '/tin-tuc': 'Tin tức',
       '/thu-vien': 'Thư viện',
       '/nha-tai-tro': 'Nhà tài trợ',
       '/tai-khoan/dang-nhap': 'Đăng nhập',
@@ -46,21 +35,52 @@ function ScrollReset() {
       '/tai-khoan/ho-so': 'Tài khoản',
       '/admin': 'Quản trị',
     };
-    document.title = `${title[pathname] ?? 'Khám phá'} • FTUCharm`;
+    document.title = `${title[pathname] ?? 'Khám phá'} • FTUCharm (2027)`;
   }, [pathname]);
   return null;
 }
 export default function App() {
   const [menu, setMenu] = useState(false);
-  const [motionPaused, setMotionPaused] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [allowMotion, setAllowMotion] = useState(() => {
+    try {
+      return localStorage.getItem('ftucharm-motion-override') === 'on';
+    } catch {
+      return false;
+    }
+  });
+  const reduced = useSystemReducedMotion();
+  const motionPaused = paused || (reduced && !allowMotion);
+  const toggleMotion = () => {
+    const override = motionPaused && reduced;
+    setPaused(!motionPaused);
+    setAllowMotion(override);
+    try {
+      if (override) localStorage.setItem('ftucharm-motion-override', 'on');
+      else localStorage.removeItem('ftucharm-motion-override');
+    } catch {
+      /* The control also works when browser storage is unavailable. */
+    }
+  };
   const location = useLocation();
+  useEffect(() => {
+    const syncMotion = (event: StorageEvent) => {
+      if (event.key === 'ftucharm-motion-override' || event.key === null) {
+        setAllowMotion(event.newValue === 'on');
+        setPaused(false);
+      }
+    };
+    window.addEventListener('storage', syncMotion);
+    return () => window.removeEventListener('storage', syncMotion);
+  }, []);
   const { user } = useAuth();
   useEffect(() => setMenu(false), [location.pathname]);
   useEffect(() => {
     document.documentElement.dataset.motion = motionPaused ? 'off' : 'on';
-  }, [motionPaused]);
+    document.documentElement.dataset.motionOverride = allowMotion ? 'on' : 'off';
+  }, [motionPaused, allowMotion]);
   return (
-    <InterfaceMotion paused={motionPaused}>
+    <InterfaceMotion paused={motionPaused} allowMotion={allowMotion}>
       <ScrollReset />
       <div className="reading-progress" aria-hidden="true" />
       <a className="skip-link" href="#main">
@@ -69,7 +89,13 @@ export default function App() {
       {preview && <div className="preview-bar">Bản xem trước · Chưa nhận đăng ký thật</div>}
       <header className="site-header">
         <Link to="/" className="brand" aria-label="FTUCharm, trang chủ">
-          <Crown size={27} strokeWidth={1.3} />
+          <img
+            className="brand-logo"
+            src="/images/ftucharm-logo-transparent.webp"
+            width="48"
+            height="44"
+            alt=""
+          />
           <span>
             ftu<span className="brand-italic">charm</span>
           </span>
@@ -87,7 +113,6 @@ export default function App() {
           <NavLink to="/thi-sinh">Thí sinh</NavLink>
           <NavLink to="/ve">Vé</NavLink>
           <NavLink to="/binh-chon">Bình chọn</NavLink>
-          <NavLink to="/tin-tuc">Tin tức</NavLink>
         </nav>
         <div className="header-actions">
           <Link className="account-link" to={user ? '/tai-khoan/ho-so' : '/tai-khoan/dang-nhap'}>
@@ -112,6 +137,14 @@ export default function App() {
           </button>
         </div>
       </header>
+      {reduced && motionPaused && (
+        <aside className="motion-notice" aria-label="Tùy chọn chuyển động">
+          <span>Trình duyệt đang yêu cầu giảm chuyển động.</span>
+          <button type="button" onClick={toggleMotion}>
+            Bật hiệu ứng cho trang này
+          </button>
+        </aside>
+      )}
       <main id="main" tabIndex={-1}>
         <MotionPage key={location.pathname}>
           <Suspense
@@ -149,7 +182,6 @@ export default function App() {
             <h3>Đồng hành</h3>
             <Link to="/ve">Thông tin vé</Link>
             <Link to="/nha-tai-tro">Nhà tài trợ</Link>
-            <Link to="/tin-tuc">Tin tức</Link>
           </div>
           <div>
             <h3>Kết nối</h3>
@@ -191,11 +223,7 @@ export default function App() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} FTUCharm • Duyên dáng Ngoại thương</span>
           <div>
-            <button
-              className="motion-toggle"
-              onClick={() => setMotionPaused(!motionPaused)}
-              aria-pressed={motionPaused}
-            >
+            <button className="motion-toggle" onClick={toggleMotion} aria-pressed={motionPaused}>
               {motionPaused ? <Play size={14} /> : <Pause size={14} />}{' '}
               {motionPaused ? 'Bật chuyển động' : 'Dừng chuyển động'}
             </button>
@@ -211,10 +239,7 @@ export default function App() {
         onClick={() =>
           window.scrollTo({
             top: 0,
-            behavior:
-              motionPaused || matchMedia('(prefers-reduced-motion: reduce)').matches
-                ? 'instant'
-                : 'smooth',
+            behavior: motionPaused ? 'instant' : 'smooth',
           })
         }
       >

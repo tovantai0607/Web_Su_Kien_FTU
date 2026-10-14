@@ -242,15 +242,13 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
     await db.query('select public.admin_save($1,$2,$3,$4,$5)', [
       admin,
       'aal2',
-      'news_posts',
+      'timeline_events',
       id,
       {
         edition_id: edition,
         title: 'Test title',
-        slug: 'test-news',
-        excerpt: 'Excerpt',
-        body: 'Plain text content',
-        category: 'Test',
+        description: 'Test timeline',
+        position: 42,
         published: false,
       },
     ]);

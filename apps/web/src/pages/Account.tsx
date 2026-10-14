@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import AuthForm from '../components/AuthForm';
 import AccountSecurity from '../components/AccountSecurity';
+import type { Contestant } from '@ftu/shared';
 function Profile() {
   const { user } = useAuth();
   const [error, setError] = useState('');
@@ -20,7 +21,10 @@ function Profile() {
           full_name: string;
           status: string;
           note: string | null;
-          contestants: { faculty: string; bio: string; talents: string };
+          contestants: Pick<
+            Contestant,
+            'faculty' | 'bio' | 'talents' | 'cohort' | 'class_name' | 'height_cm' | 'gender'
+          >;
         }[]
       >('/me/application'),
   });
@@ -32,6 +36,7 @@ function Profile() {
     [bio, setBio] = useState(''),
     [faculty, setFaculty] = useState(''),
     [talents, setTalents] = useState('');
+  const [details, setDetails] = useState({ cohort: '', class_name: '', height_cm: '', gender: '' });
   const labels: Record<string, string> = {
     pending: 'Chờ duyệt',
     approved: 'Đã duyệt',
@@ -66,6 +71,12 @@ function Profile() {
                       setBio(a.contestants.bio);
                       setFaculty(a.contestants.faculty);
                       setTalents(a.contestants.talents);
+                      setDetails({
+                        cohort: a.contestants.cohort ?? '',
+                        class_name: a.contestants.class_name ?? '',
+                        height_cm: String(a.contestants.height_cm ?? ''),
+                        gender: a.contestants.gender ?? '',
+                      });
                     }}
                   >
                     Bổ sung hồ sơ
@@ -77,7 +88,13 @@ function Profile() {
                         try {
                           await api('/me/application/' + a.id, {
                             method: 'PATCH',
-                            body: JSON.stringify({ bio, faculty, talents }),
+                            body: JSON.stringify({
+                              bio,
+                              faculty,
+                              talents,
+                              ...details,
+                              height_cm: Number(details.height_cm),
+                            }),
                           });
                           setEditing(null);
                           void q.refetch();
@@ -88,6 +105,45 @@ function Profile() {
                     >
                       <Field label="Khoa">
                         <Input value={faculty} onChange={(e) => setFaculty(e.target.value)} />
+                      </Field>
+                      <Field label="Khóa">
+                        <Input
+                          required
+                          value={details.cohort}
+                          onChange={(e) => setDetails((d) => ({ ...d, cohort: e.target.value }))}
+                        />
+                      </Field>
+                      <Field label="Lớp">
+                        <Input
+                          required
+                          value={details.class_name}
+                          onChange={(e) =>
+                            setDetails((d) => ({ ...d, class_name: e.target.value }))
+                          }
+                        />
+                      </Field>
+                      <Field label="Chiều cao (cm)">
+                        <Input
+                          required
+                          type="number"
+                          min="100"
+                          max="250"
+                          step="0.1"
+                          value={details.height_cm}
+                          onChange={(e) => setDetails((d) => ({ ...d, height_cm: e.target.value }))}
+                        />
+                      </Field>
+                      <Field label="Hạng mục dự thi">
+                        <select
+                          required
+                          className="input"
+                          value={details.gender}
+                          onChange={(e) => setDetails((d) => ({ ...d, gender: e.target.value }))}
+                        >
+                          <option value="">Chọn hạng mục</option>
+                          <option value="male">Nam</option>
+                          <option value="female">Nữ</option>
+                        </select>
                       </Field>
                       <Field label="Giới thiệu">
                         <textarea
