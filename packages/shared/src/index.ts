@@ -193,6 +193,7 @@ export type Sponsor = {
   published: boolean;
 };
 export type Ticket = {
+  ticket_code?: string | null;
   id: string;
   edition_id: string;
   round_id: string;
@@ -340,3 +341,4 @@ export function demoVoting(): VotingData {
     server_time: new Date().toISOString(),
   };
 }
+export * from './purchases';

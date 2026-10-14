@@ -1,5 +1,9 @@
 # API contracts
 
+Contract hiện hành, quyền và DTO của luồng bổ sung ở [nghiệm thu](supplement-acceptance.md). Luồng mua dùng purchase-catalog/purchases/private evidence và shared tickets/votes; năm2027, quota30 phút, không cap10, không check-in/provider/email vé tự động. Xem [runbook](supplement-runbook.md) và Word11/11 cho bàn giao local/DEMO.
+
+Phần dưới là API chọn ghế và contract lịch sử giữ tương thích, không là nghiệm thu mới.
+
 ## Catalog và giữ ghế giai đoạn 03
 
 `GET /api/events` và `/api/events/:identifier` (UUID hoặc slug, optional `edition=UUID`) trả `{data:{server_time,events}}`. Chỉ event thuộc mùa/vòng published; xem detail được trước/sau giờ bán. Có categories/giá/tồn kho, detail thêm seat states; không trả holder/hash. Clock/quyền giữ ghế do server quyết định.

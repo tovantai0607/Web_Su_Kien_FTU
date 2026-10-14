@@ -21,4 +21,27 @@
   "ratelimits": [
     { "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
   ],
+  // Run with --env demo-test --local. Images and MEDIA stay on this computer;
+  // Supabase writes are real and restricted to the user-approved DEMO workflow.
+  "env": {
+    "demo-test": {
+      "name": "ftucharm-demo-test-local",
+      "main": "src/demo-test.ts",
+      "vars": {
+        "DEMO_MODE": "false",
+        "DEMO_TEST_OFFER_SLUG": "test-giao-dich-demo",
+        "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
+        "SUPABASE_URL": "https://ifgtyslifgegwcguysbb.supabase.co",
+        "SUPABASE_JWKS_URL": "https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json",
+      },
+      "images": { "binding": "IMAGES", "remote": false },
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "ftu-demo-proof-local", "remote": false },
+      ],
+      "ratelimits": [
+        { "name": "RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 20, "period": 60 } },
+      ],
+      "triggers": { "crons": [] },
+    },
+  },
 }

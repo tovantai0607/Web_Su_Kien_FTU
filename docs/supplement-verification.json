@@ -1,0 +1,190 @@
+{
+  "date": "2026-10-14",
+  "season": 2027,
+  "scope": "local DEMO acceptance only; no remote database migrations/deploy/load/email/payment",
+  "unit_tests": 133,
+  "unit_tests_passed": 133,
+  "native_opt_in_default": "skipped; run separately and passed",
+  "native": "20-connection quota/completion/vote races; expiry after lock; desktop/mobile checkout->injected failure->retry->vote; admin six columns/private proof/stats",
+  "e2e_tests_passed": 46,
+  "load": [
+    {
+      "users": 500,
+      "duration_ms": 123970.70719999999,
+      "think_ms": 4000,
+      "ramp_ms": 10000,
+      "journeys": {
+        "read": 10196,
+        "purchase": 2905,
+        "vote": 1456
+      },
+      "requests": 20367,
+      "errors": 0,
+      "errorSamples": [],
+      "error_rate": 0,
+      "p95_ms": 14.479400000011083,
+      "p99_ms": 34.543799999999464,
+      "pool_max": 20,
+      "max_pool_waiting": 0
+    },
+    {
+      "users": 1000,
+      "duration_ms": 124002.25720000002,
+      "think_ms": 4000,
+      "ramp_ms": 10000,
+      "journeys": {
+        "read": 20396,
+        "purchase": 5778,
+        "vote": 2912
+      },
+      "requests": 40642,
+      "errors": 0,
+      "errorSamples": [],
+      "error_rate": 0,
+      "p95_ms": 41.264200000005076,
+      "p99_ms": 111.26010000001406,
+      "pool_max": 20,
+      "max_pool_waiting": 38
+    }
+  ],
+  "invariants": {
+    "oversold": "0",
+    "duplicate_codes": "0",
+    "duplicate_votes": "0",
+    "mismatched_tickets": "0"
+  },
+  "postgres_stats": {
+    "deadlocks": "0",
+    "xact_commit": "88466",
+    "xact_rollback": "20"
+  },
+  "sold_counter_consistency": {
+    "mismatches": 0
+  },
+  "source_sha256": {
+    "apps/api/src/purchases.ts": "baa03ecf5cb2cfac6f0b5fb7fb037d0346a6a49455de99a33f83a7cbe205b4e6",
+    "apps/api/src/index.ts": "d5d21706a3aa295bce75865fdf158eea8fe6d7d8f1f45bf0d816d141eb79c568",
+    "apps/web/src/pages/PurchaseTickets.tsx": "db8adb0a761caaf35875e76e1dc1f430cda8345af2914f4ed9e5c2a1d7da2f93",
+    "packages/shared/src/purchases.ts": "a41fa79d4d0e1fce51eaab040072c6d27813cc0b980e0dbf0b8ba48be699055d",
+    "supabase/migrations/20261014120000_supplement_purchases.sql": "30d1ebeae330deb381138e3992ada9a082f99b9dc4cc2dba6ba72ea244619849",
+    "supabase/rollbacks/20261014120000_supplement_purchases.sql": "292de219128bc2580199033eb74a53e6313b7c6ea5840341ae60fe1b98150248"
+  },
+  "limitations": [
+    "mocked Auth/JWKS/captcha; local sharp/R2 adapter",
+    "Hono in Node local HTTP harness, not Cloudflare online runtime",
+    "official BTC price/quota/QR/venue/time/final date configured before real sales"
+  ],
+  "decisions": {
+    "statistics_image": "illustrative; omit Đêm when absent from actual data",
+    "hold_minutes": 30,
+    "order_limit": "remaining quota only",
+    "season": 2027
+  },
+  "progress": {
+    "completed": 11,
+    "total": 11,
+    "scope": "local/DEMO acceptance"
+  },
+  "checks": {
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "passed; pre-existing stageScene chunk warning",
+    "worker_bundle": "Wrangler4.150.0 dry-run passed using isolated no-secret QA config",
+    "format_and_diff": "passed",
+    "skill_validation": "passed",
+    "word": "6 pages rendered and visually inspected; 11 checked controls preserved"
+  },
+  "progress_sha256": "8f93a1aff1b5aac804389173a1d02f7aebf9750609a9726d36c851324a0f9103",
+  "remote_database": {
+    "project_id": "ifgtyslifgegwcguysbb",
+    "checked_at": "2026-10-14T17:55:40.330607+07:00",
+    "report": "docs/supabase-sync-20261014.md",
+    "evidence": "docs/supabase-sync-verification.json",
+    "migrations": 9,
+    "public_tables": 44,
+    "schema_matches_local": true,
+    "history_matches_local": true,
+    "auth_accounts": 0,
+    "load_test_online": false,
+    "worker_deployed": false
+  },
+  "source_sha256_scope": "Original acceptance snapshot; subsequent UI revision recorded separately below.",
+  "checkout_ui_revision": {
+    "date": "2026-10-14",
+    "report": "docs/checkout-steps-20261014.md",
+    "steps": [
+      "selection confirmation",
+      "buyer confirmation",
+      "QR",
+      "proof selection/replacement",
+      "server completion"
+    ],
+    "photo_replacement": "local file before first completion submission; server-received proof stays immutable",
+    "checks": {
+      "typecheck": "passed",
+      "lint": "passed",
+      "preview_build": "passed",
+      "format_and_diff": "passed",
+      "e2e": "43 passed initially; 3 timeout cases rerun sequentially and passed",
+      "native_postgres": "passed; latest selected image verified by stored WebP pixels",
+      "browser_1280_390": "passed; no API writes, JS errors or horizontal overflow"
+    },
+    "remote_database_changes": false,
+    "source_sha256": {
+      "apps/web/src/pages/PurchaseTickets.tsx": "478722990b3d9c2bbba8b81b40da5eef7b7464d8bc83c1ef6bc746838bfe5890",
+      "apps/web/src/pages/purchases.css": "76296e21a72d8152af0571358d2054ed724b70ef881ebd0f80717246d9be9a8d",
+      "tests/e2e/site.spec.ts": "a04b873c25322304c076d404f9bd423d924ea228d819229faa1878d2670a03b9",
+      "tests/db/native-purchases.test.ts": "7507ef6c80cba49a6acd8d60aed428d3d9bb4b12af0b991bb729b9f9354fd441"
+    }
+  },
+  "countdown_ui_revision": {
+    "date": "2026-10-14",
+    "report": "docs/checkout-steps-20261014.md",
+    "deadline_minutes": 30,
+    "live_deadline_source": "existing expires_at and server_time; no database change",
+    "demo_countdown": "illustrative only; no real reservation",
+    "tests": "4 targeted desktop/mobile E2E passed; 5-second countdown, no reset between steps, 30-minute expiry and reorder",
+    "source_sha256": {
+      "apps/web/src/pages/PurchaseTickets.tsx": "4b958afbad8d70e8dba46646e353899ef8da4f7f590ed6bf28d38a969e4d347d",
+      "apps/web/src/pages/purchases.css": "1e7be06719b39e861ed70867677bbab08025679f9fc72513c5601da34d4e3a0f",
+      "tests/e2e/site.spec.ts": "67998960c4a08b4878ebd7526d14dd234939ba90e3f6ab48bde3c24a08abca09"
+    }
+  },
+  "price_configuration_revision": {
+    "report": "docs/ticket-sales-demo-verification.json",
+    "mode": "DEMO",
+    "unit_vnd": 100000,
+    "real_supabase_write": true,
+    "tests_passed": 143,
+    "native_skipped": 1,
+    "live_published": false,
+    "image_storage": "R2 local"
+  },
+  "git_sync_customer_revision": {
+    "date": "2026-10-14",
+    "report": "docs/git-sync-admin-customers-20261014.md",
+    "branch": "web_ftu",
+    "upstream_commit": "8115e0f27d051872d4e3f30eda38f3cbc3c999ff",
+    "tests_passed": 180,
+    "native_skipped": 1,
+    "auth_admin_e2e_passed": 10,
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "passed; existing large Three chunk warning",
+    "database_migrations_applied_this_turn": false,
+    "admin_role_changed": false,
+    "named_admin_login_tested": false,
+    "image_storage": "R2 local",
+    "skill_validation": "YAML and metadata checked with js-yaml; Python script blocked by missing PyYAML",
+    "source_sha256": {
+      "apps/web/src/pages/PurchaseCustomers.tsx": "f3aca68551f5edb3bd073985a3cc973e6e6caad6d7f36805e64e4b4eb38fb84f",
+      "apps/web/src/pages/Admin.tsx": "746dba4dff25a012c8e4fc091551cced15cb579d4ddf0eb797254adba13df794",
+      "apps/web/src/pages/AdminSettings.tsx": "b4ad9934f52ad33e3aec23614a56234d84a753d3c70b6faf13ba8eb4b7af7676",
+      "apps/web/src/components/PurchaseRecords.tsx": "26277c3393733ed5a46de11bdec58005deb6cc79cbb1227693d6afb3aa7123ff",
+      "apps/web/src/components/PurchaseAdmin.tsx": "5e90519accaf0b446ef840409cfa56b77b975deff3886452fc9e0edfd91ee0fa",
+      "apps/api/src/purchases.ts": "5759da2b02c9acde696ab9f75a8b945809b4330c2844d32e8e58a685d7125457",
+      "tests/e2e/auth-admin-settings.spec.ts": "5484635141a99c8806c0d8665d031021496bc07b8f0e30ce198353f8927f8f44",
+      "tests/db/purchases.test.ts": "00dbaf4a6c0144cc94d4e44d797b46f86d99c8cb7692f125ae6ca6338f1e1115"
+    }
+  }
+}

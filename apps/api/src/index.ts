@@ -39,6 +39,7 @@ import {
   type Principal,
 } from './security';
 import { sendOutbox } from './outbox';
+import { purchases } from './purchases';
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export const app = new Hono<AppEnv>();
 const publicFields =
@@ -69,7 +70,11 @@ app.use(
 );
 app.use('/api/*', (c, next) =>
   bodyLimit({
-    maxSize: c.req.path === '/api/media/upload' ? 5 * 1024 * 1024 : 64 * 1024,
+    maxSize:
+      c.req.path === '/api/media/upload' ||
+      /^\/api\/purchases\/[a-f0-9-]+\/evidence$/.test(c.req.path)
+        ? 5 * 1024 * 1024
+        : 64 * 1024,
     onError: (c) => c.json({ error: 'Tệp hoặc yêu cầu quá lớn.' }, 413),
   })(c, next),
 );
@@ -126,7 +131,7 @@ function dbError(error: { message: string; code?: string } | null) {
       409,
       'Vé cần được BTC liên kết với sự kiện trước khi bình chọn.',
     ],
-    TICKET_NOT_ELIGIBLE: [403, 'Vé chưa check-in hoặc không thuộc tài khoản của bạn.'],
+    TICKET_NOT_ELIGIBLE: [403, 'Vé không hợp lệ hoặc không thuộc tài khoản của bạn.'],
     CONTESTANT_NOT_ELIGIBLE: [409, 'Thí sinh không thuộc lượt bình chọn này.'],
     ALREADY_VOTED: [409, 'Vé này đã bình chọn.'],
     ALREADY_CHECKED_IN: [409, 'Vé đã được check-in trước đó.'],
@@ -274,7 +279,7 @@ app.get('/api/voting/:id', async (c) => {
     .select('*')
     .eq('id', id)
     .eq('published', true)
-    .eq('kind', 'final')
+    .in('kind', ['semifinal', 'final'])
     .maybeSingle();
   dbError(error);
   if (!round) return c.json({ error: 'Chưa có lượt bình chọn công khai.' }, 404);
@@ -331,6 +336,9 @@ for (const path of [
   '/api/media/*',
   '/api/contestants/apply',
   '/api/events/:id/holds',
+  '/api/purchases',
+  '/api/purchases/*',
+  '/api/purchase-evidence/*',
 ]) {
   app.use(path, async (c, next) => {
     c.set('principal', await authenticate(c.req.raw, c.env));
@@ -475,7 +483,7 @@ app.patch('/api/me/application/:id', async (c) => {
 app.get('/api/me/tickets', async (c) => {
   const { data, error } = await service(c.env)
     .from('tickets')
-    .select('id,edition_id,round_id,seat_label,checked_in_at,status')
+    .select('id,edition_id,round_id,seat_label,checked_in_at,status,ticket_code')
     .eq('user_id', c.get('principal').id);
   dbError(error);
   return ok(c, data);
@@ -854,6 +862,7 @@ app.put('/api/admin/events/:id/sale-settings', async (c) => {
   dbError(error);
   return ok(c, data);
 });
+app.route('/api', purchases);
 app.all('/api/*', (c) => c.json({ error: 'Không tìm thấy API.' }, 404));
 app.get('*', async (c) =>
   c.env.ASSETS ? c.env.ASSETS.fetch(c.req.raw) : c.text('FTUCHARM API', 200),
@@ -863,6 +872,13 @@ export default {
   scheduled: (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
     if (env.DEMO_MODE !== 'true') {
       ctx.waitUntil(sendOutbox(env));
+      ctx.waitUntil(
+        Promise.resolve(service(env).rpc('expire_purchase_holds', { p_limit: 100 })).then(
+          ({ error }) => {
+            if (error) console.error('Purchase hold expiry failed');
+          },
+        ),
+      );
       ctx.waitUntil(
         Promise.resolve(service(env).rpc('expire_sales_holds', { p_limit: 100 })).then(
           ({ error }) => {

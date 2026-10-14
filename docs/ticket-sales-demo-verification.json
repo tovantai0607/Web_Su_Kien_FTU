@@ -1,0 +1,68 @@
+{
+  "checked_at": "2026-10-14T13:13:32.170Z",
+  "project": "ifgtyslifgegwcguysbb",
+  "authorization": "User confirmed Test DEMO, ghi vào Supabase and temporary unit price 100000 VND",
+  "http": {
+    "checked_at": "2026-10-14T12:56:16.633Z",
+    "project": "ifgtyslifgegwcguysbb",
+    "mode": "DEMO",
+    "request_id": "ffe700e0-1361-443f-8efe-042101a056e5",
+    "code": "FTC-FFE700E01361443F8EFE042101A056E5",
+    "evidence_id": "f9e14357-a912-4a0e-84d8-a64742ac6da6",
+    "status": "COMPLETED",
+    "quantity": 2,
+    "total_vnd": 200000,
+    "tickets": 2,
+    "hold_minutes": 30,
+    "retry_duplicates": false,
+    "image_storage": "R2 local",
+    "image_private": true,
+    "non_demo_writes_blocked": true
+  },
+  "browser": {
+    "checked_at": "2026-10-14T13:04:32.109Z",
+    "request_id": "abe714d7-4163-4369-8993-e5b5b56cffcf",
+    "viewport": 390,
+    "real_auth": true,
+    "real_supabase_write": true,
+    "proof_replaced_before_submit": true,
+    "overflow": false,
+    "javascript_errors": []
+  },
+  "checks": {
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "passed",
+    "format": "passed",
+    "tests_passed": 143,
+    "native_skipped": 1
+  },
+  "remote_summary": {
+    "demo_completed_orders": 2,
+    "demo_tickets": 5,
+    "demo_evidence_records": 2,
+    "live_completed_orders": 0,
+    "live_published": false
+  },
+  "image_storage": "Local R2 persistence; Supabase stores metadata",
+  "limitations": [
+    "No real transfer",
+    "No email",
+    "No Cloudflare deployment",
+    "No online image storage",
+    "Remote migration 20261014120001 absent from local"
+  ],
+  "source_sha256": {
+    "apps/api/src/demo-test.ts": "a64e9a45f0ad08f15016441807e3caf27e1ad264131fce66c02549ea7fc09647",
+    "apps/api/wrangler.jsonc": "3814c2cc8170130838b4d93af446fa385dd06f0225dfcb39e408cc001decd65f",
+    "apps/web/src/components/PurchaseOfferEditor.tsx": "be2cd866aeb6452f9b6c922f60dbbcd2c8aad02d2bbb567cb9e3c62d117fff26",
+    "apps/web/src/components/PurchaseAdmin.tsx": "816ff281732d636ffbbc3811c9d62fb697853c42e9d73f3e0b55450b7903da6a",
+    "apps/web/src/pages/purchases.css": "c7dfcc71e00b02a12b60f1e71dc4578921b0d13df3dc0a9a858aba814a401807",
+    "packages/shared/src/purchases.ts": "5516bf55769f81ee2af1c36f3663bfa1ab879744f686d3170582371cc7270698",
+    "tests/db/purchases.test.ts": "9005f385609b31d4fa27cabcdfeab4eefcbdc1a71e1f888aa62dc45c079c4238",
+    "tests/unit/purchase-offer-editor.test.ts": "7d527cbeab715fdbeaa2b7564c9bdca52a6eaf98b6384f6f34b7a827635ca444",
+    "tests/unit/demo-test-entry.test.ts": "41803407cb2e13990747b9d361ada10a31704d52fa4a785aeed0f57fbe155fcf",
+    "tools/configure-supabase-ticket-demo.sql": "90d67dbecc07e2b680f4fcac48f55ef35c4847f65fbbf60d3bd2958ccd97b405",
+    "tools/setup-supabase-demo-local.mjs": "896bf16a14d1a15d8ac2fb73f650cb0d91eb0c137e42863cf2f08f1e597470af"
+  }
+}

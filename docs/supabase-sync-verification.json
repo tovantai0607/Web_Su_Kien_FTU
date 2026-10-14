@@ -1,0 +1,282 @@
+{
+  "project_id": "ifgtyslifgegwcguysbb",
+  "checked_at": "2026-10-14T17:55:40.330607+07:00",
+  "migrations": [
+    {
+      "version": "20261013132515",
+      "name": "ftucharm"
+    },
+    {
+      "version": "20261013132526",
+      "name": "management"
+    },
+    {
+      "version": "20261013132538",
+      "name": "vote_window"
+    },
+    {
+      "version": "20261013132724",
+      "name": "restrict_role_lookup"
+    },
+    {
+      "version": "20261013141222",
+      "name": "student_card_and_sponsor_logos"
+    },
+    {
+      "version": "20261013143000",
+      "name": "ftucharm_sales_voting"
+    },
+    {
+      "version": "20261013150000",
+      "name": "ticket_inventory_operations"
+    },
+    {
+      "version": "20261014100000",
+      "name": "charm2027_profiles_categories"
+    },
+    {
+      "version": "20261014120000",
+      "name": "supplement_purchases"
+    }
+  ],
+  "tables": 44,
+  "schema_matches_local": true,
+  "reference_data_preserved": true,
+  "verification": {
+    "votes": 0,
+    "offers": 0,
+    "catalog": {
+      "offers": [],
+      "server_time": "2026-10-14T17:55:40.330607+07:00"
+    },
+    "tickets": 0,
+    "accounts": 0,
+    "table_count": 44,
+    "edition_2027": [
+      {
+        "slug": "ftucharm-2027",
+        "published": false
+      }
+    ],
+    "role_assignments": 0,
+    "unprotected_tables": [],
+    "client_rpc_exposure": [],
+    "service_rpc_missing": [],
+    "client_purchase_grants": 0
+  },
+  "table_counts": [
+    {
+      "table_name": "api_idempotency",
+      "rows": 0
+    },
+    {
+      "table_name": "audit_logs",
+      "rows": 0
+    },
+    {
+      "table_name": "checkins",
+      "rows": 0
+    },
+    {
+      "table_name": "consent_records",
+      "rows": 0
+    },
+    {
+      "table_name": "contest_editions",
+      "rows": 2
+    },
+    {
+      "table_name": "contest_rounds",
+      "rows": 4
+    },
+    {
+      "table_name": "contestant_media",
+      "rows": 0
+    },
+    {
+      "table_name": "contestant_private",
+      "rows": 0
+    },
+    {
+      "table_name": "contestants",
+      "rows": 0
+    },
+    {
+      "table_name": "edition_sponsors",
+      "rows": 0
+    },
+    {
+      "table_name": "email_outbox",
+      "rows": 0
+    },
+    {
+      "table_name": "email_templates",
+      "rows": 0
+    },
+    {
+      "table_name": "event_seats",
+      "rows": 0
+    },
+    {
+      "table_name": "events",
+      "rows": 0
+    },
+    {
+      "table_name": "media_assets",
+      "rows": 0
+    },
+    {
+      "table_name": "news_categories",
+      "rows": 3
+    },
+    {
+      "table_name": "news_posts",
+      "rows": 0
+    },
+    {
+      "table_name": "notifications",
+      "rows": 0
+    },
+    {
+      "table_name": "order_items",
+      "rows": 0
+    },
+    {
+      "table_name": "order_reservations",
+      "rows": 0
+    },
+    {
+      "table_name": "orders",
+      "rows": 0
+    },
+    {
+      "table_name": "payment_events",
+      "rows": 0
+    },
+    {
+      "table_name": "payments",
+      "rows": 0
+    },
+    {
+      "table_name": "profiles",
+      "rows": 0
+    },
+    {
+      "table_name": "purchase_allocations",
+      "rows": 0
+    },
+    {
+      "table_name": "purchase_evidence",
+      "rows": 0
+    },
+    {
+      "table_name": "purchase_offers",
+      "rows": 0
+    },
+    {
+      "table_name": "purchase_products",
+      "rows": 0
+    },
+    {
+      "table_name": "purchase_requests",
+      "rows": 0
+    },
+    {
+      "table_name": "roles",
+      "rows": 8
+    },
+    {
+      "table_name": "round_entries",
+      "rows": 0
+    },
+    {
+      "table_name": "seat_holds",
+      "rows": 0
+    },
+    {
+      "table_name": "sponsors",
+      "rows": 0
+    },
+    {
+      "table_name": "ticket_categories",
+      "rows": 0
+    },
+    {
+      "table_name": "ticket_delivery_secrets",
+      "rows": 0
+    },
+    {
+      "table_name": "tickets",
+      "rows": 0
+    },
+    {
+      "table_name": "timeline_events",
+      "rows": 11
+    },
+    {
+      "table_name": "user_roles",
+      "rows": 0
+    },
+    {
+      "table_name": "vote_categories",
+      "rows": 2
+    },
+    {
+      "table_name": "vote_eligible_contestants",
+      "rows": 0
+    },
+    {
+      "table_name": "vote_incident_logs",
+      "rows": 0
+    },
+    {
+      "table_name": "vote_result_snapshots",
+      "rows": 0
+    },
+    {
+      "table_name": "vote_sessions",
+      "rows": 0
+    },
+    {
+      "table_name": "votes",
+      "rows": 0
+    }
+  ],
+  "security_advisors": {
+    "rls_enabled_no_policy": 20,
+    "warnings": 0,
+    "errors": 0
+  },
+  "performance_advisors": {
+    "unindexed_foreign_keys": 41,
+    "unused_index": 48
+  },
+  "load_test_online": false,
+  "worker_deployed": false,
+  "auth_user_created": false,
+  "secret_changed": false,
+  "git_branch": "web_ftu",
+  "git_pushed": false,
+  "http_readiness": {
+    "checked_at": "2026-10-14T17:57:39.1641716+07:00",
+    "writes_performed": false,
+    "jwks": {
+      "algorithms": ["ES256"],
+      "status": 200
+    },
+    "auth_settings": {
+      "settings": {
+        "mailer_autoconfirm": false,
+        "disable_signup": false,
+        "email_enabled": true
+      },
+      "status": 200
+    },
+    "public_editions": {
+      "status": 200
+    },
+    "private_purchases": {
+      "status": 401
+    }
+  }
+}

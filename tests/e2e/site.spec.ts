@@ -115,27 +115,117 @@ test('core public pages pass WCAG AA automated checks', async ({ page }) => {
 });
 test('ticket details remain viewable before sale opens, without reserving', async ({ page }) => {
   await page.goto('/ve');
-  await page.getByRole('link', { name: 'Xem chi tiết' }).first().click();
+  await page.getByRole('link', { name: 'Xem vé & combo' }).first().click();
   await expect(page).toHaveURL(/\/ve\/ban-ket-demo$/);
   await expect(
-    page.getByRole('heading', { name: 'Đêm bán kết · Minh họa', exact: true, level: 1 }),
+    page.getByRole('heading', { name: 'Đêm bán kết', exact: true, level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText('Sắp mở bán', { exact: true })).toBeVisible();
-  await expect(page.locator('.sales-seat:enabled')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+  await expect(page.getByText(/Vé sớm · Sắp mở bán/).first()).toBeVisible();
+  await expect(page.locator('.sales-seat')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Thông tin người mua' })).toHaveCount(0);
 });
-test('ticket seat selection supports keyboard and stops at ten in preview', async ({ page }) => {
+test('ticket types and combos support quantities over ten and read-only DEMO checkout', async ({
+  page,
+}) => {
   await page.goto('/ve/chung-ket-demo');
-  const seats = page.locator('.sales-seat:enabled');
-  await seats.first().focus();
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/api/')) writes.push(request.url());
+  });
+  await expect(page.getByLabel('Họ tên', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Số lượng vé đơn The Intro EARLY').fill('12');
+  await page.getByRole('checkbox', { name: 'Chọn Combo 2 The Intro EARLY' }).focus();
   await page.keyboard.press('Space');
-  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(1);
-  for (let i = 0; i < 9; i++)
-    await page.locator('.sales-seat[aria-pressed="false"]:enabled').first().click();
-  await expect(page.locator('.sales-seat[aria-pressed="true"]')).toHaveCount(10);
-  await expect(page.locator('.sales-seat[aria-pressed="false"]:enabled')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Số lượng Combo 2 The Intro EARLY')).toHaveValue('1');
+  await page.getByRole('button', { name: 'Xác nhận vé & combo' }).click();
+  await expect(page.getByRole('heading', { name: 'Thông tin người mua' })).toBeFocused();
+  await expect(page.getByRole('heading', { name: 'Thanh toán chuyển khoản' })).toHaveCount(0);
+  await expect(page.locator('input[type=file]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Đổi vé & combo' }).click();
+  await expect(page.getByLabel('Số lượng vé đơn The Intro EARLY')).toHaveValue('12');
+  await page.getByRole('button', { name: 'Xác nhận vé & combo' }).click();
+  for (const [name, value] of Object.entries({
+    'Họ tên': 'DEMO',
+    Trường: 'DEMO',
+    'Khóa/lớp': 'DEMO',
+    MSSV: 'DEMO',
+    Email: 'demo@example.test',
+    'Số điện thoại': '0000000000',
+    Facebook: 'DEMO',
+  }))
+    await page.getByLabel(name, { exact: true }).fill(value);
+  await page.getByRole('button', { name: 'Xác nhận thông tin' }).click();
+  await expect(page.getByRole('heading', { name: 'Thanh toán chuyển khoản' })).toBeVisible();
+  await expect(page.getByRole('timer', { name: 'Thời gian còn lại' })).toHaveText(
+    /^(30:00|29:5\d)$/,
+  );
+  await expect(page.getByText(/14 vé/).first()).toBeVisible();
+  await expect(page.locator('input[type=file]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Tiếp tục gửi minh chứng', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Thanh toán chuyển khoản' })).toHaveCount(0);
+  const proof = page.getByLabel('Ảnh minh chứng JPG/PNG (tối đa 5 MB)');
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j9J0AAAAASUVORK5CYII=',
+    'base64',
+  );
+  await proof.setInputFiles({ name: 'chon-nham.png', mimeType: 'image/png', buffer: png });
+  await expect(page.getByText('Ảnh đã chọn: chon-nham.png', { exact: true })).toBeVisible();
+  const image = page.getByAltText('Ảnh minh chứng bạn đã chọn');
+  const firstImage = await image.getAttribute('src');
+  const chooserReady = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Đổi ảnh minh chứng', exact: true }).click();
+  await (
+    await chooserReady
+  ).setFiles({ name: 'dung-minh-chung.png', mimeType: 'image/png', buffer: png });
+  await expect(page.getByText('Ảnh đã chọn: dung-minh-chung.png', { exact: true })).toBeVisible();
+  await expect(image).not.toHaveAttribute('src', firstImage!);
+  await expect(proof).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Hoàn tất', exact: true })).toBeDisabled();
+  expect(writes).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('QR countdown expires after thirty minutes without restarting between steps', async ({
+  page,
+}) => {
+  const start = new Date('2026-10-14T12:00:00+07:00');
+  await page.clock.install({ time: start });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/ve/chung-ket-demo');
+  await page.getByLabel('Số lượng vé đơn The Intro EARLY').fill('1');
+  await page.getByRole('button', { name: 'Xác nhận vé & combo' }).click();
+  for (const [name, value] of Object.entries({
+    'Họ tên': 'DEMO',
+    Trường: 'DEMO',
+    'Khóa/lớp': 'DEMO',
+    MSSV: 'DEMO',
+    Email: 'demo@example.test',
+    'Số điện thoại': '0000000000',
+    Facebook: 'DEMO',
+  }))
+    await page.getByLabel(name, { exact: true }).fill(value);
+  await page.getByRole('button', { name: 'Xác nhận thông tin' }).click();
+  const timer = page.getByRole('timer', { name: 'Thời gian còn lại' });
+  await expect(timer).toHaveText(/^(30:00|29:5\d)$/);
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const initial = (await timer.innerText()).split(':').map(Number);
+  const seconds = initial[0] * 60 + initial[1] - 5;
+  const expected = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  await page.clock.fastForward(5000);
+  await expect(timer).toHaveText(expected);
+  await page.getByRole('button', { name: 'Xem lại thông tin' }).click();
+  await page.getByRole('button', { name: 'Xác nhận thông tin' }).click();
+  await expect(timer).toHaveText(expected);
+  await page.getByRole('button', { name: 'Tiếp tục gửi minh chứng' }).click();
+  await expect(timer).toHaveText(expected);
+  await page.getByRole('button', { name: 'Xem lại thanh toán' }).click();
+  await expect(timer).toHaveText(expected);
+  await page.clock.fastForward(30 * 60 * 1000);
+  await expect(page.getByRole('heading', { name: 'Đã hết hạn giữ vé' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Thanh toán chuyển khoản' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Đặt vé lại' }).click();
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toBeVisible();
 });
 
 test('reference hero copy and ticket purchase remain honest', async ({ page }) => {
@@ -150,9 +240,9 @@ test('reference hero copy and ticket purchase remain honest', async ({ page }) =
   );
   await expect(page.getByRole('timer')).toHaveCount(0);
   await page.goto('/ve');
-  await page.getByRole('link', { name: 'Xem chi tiết' }).last().click();
-  await expect(page.getByRole('button', { name: 'Giữ ghế', exact: true })).toBeDisabled();
-  await expect(page.locator('.sales-seat:enabled').first()).toBeVisible();
+  await page.getByRole('link', { name: 'Xem vé & combo' }).last().click();
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'The Intro', exact: true })).toBeVisible();
 });
 
 test('gallery supports keyboard, slide status and lightbox dismissal', async ({ page }) => {

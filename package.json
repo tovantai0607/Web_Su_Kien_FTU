@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite --config apps/web/vite.config.ts --host 127.0.0.1",
     "dev:api": "wrangler dev --config apps/api/wrangler.jsonc",
+    "dev:demo-db": "wrangler dev --config apps/api/wrangler.jsonc --env demo-test --local --ip 127.0.0.1 --port 8787 --persist-to .wrangler/state/demo-test --show-interactive-dev-session false",
     "build": "vite build --config apps/web/vite.config.ts",
     "build:preview": "node scripts/build-preview.mjs",
     "preview": "vite preview --config apps/web/vite.config.ts --outDir ../../dist --host 127.0.0.1 --port 5173",
@@ -38,6 +39,7 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@types/node": "26.6.5",
+    "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/three": "0.186.0",

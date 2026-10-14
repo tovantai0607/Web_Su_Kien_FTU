@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import AdminSettings from './AdminSettings';
 import {
   LayoutDashboard,
@@ -31,6 +31,8 @@ import { roles } from '@ftu/shared';
 import { useAuth } from '../lib/auth';
 import PrivateMedia from '../components/PrivateMedia';
 import AdminOverview from '../components/AdminOverview';
+import PurchaseAdmin from '../components/PurchaseAdmin';
+import PurchaseCustomers from './PurchaseCustomers';
 type Row = Record<string, unknown>;
 const tabs = [
   ['overview', 'Tổng quan', LayoutDashboard],
@@ -40,7 +42,8 @@ const tabs = [
   ['rounds', 'Vòng thi & vote', Heart],
   ['timeline', 'Timeline', CalendarDays],
   ['sponsors', 'Nhà tài trợ', ShieldCheck],
-  ['tickets', 'Vé & check-in', Ticket],
+  ['tickets', 'Vé cũ (lịch sử)', Ticket],
+  ['purchase-data', 'Bán vé theo bổ sung', Ticket],
   ['emails', 'Email', Mail],
   ['audit', 'Lịch sử', Settings],
   ['roles', 'Phân quyền', ShieldCheck],
@@ -94,8 +97,9 @@ const defaults: Record<string, Row> = {
 export default function Admin() {
   const { user, loading, access, accessLoading, accessError, refreshAccess } = useAuth();
   const { pathname } = useLocation();
-  const [tab, setTab] = useState('overview'),
-    [page, setPage] = useState(1),
+  const [params, setParams] = useSearchParams();
+  const tab = tabs.some(([value]) => value === params.get('muc')) ? params.get('muc')! : 'overview';
+  const [page, setPage] = useState(1),
     [status, setStatus] = useState('pending'),
     [editing, setEditing] = useState<Row | null>(null),
     [values, setValues] = useState<Row>({}),
@@ -116,7 +120,13 @@ export default function Admin() {
           (tab === 'tickets' ? 'overview' : tab) +
           (tab === 'applications' ? `?page=${page - 1}&status=${status}` : ''),
       ),
-    enabled: !!user && !preview && !!access?.is_admin && pathname !== '/admin/cau-hinh',
+    enabled:
+      !!user &&
+      !preview &&
+      !!access?.is_admin &&
+      pathname !== '/admin/cau-hinh' &&
+      pathname !== '/admin/ve' &&
+      tab !== 'purchase-data',
     retry: false,
   });
   if (loading || accessLoading)
@@ -162,6 +172,7 @@ export default function Admin() {
       </div>
     );
   if (pathname === '/admin/cau-hinh') return <AdminSettings />;
+  if (pathname === '/admin/ve') return <PurchaseCustomers />;
   const collection =
     tab === 'applications'
       ? ((q.data as { items: Row[]; total: number } | undefined)?.items ?? [])
@@ -221,13 +232,16 @@ export default function Admin() {
         <Link className="text-link" to="/admin/cau-hinh">
           Cấu hình vote và vé
         </Link>
+        <Link className="text-link" to="/admin/ve">
+          Khách đã mua vé
+        </Link>
         {tabs.map(([value, label, Icon]) => (
           <button
             key={value}
             className={value === tab ? 'active' : ''}
             aria-current={value === tab ? 'page' : undefined}
             onClick={() => {
-              setTab(value);
+              setParams(value === 'overview' ? {} : { muc: value });
               setPage(1);
               setMessage('');
               setError('');
@@ -247,8 +261,9 @@ export default function Admin() {
         <p role="status" className={message ? 'notice admin-notification' : 'sr-only'}>
           {message}
         </p>
-        <DataState query={q} />
+        {tab !== 'purchase-data' && <DataState query={q} />}
         {tab === 'overview' && q.isSuccess && <AdminOverview summary={summary} />}
+        {tab === 'purchase-data' && <PurchaseAdmin />}
         {defaults[tab] && tab !== 'contestant-profiles' && (
           <Button onClick={() => edit()}>Thêm mới</Button>
         )}

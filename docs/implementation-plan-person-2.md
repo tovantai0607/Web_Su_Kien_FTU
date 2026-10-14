@@ -1,12 +1,30 @@
 # Kế hoạch triển khai phần việc người thứ hai
 
+## Nghiệp vụ và triển khai hiện hành
+
+Áp dụng bosung.docx, skill ftu-ticket-sales và xác nhận mới nhất ngày14/10/2026: mùa2027, giữ quota30 phút, mua loại/combo không chọn ghế, mỗi đơn/tài khoản không cap ngoài quota. Thông tin → QR → minh chứng → Hoàn tất lưu thành công có quyền vote mỗi vé/hạng mục đúng vòng ngay. Không hủy/hoàn/thu hồi, không provider/check-in/email vé tự động. Bên khác đối chiếu/gửi mail thủ công.
+
+Người dùng đã yêu cầu hoàn tất toàn bộ tiến độ. Triển khai theo thứ tự11 bước; nghiệm thu bằng bằng chứng local, không theo tests/chọn ghế cũ. Sau đó người dùng yêu cầu đồng bộ Supabase: đã áp đủ chín migration và kiểm tra schema/quyền; [báo cáo đồng bộ](supabase-sync-20261014.md) ghi tài khoản/cấu hình còn thiếu. Không tạo fixture/load online hoặc deploy/push/thay secret trong lượt này.
+
+Đã nghiệm thu **11/11 giai đoạn local/DEMO**, Word đánh X toàn bộ và cập nhật tổng. Ảnh thống kê là minh họa; dữ liệu không có Đêm thì bỏ cột theo xác nhận mới nhất.
+
+Contract thực thi, phạm vi sở hữu, các quyết định và bằng chứng xem [nghiệm thu luồng bổ sung](supplement-acceptance.md), [runbook](supplement-runbook.md) và `tiến độn.docx`. Các trường/giá/quota/QR/ngày giờ thật do BTC cấu hình trước mở bán; DEMO không là cấu hình thật hoặc bằng chứng đã nhận tiền. Workload/ngưỡng tải local đã chốt; kết quả ghi ở [verification](supplement-verification.json).
+
+Mô hình additive dùng purchase_offers/products/requests/allocations/evidence và shared tickets/votes; giữ nguyên dữ liệu/định danh/phần CMS/Auth/registration của người thứ nhất. Frontend `/ve` dùng PurchaseTickets; API mới có namespace riêng, API chọn ghế/payment cũ chỉ là compatibility/history. Legacy chưa phân hạng mục giữ lịch sử và chặn vote mới.
+
+Phần dưới là nhật ký lịch sử trước khi đổi nghiệp vụ; không dùng nó làm contract hoặc trạng thái hiện hành.
+
+## Nhật ký nghiệm thu trước khi đổi nghiệp vụ
+
+Các nội dung bên dưới ghi nhận khảo sát/triển khai/kiểm thử ngày 13/10/2026. Các quyết định ghế/payment/email và trạng thái 3/12 trong lịch sử không còn là contract hoặc tiến độ hiện hành.
+
 Ngày đối chiếu: 13/10/2026. Lượt đầu thực hiện giai đoạn 01; người dùng sau đó yêu cầu tiếp tục giai đoạn 02 và chốt bảo toàn phiếu legacy. Nhật ký giai đoạn 01 bên dưới giữ bằng chứng tại thời điểm khảo sát; kết quả giai đoạn 02 ở mục 9.
 
 Lượt giai đoạn 03: người dùng yêu cầu lấy main mới nhất rồi triển khai tồn kho/trang vé. Đã clone và cập nhật tới `1515317`; kết quả tại mục 10. Các mục 1–9 là lịch sử nghiệm thu trước đó; upstream đã đổi tên migration sales sang `20261013143000_ftucharm_sales_voting.sql`.
 
 **Trạng thái: hoàn tất giai đoạn 01 ngày 13/10/2026.** Nghiệp vụ và contract đã được người dùng xác nhận; bảng Word đã đánh X ô 01, tổng 1/12, tiếp theo 02. Bằng chứng kiểm tra ở mục 7. Phương án kỹ thuật ở giai đoạn sau vẫn là đề xuất triển khai, không phải chức năng đã hoạt động. Không bắt đầu giai đoạn 02 trong lượt này.
 
-**Trạng thái hiện tại: hoàn tất 03/12, tiếp theo 04.** Word đã đánh X 01–03. Giai đoạn 03 có catalog/detail, inventory/holds và kiểm chứng local; chưa triển khai checkout/thanh toán. Bằng chứng ở mục 10.
+**Trạng thái tại thời điểm nghiệm thu cũ 13/10/2026: hoàn tất 03/12, tiếp theo 04; đã được thay bằng 2/11, tiếp theo 03 ở trên.** Word đã đánh X 01–03. Giai đoạn 03 có catalog/detail, inventory/holds và kiểm chứng local; chưa triển khai checkout/thanh toán. Bằng chứng ở mục 10.
 
 Giai đoạn 03 đã nghiệm thu sau checks và render/QA Word. Không bắt đầu 04.
 

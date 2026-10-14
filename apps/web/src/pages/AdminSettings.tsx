@@ -82,6 +82,9 @@ export default function AdminSettings() {
       <Link className="text-link" to="/admin">
         Về tổng quan quản trị
       </Link>
+      <Link className="text-link" to="/admin/ve">
+        Khách đã mua vé
+      </Link>
       <PageTitle
         title="Cấu hình vote và vé"
         description="Thời gian theo giờ Việt Nam (UTC+7). Mọi thay đổi được ghi vào lịch sử quản trị."
