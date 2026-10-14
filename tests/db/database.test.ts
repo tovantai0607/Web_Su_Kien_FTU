@@ -56,10 +56,10 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
     expect(r.rows).toHaveLength(1);
     await db.exec('reset role;');
   });
-  it('unverified MFA cannot approve an application', async () => {
+  it('a user without reviewer rights cannot approve an application', async () => {
     await expect(
       db.query(
-        `select public.review_application('${admin}','aal1','${candidate}','approved','Test note')`,
+        `select public.review_application('${user}','aal1','${candidate}','approved','Test note')`,
       ),
     ).rejects.toThrow('FORBIDDEN');
   });

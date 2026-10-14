@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test('brand, retired news and complete contestant profiles', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.brand-logo')).toBeVisible();
+  await expect(page.locator('.site-header .brand-logo')).toBeVisible();
   await expect(page.locator('.hero-year')).toHaveText('(2027)');
   await expect(page.getByRole('link', { name: 'Tin tức', exact: true })).toHaveCount(0);
   expect(
@@ -57,10 +57,10 @@ test('motion runs, stops, resumes and respects reduced motion', async ({ page })
   const before = await logo.evaluate((el) => getComputedStyle(el).transform);
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).not.toBe(before);
   await expect(page.locator('.ribbon-field canvas')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.ribbon-field canvas')).toHaveCount(0);
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
-  await page.getByRole('button', { name: 'Bật chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect(page.locator('.ribbon-field canvas')).toHaveCount(1);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.ribbon-field canvas')).toHaveCount(0);

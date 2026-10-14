@@ -11,12 +11,12 @@ export function emailTemplate(template: string, payload: Record<string, string>)
     approved: 'Hồ sơ của bạn đã được duyệt',
     rejected: 'Thông tin xét duyệt hồ sơ',
     needs_changes: 'Vui lòng bổ sung hồ sơ',
-    reminder: 'Lịch hẹn trên hành trình FTUCharm',
+    reminder: 'Lịch hẹn trên hành trình FTUCHARM',
   };
-  const title = titles[template] ?? 'Thông báo từ FTUCharm';
+  const title = titles[template] ?? 'Thông báo từ FTUCHARM';
   return {
-    subject: `FTUCharm • ${title}`,
-    html: `<div style="background:#fff9fb;padding:36px;font:16px Arial;color:#2f2930"><div style="max-width:540px;margin:auto;background:white;padding:32px;border-radius:16px"><p style="color:#913b59">FTUCharm • Duyên dáng Ngoại thương</p><h1 style="font:32px Georgia">${title}</h1><p>Mã hồ sơ: <strong>${escapeHtml(payload.code ?? '')}</strong></p><p>${template === 'received' ? 'Chúng tôi đã lưu hồ sơ của bạn. Đây là xác nhận tiếp nhận, chưa phải thông báo trúng tuyển.' : escapeHtml(payload.note ?? 'Vui lòng xem thông tin trong tài khoản của bạn.')}</p><p>Cảm ơn bạn đã sẵn sàng kể câu chuyện của chính mình.</p></div></div>`,
+    subject: `FTUCHARM • ${title}`,
+    html: `<div style="background:#fff9fb;padding:36px;font:16px Arial;color:#2f2930"><div style="max-width:540px;margin:auto;background:white;padding:32px;border-radius:16px"><p style="color:#913b59">FTUCHARM • Duyên dáng Ngoại thương</p><h1 style="font:32px Georgia">${title}</h1><p>Mã hồ sơ: <strong>${escapeHtml(payload.code ?? '')}</strong></p><p>${template === 'received' ? 'Chúng tôi đã lưu hồ sơ của bạn. Đây là xác nhận tiếp nhận, chưa phải thông báo trúng tuyển.' : escapeHtml(payload.note ?? 'Vui lòng xem thông tin trong tài khoản của bạn.')}</p><p>Cảm ơn bạn đã sẵn sàng kể câu chuyện của chính mình.</p></div></div>`,
   };
 }
 export async function sendOutbox(env: Env) {

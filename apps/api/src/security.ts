@@ -1,5 +1,4 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { HTTPException } from 'hono/http-exception';
 export type Env = {
   SUPABASE_URL: string;
@@ -23,16 +22,6 @@ export function readClient(env: Env): SupabaseClient {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
-function verifiedJWKS(url: string) {
-  let jwks = jwksCache.get(url);
-  if (!jwks) {
-    if (jwksCache.size >= 4) jwksCache.clear();
-    jwks = createRemoteJWKSet(new URL(url));
-    jwksCache.set(url, jwks);
-  }
-  return jwks;
-}
 export function service(env: Env): SupabaseClient {
   if (!env.SUPABASE_SECRET_KEY)
     throw new HTTPException(503, { message: 'Dịch vụ chưa được cấu hình.' });
@@ -49,14 +38,25 @@ export async function authenticate(request: Request, env: Env): Promise<Principa
     // No arbitrary JWKS URL: it must belong to the configured Supabase project.
     const jwksURL = env.SUPABASE_URL + '/auth/v1/.well-known/jwks.json';
     if (env.SUPABASE_JWKS_URL !== jwksURL) throw new Error('Invalid issuer configuration');
-    const { payload } = await jwtVerify(token, verifiedJWKS(jwksURL), {
-      issuer: env.SUPABASE_URL + '/auth/v1',
-      audience: 'authenticated',
-      algorithms: ['ES256', 'RS256'],
-    });
     const auth = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    // The SDK verifies asymmetric signatures with project JWKS. For legacy
+    // HS256 it verifies with the project's Auth server; no shared signing secret
+    // is needed here, and decoded/unverified claims are never used for access.
+    const verified = await auth.auth.getClaims(token);
+    if (verified.error || !verified.data) throw new Error('Invalid claims');
+    const { claims: payload, header: jwtHeader } = verified.data;
+    const audience = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    if (
+      !['HS256', 'ES256', 'RS256'].includes(jwtHeader.alg) ||
+      payload.iss !== env.SUPABASE_URL + '/auth/v1' ||
+      !audience.includes('authenticated') ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= Date.now() / 1000 ||
+      (typeof payload.nbf === 'number' && payload.nbf > Date.now() / 1000)
+    )
+      throw new Error('Invalid token scope');
     const { data, error } = await auth.auth.getUser(token);
     if (error || !data.user?.email_confirmed_at || data.user.id !== payload.sub)
       throw new Error('Invalid user');
@@ -72,8 +72,14 @@ export async function authenticate(request: Request, env: Env): Promise<Principa
   }
 }
 export async function authorize(principal: Principal, env: Env, roles: string[]) {
-  if (principal.aal !== 'aal2')
-    throw new HTTPException(403, { message: 'Cần xác thực hai bước (MFA) để quản trị.' });
+  if (principal.aal !== 'aal2') {
+    const admin = await service(env).rpc('has_role', {
+      p_user: principal.id,
+      p_roles: ['SUPER_ADMIN'],
+    });
+    if (admin.error || !admin.data)
+      throw new HTTPException(403, { message: 'Bạn không có quyền thực hiện thao tác này.' });
+  }
   const { data, error } = await service(env).rpc('has_role', {
     p_user: principal.id,
     p_roles: roles,

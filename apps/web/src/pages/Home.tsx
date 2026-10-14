@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <>
       <div className="crown-story">
-        <section className="luminous-hero" aria-label="FTUCharm">
+        <section className="luminous-hero" aria-label="FTUCHARM">
           <RibbonField />
           <StageAtmosphere />
           <div className="luminous-hero-grid">
@@ -53,9 +53,6 @@ export default function Home() {
             </div>
             <div className="crown-stage" aria-hidden="true">
               <div className="stage-halo" />
-              <div className="crown-orbit">
-                <span />
-              </div>
               <StageParallax>
                 <StageCrown />
               </StageParallax>
@@ -132,7 +129,7 @@ export default function Home() {
             bản lĩnh.
           </p>
           <Link className="text-link" to="/gioi-thieu">
-            Về FTUCharm <ArrowUpRight size={18} />
+            Về FTUCHARM <ArrowUpRight size={18} />
           </Link>
         </div>
       </section>

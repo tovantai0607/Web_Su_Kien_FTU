@@ -1,34 +1,23 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useMotionDisabled } from './MotionSystem';
+import { mountStage } from './stageScene';
 
-/** Optional GPU scene; content and static artwork remain usable during loading. */
+/** Paint the first GPU frame before revealing the hero, including on reload. */
 export function RibbonField() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const disabled = useMotionDisabled();
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const host = canvas?.closest('section');
-    if (!canvas || !host || disabled) return;
-    let cancelled = false;
-    let cleanup: (() => void) | undefined;
-    const timer = window.setTimeout(() => {
-      void import('./stageScene')
-        .then(({ mountStage }) => {
-          if (!cancelled) cleanup = mountStage(canvas, host);
-        })
-        .catch(() => {
-          /* CSS fallback covers failed chunk downloads. */
-        });
-    }, 1200);
+  useLayoutEffect(() => {
+    const element = root.current;
+    const host = element?.closest('section');
+    if (!element || !host || disabled) return;
+    // A fresh canvas also handles StrictMode remounts and motion toggles safely.
+    const canvas = document.createElement('canvas');
+    element.appendChild(canvas);
+    const cleanup = mountStage(canvas, host);
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      cleanup?.();
+      cleanup();
+      canvas.remove();
     };
   }, [disabled]);
-  return (
-    <div className="ribbon-field" aria-hidden="true">
-      {!disabled && <canvas ref={canvasRef} />}
-    </div>
-  );
+  return <div ref={root} className="ribbon-field" aria-hidden="true" />;
 }

@@ -69,14 +69,14 @@ export default function Voting() {
   const isOpen =
     !!openAt &&
     !!closeAt &&
-    (!hasCategories || (!!category && session?.state === 'OPEN')) &&
+    (!hasCategories ||
+      (!!category && (session?.state === 'OPEN' || session?.state === 'SCHEDULED'))) &&
     time >= Date.parse(openAt) &&
     time < Date.parse(closeAt);
   const seconds = closeAt ? Math.max(0, Math.floor((Date.parse(closeAt) - time) / 1000)) : 600;
   const eligible = (tickets.data ?? []).filter(
     (t) =>
       t.round_id === current?.id &&
-      t.checked_in_at &&
       t.status === 'issued' &&
       !ownVotes.data?.some(
         (v) => v.ticket_id === t.id && (!v.category_id || v.category_id === category?.id),
@@ -134,7 +134,7 @@ export default function Voting() {
             {category?.name ??
               (gender === 'male' ? 'Nam được yêu thích nhất' : 'Nữ được yêu thích nhất')}
           </h2>
-          <p>Mỗi vé đã check-in được bỏ một phiếu nam và một phiếu nữ trong vòng bình chọn.</p>
+          <p>Mỗi vé hợp lệ được bỏ một phiếu nam và một phiếu nữ trong vòng bình chọn.</p>
         </div>
         <div className="vote-clock">
           <Clock3 size={25} />
@@ -167,7 +167,7 @@ export default function Voting() {
       {!user && (
         <Card>
           <h3>Đăng nhập bằng tài khoản nhận vé.</h3>
-          <p>Vé phải thuộc tài khoản của bạn và đã được nhân viên check-in.</p>
+          <p>Vé phải thuộc tài khoản của bạn và còn hiệu lực trong vòng bình chọn.</p>
           <Button asChild variant="outline">
             <Link to="/tai-khoan/dang-nhap">Đăng nhập</Link>
           </Button>
@@ -235,7 +235,7 @@ export default function Voting() {
         {success ? (
           <AnimatedGroup className="success-card vote-success">
             <Check size={40} />
-            <p>Cảm ơn bạn đã đồng hành cùng FTUCharm.</p>
+            <p>Cảm ơn bạn đã đồng hành cùng FTUCHARM.</p>
             <Button onClick={() => setSelected(null)}>Hoàn tất</Button>
           </AnimatedGroup>
         ) : (
@@ -266,7 +266,7 @@ function FieldTicket({
 }) {
   return tickets.length ? (
     <label className="field">
-      Vé đã check-in
+      Vé hợp lệ
       <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Chọn vé của bạn</option>
         {tickets.map((t) => (
@@ -278,7 +278,7 @@ function FieldTicket({
     </label>
   ) : (
     <EmptyState title="Không có vé đủ điều kiện hoặc vé đã bình chọn">
-      Kiểm tra trạng thái check-in và liên hệ nhân viên nếu cần hỗ trợ.
+      Kiểm tra trạng thái vé và liên hệ ban tổ chức nếu cần hỗ trợ.
     </EmptyState>
   );
 }

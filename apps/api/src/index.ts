@@ -23,6 +23,8 @@ import {
   demoVoting,
   demoSalesCatalog,
   salesHoldSchema,
+  votingSettingsSchema,
+  saleSettingsSchema,
 } from '@ftu/shared';
 import {
   authenticate,
@@ -140,6 +142,14 @@ function dbError(error: { message: string; code?: string } | null) {
     SEAT_UNAVAILABLE: [409, 'Ghế vừa được giữ hoặc không còn bán. Chọn ghế khác.'],
     INVALID_SEAT_SELECTION: [400, 'Chọn từ 1 đến 10 ghế khác nhau.'],
     INVALID_IDEMPOTENCY_KEY: [400, 'Thiếu mã chống gửi trùng.'],
+    PRICE_CHANGED: [409, 'Giá hoặc đợt bán vừa thay đổi. Hãy tải lại giá rồi xác nhận giữ ghế.'],
+    SETTINGS_CHANGED: [409, 'Cấu hình vừa được thay đổi. Tải lại trước khi lưu.'],
+    SALE_PHASE_OVERLAP: [400, 'Đợt bán sớm và bán thường không được chồng thời gian.'],
+    SALE_PHASE_NOT_CONFIGURED: [400, 'Cần cấu hình đủ hai hạng vé và đợt bán thường.'],
+    INVALID_VOTE_WINDOW: [400, 'Thời gian bình chọn không hợp lệ.'],
+    VOTE_ALREADY_CLOSED: [409, 'Phiên bình chọn đã kết thúc; không thể mở lại.'],
+    VOTE_REASON_REQUIRED: [400, 'Giữ nguyên giờ mở và nhập lý do thay đổi giờ đóng.'],
+    VOTE_SETTINGS_REQUIRED: [409, 'Chỉnh lịch bình chọn tại trang cấu hình quản trị.'],
   };
   const matched = Object.entries(codes).find(([key]) => error.message.includes(key));
   if (matched) throw new HTTPException(matched[1][0] as 400, { message: matched[1][1] });
@@ -381,6 +391,7 @@ app.post('/api/events/:id/holds', async (c) => {
     p_seats: selected,
     p_key: key,
     p_hash: await digest(JSON.stringify({ event_id: event, seat_ids: selected })),
+    ...(input.pricing_version !== undefined ? { p_quote: input.pricing_version } : {}),
   });
   dbError(error);
   return ok(c, data);
@@ -712,11 +723,15 @@ app.post('/api/admin/rounds/:id/publish', async (c) => {
   return ok(c, data);
 });
 app.post('/api/admin/rounds/:id/open-voting', async (c) => {
-  await authorize(c.get('principal'), c.env, ['VOTE_MANAGER']);
-  const { data, error } = await service(c.env).rpc('open_voting', {
+  await authorize(c.get('principal'), c.env, ['SUPER_ADMIN']);
+  const input = await parse(c, votingSettingsSchema);
+  const { data, error } = await service(c.env).rpc('save_voting_settings', {
     p_actor: c.get('principal').id,
     p_aal: c.get('principal').aal,
     p_round: rowId(c),
+    p_open: input.open_at,
+    p_close: input.close_at,
+    p_reason: input.reason,
   });
   dbError(error);
   return ok(c, data);
@@ -791,9 +806,57 @@ app.get('/api/admin/roles', async (c) => {
   dbError(error);
   return ok(c, data);
 });
+app.get('/api/me/access', async (c) => {
+  const principal = c.get('principal');
+  const { data, error } = await service(c.env).rpc('has_role', {
+    p_user: principal.id,
+    p_roles: ['SUPER_ADMIN'],
+  });
+  dbError(error);
+  return ok(c, { is_admin: data === true, aal: principal.aal });
+});
+app.get('/api/admin/settings', async (c) => {
+  const p = c.get('principal');
+  await authorize(p, c.env, ['SUPER_ADMIN']);
+  const { data, error } = await service(c.env).rpc('admin_event_settings', {
+    p_actor: p.id,
+    p_aal: p.aal,
+  });
+  dbError(error);
+  return ok(c, data);
+});
+app.put('/api/admin/rounds/:id/voting-settings', async (c) => {
+  const p = c.get('principal');
+  await authorize(p, c.env, ['SUPER_ADMIN']);
+  const input = await parse(c, votingSettingsSchema);
+  const { data, error } = await service(c.env).rpc('save_voting_settings', {
+    p_actor: p.id,
+    p_aal: p.aal,
+    p_round: rowId(c),
+    p_open: input.open_at,
+    p_close: input.close_at,
+    p_reason: input.reason,
+  });
+  dbError(error);
+  return ok(c, data);
+});
+app.put('/api/admin/events/:id/sale-settings', async (c) => {
+  const p = c.get('principal');
+  await authorize(p, c.env, ['SUPER_ADMIN']);
+  const input = await parse(c, saleSettingsSchema);
+  const { data, error } = await service(c.env).rpc('save_sale_settings', {
+    p_actor: p.id,
+    p_aal: p.aal,
+    p_event: rowId(c),
+    p_revision: input.revision,
+    p_phases: input.phases,
+  });
+  dbError(error);
+  return ok(c, data);
+});
 app.all('/api/*', (c) => c.json({ error: 'Không tìm thấy API.' }, 404));
 app.get('*', async (c) =>
-  c.env.ASSETS ? c.env.ASSETS.fetch(c.req.raw) : c.text('FTUCharm API', 200),
+  c.env.ASSETS ? c.env.ASSETS.fetch(c.req.raw) : c.text('FTUCHARM API', 200),
 );
 export default {
   fetch: app.fetch,

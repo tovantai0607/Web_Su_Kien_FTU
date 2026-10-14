@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /** Twisted silk with real depth, surface normals and double-sided lighting. */
 function silkGeometry(phase: number) {
   const positions: number[] = [],
     indices: number[] = [];
-  for (let i = 0; i <= 100; i++) {
-    const t = (i / 100) * Math.PI * 2;
+  const segments = 160;
+  for (let i = 0; i < segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
     for (const edge of [-1, 1]) {
       const width = (5 + 7 * Math.pow(Math.sin(t), 2)) * edge;
       const twist = t * 2 + phase;
@@ -16,10 +16,9 @@ function silkGeometry(phase: number) {
         Math.sin(t * 2 + phase) * 65 + width * Math.sin(twist),
       );
     }
-    if (i < 100) {
-      const j = i * 2;
-      indices.push(j, j + 1, j + 2, j + 1, j + 3, j + 2);
-    }
+    const j = i * 2;
+    const next = ((i + 1) % segments) * 2;
+    indices.push(j, j + 1, next, j + 1, next + 1, next);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -48,9 +47,9 @@ function petalGeometry() {
 export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
   let renderer: THREE.WebGLRenderer;
   try {
-    const context = canvas.getContext('webgl2', { alpha: true, antialias: false });
+    const context = canvas.getContext('webgl2', { alpha: true, antialias: true });
     if (!context) return () => {};
-    renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: false });
+    renderer = new THREE.WebGLRenderer({ canvas, context, alpha: true, antialias: true });
   } catch {
     return () => {};
   }
@@ -68,9 +67,11 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     const mesh = new THREE.Mesh(
       silkGeometry(i * 1.8),
       new THREE.MeshStandardMaterial({
-        color: i ? 0x80614b : 0xa7090e,
-        metalness: 0.65,
-        roughness: 0.36,
+        color: 0xa7090e,
+        emissive: 0xa7090e,
+        emissiveIntensity: 0.35,
+        metalness: 0,
+        roughness: 0.65,
         side: THREE.DoubleSide,
       }),
     );
@@ -89,17 +90,6 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
   const petals = Array.from({ length: 12 }, (_, i) => {
     const mesh = new THREE.Mesh(petalShape, petalMaterial);
     mesh.scale.setScalar(0.45 + (i % 3) * 0.2);
-    stage.add(mesh);
-    return mesh;
-  });
-  const pearlMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc5a783,
-    metalness: 0.35,
-    roughness: 0.25,
-  });
-  const pearlShape = new THREE.SphereGeometry(13, 20, 12);
-  const pearls = Array.from({ length: 3 }, () => {
-    const mesh = new THREE.Mesh(pearlShape, pearlMaterial);
     stage.add(mesh);
     return mesh;
   });
@@ -134,7 +124,6 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     scroll = 0,
     width = 1,
     height = 1;
-  const flowers: THREE.Group[] = [];
   const disposeObject = (object: THREE.Object3D) =>
     object.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
@@ -145,45 +134,6 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
         material.dispose();
       }
     });
-  // Tiny CC0 models are served locally. No third-party requests at runtime.
-  for (const [i, name] of ['flower-red', 'flower-red-cluster'].entries()) {
-    new GLTFLoader().load(
-      `/models/stage/${name}.glb`,
-      ({ scene: flower }) => {
-        if (disposed) {
-          disposeObject(flower);
-          textures.forEach((texture) => texture.dispose());
-          return;
-        }
-        const bounds = new THREE.Box3().setFromObject(flower);
-        const center = bounds.getCenter(new THREE.Vector3()),
-          size = bounds.getSize(new THREE.Vector3());
-        flower.position.sub(center);
-        const group = new THREE.Group();
-        group.add(flower);
-        group.scale.setScalar(65 / Math.max(size.x, size.y, size.z, 0.01));
-        group.position.set(i ? 300 : -280, i ? -165 : 130, -15);
-        flower.traverse((child) => {
-          if (!(child instanceof THREE.Mesh)) return;
-          for (const material of Array.isArray(child.material)
-            ? child.material
-            : [child.material]) {
-            if (material instanceof THREE.MeshStandardMaterial) {
-              material.color.multiplyScalar(0.7);
-              material.roughness = 0.65;
-            }
-          }
-        });
-        group.userData.index = i;
-        stage.add(group);
-        flowers.push(group);
-      },
-      undefined,
-      () => {
-        /* A missing optional model must not break the stage. */
-      },
-    );
-  }
   const resize = () => {
     const rect = host.getBoundingClientRect();
     const logo = host.querySelector('.crown-stage')?.getBoundingClientRect() ?? rect;
@@ -204,7 +154,6 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     petals.forEach((petal, i) => {
       petal.visible = i < (mobile ? 5 : 12);
     });
-    pearls[2].visible = !mobile;
     smoke[1].visible = !mobile;
   };
   const render = (now: number) => {
@@ -226,7 +175,8 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
       const position = mesh.geometry.attributes.position;
       const rest = mesh.geometry.userData.rest as Float32Array;
       for (let j = 0; j < position.count; j++) {
-        position.setZ(j, rest[j * 3 + 2] + Math.sin(j / 20 + time * 0.55 + i) * 9);
+        const angle = (Math.floor(j / 2) / (position.count / 2)) * Math.PI * 2;
+        position.setZ(j, rest[j * 3 + 2] + Math.sin(angle * 2 + time * 0.55 + i) * 9);
       }
       position.needsUpdate = true;
       mesh.geometry.computeVertexNormals();
@@ -239,26 +189,11 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
       );
       mesh.rotation.set(time * 0.4 + i, time * 0.65 + i * 2, Math.sin(time * 0.5 + i));
     });
-    pearls.forEach((mesh, i) => {
-      const a = i * 2.1 + time * 0.1;
-      mesh.position.set(Math.cos(a) * 325, Math.sin(a) * 220, Math.sin(a) * 90);
-      mesh.scale.setScalar(0.6 + i * 0.3);
-    });
     smoke.forEach((mesh, i) => {
       mesh.rotation.z = Math.sin(time * 0.07 + i) * 0.12;
       mesh.rotation.y = Math.sin(time * 0.12 + i) * 0.22;
       mesh.position.x = (i ? -80 : 110) + Math.sin(time * 0.13 + i) * 50;
       mesh.scale.setScalar(1 + Math.sin(time * 0.17 + i) * 0.12);
-    });
-    flowers.forEach((flower) => {
-      const i = flower.userData.index as number;
-      flower.visible = !mobile || i === 0;
-      flower.rotation.set(
-        0.2 + Math.sin(time * 0.2) * 0.12,
-        time * 0.12 + i,
-        (i ? -0.3 : 0.3) + Math.sin(time * 0.3) * 0.08,
-      );
-      flower.position.y = (i ? -165 : 130) + Math.sin(time * 0.4 + i) * 14;
     });
     renderer.render(scene, camera);
     if (host.dataset.sceneReady !== 'true') host.dataset.sceneReady = 'true';
@@ -311,6 +246,12 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
   canvas.addEventListener('webglcontextrestored', onRestored);
   resize();
   onScroll();
+  // Initialize positions and paint synchronously: never flash the CSS fallback
+  // or objects at their construction positions before the first animation frame.
+  const rect = host.getBoundingClientRect();
+  visible = rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+  render(performance.now());
+  sync();
   return () => {
     disposed = true;
     cancelAnimationFrame(frame);

@@ -56,13 +56,13 @@ test('registration validation and reduced motion', async ({ page }) => {
   await expect(page.getByText('Hồ sơ đã được tiếp nhận.', { exact: true })).toHaveCount(0);
 });
 
-test('tribute, sponsor slots and motion control are accessible', async ({ page }) => {
+test('tribute and sponsor slots stay accessible with system reduced motion', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Lê Phương Nghi', exact: true })).toBeAttached();
   await expect(page.locator('.sponsor-placeholders .sponsor-tile')).toHaveCount(4);
-  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
-  await expect(page.getByRole('link', { name: 'Facebook FTUCharm', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Facebook FTUCHARM', exact: true })).toHaveAttribute(
     'href',
     'https://www.facebook.com/ftucharm.duyendangngoaithuong',
   );
@@ -78,7 +78,7 @@ test('gender voting categories are ready but stay closed before opening', async 
 test('admin is guarded, gallery dialog and keyboard work', async ({ page }) => {
   await page.goto('/admin');
   await expect(
-    page.getByText('Tài khoản được cấp quyền và xác thực hai bước mới có thể truy cập.'),
+    page.getByText('Chỉ tài khoản được cấp quyền admin mới có thể truy cập.'),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Thêm mới' })).toHaveCount(0);
   await page.goto('/thu-vien');
@@ -158,7 +158,7 @@ test('reference hero copy and ticket purchase remain honest', async ({ page }) =
 test('gallery supports keyboard, slide status and lightbox dismissal', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/thu-vien');
-  const gallery = page.getByRole('region', { name: 'Thư viện FTUCharm' });
+  const gallery = page.getByRole('region', { name: 'Thư viện FTUCHARM' });
   await gallery.focus();
   await page.keyboard.press('ArrowRight');
   await expect(gallery.getByRole('status')).toHaveText('2 / 2');
@@ -214,7 +214,7 @@ test('account signup has confirmation, password visibility and no preview write'
   await expect(page.getByText('Bản xem trước không tạo tài khoản.')).toBeVisible();
 });
 
-test('crown responds to scroll and becomes static when motion is paused', async ({ page }) => {
+test('crown responds to scroll and becomes static with system reduced motion', async ({ page }) => {
   await page.goto('/');
   await page.locator('.stage-crown img').waitFor();
   await expect(page.locator('.stage-crown img')).toHaveJSProperty('complete', true);
@@ -227,7 +227,7 @@ test('crown responds to scroll and becomes static when motion is paused', async 
     .locator('.crown-scroll')
     .evaluate((el) => getComputedStyle(el).transform);
   expect(after).not.toBe(before);
-  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
   expect(
     await page.locator('.stage-crown').evaluate((el) => getComputedStyle(el).animationName),

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-preview/
+dist-auth-test/
 .wrangler/
 .env
 .env.*
@@ -11,6 +12,7 @@ dist-preview/
 playwright-report/
 .playwright-cli/
 test-results/
+test-results-auth/
 coverage/
 *.log
 .DS_Store

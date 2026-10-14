@@ -69,9 +69,9 @@ it('seeds both categories in a draft 2027 season without opening registrations o
     { code: 'male', published: false, vote_open_at: null },
   ]);
 });
-it('requires MFA and role before editing details or preparing voting', async () => {
+it('requires role before editing details or preparing voting', async () => {
   await expect(
-    db.query('select public.prepare_gender_voting($1,$2,$3)', [admin, 'aal1', round]),
+    db.query('select public.prepare_gender_voting($1,$2,$3)', [user, 'aal1', round]),
   ).rejects.toThrow('FORBIDDEN');
   await expect(
     db.query('select public.prepare_gender_voting($1,$2,$3)', [user, 'aal2', round]),
@@ -153,7 +153,7 @@ it('prepares categories idempotently and opens one session with correct gender a
     db.query('select public.open_voting($1,$2,$3)', [admin, 'aal2', round]),
   ).rejects.toThrow('VOTING_HAS_STARTED');
 });
-it('rejects unchecked tickets, wrong owners and cross-category votes', async () => {
+it('accepts issued tickets without check-in while rejecting wrong owners and cross-category votes', async () => {
   await expect(
     db.query('select public.cast_category_vote($1,$2,$3,$4,$5,$6)', [
       user,
@@ -163,7 +163,7 @@ it('rejects unchecked tickets, wrong owners and cross-category votes', async () 
       maleCategory,
       session,
     ]),
-  ).rejects.toThrow('TICKET_NOT_ELIGIBLE');
+  ).resolves.toBeDefined();
   await db.query('update public.tickets set checked_in_at=now() where id=$1', [ticket]);
   await expect(
     db.query('select public.cast_category_vote($1,$2,$3,$4,$5,$6)', [

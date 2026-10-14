@@ -8,7 +8,10 @@ import { passwordError, safeAuthError } from '../lib/auth-policy';
 import { Turnstile } from './Turnstile';
 
 export default function AccountSecurity() {
-  const { user } = useAuth();
+  const { user, access, refreshAccess } = useAuth();
+  const googleOnly =
+    user?.app_metadata?.provider === 'google' &&
+    !user.identities?.some((i) => i.provider === 'email');
   const [factor, setFactor] = useState<{ id: string; qr?: string } | null>(null);
   const [verified, setVerified] = useState(false);
   const [code, setCode] = useState('');
@@ -116,168 +119,179 @@ export default function AccountSecurity() {
     });
   }
   return (
-    <Card className="account-security">
-      <h2>Bảo mật</h2>
-      <p>{verified ? 'Xác thực hai bước đã bật.' : 'Thêm xác thực hai bước cho tài khoản.'}</p>
-      {!factor && (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              const result = await supabase!.auth.mfa.enroll({
-                factorType: 'totp',
-                friendlyName: 'FTUCharm',
-              });
-              if (result.error) throw new Error('Không thể thiết lập MFA. Hãy thử lại.');
-              setFactor({ id: result.data.id, qr: result.data.totp.qr_code });
-            })
-          }
-        >
-          Bật xác thực hai bước
-        </Button>
-      )}
-      {factor && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(async () => {
-              if (!/^\d{6}$/.test(code)) throw new Error('Nhập mã gồm 6 chữ số.');
-              const result = await supabase!.auth.mfa.challengeAndVerify({
-                factorId: factor.id,
-                code,
-              });
-              setCode('');
-              if (result.error)
-                throw new Error(safeAuthError(result.error, 'Mã không hợp lệ hoặc đã hết hạn.'));
-              setVerified(true);
-              setFactor({ id: factor.id });
-              setMessage('Đã xác minh hai bước.');
-            });
-          }}
-        >
-          {factor.qr && (
-            <img
-              src={
-                factor.qr.startsWith('data:')
-                  ? factor.qr
-                  : 'data:image/svg+xml;base64,' + btoa(factor.qr)
-              }
-              alt="Quét bằng ứng dụng xác thực"
-              width="200"
-              height="200"
-            />
-          )}
-          <Field label="Mã 6 chữ số">
-            <Input
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              disabled={busy}
-            />
-          </Field>
-          <Button disabled={busy} variant="outline">
-            {verified ? 'Xác minh phiên' : 'Xác nhận MFA'}
+    <div id="bao-mat">
+      <Card className="account-security">
+        <h2>Bảo mật</h2>
+        <p>{verified ? 'Xác thực hai bước đã bật.' : 'Xác thực hai bước là tùy chọn.'}</p>
+        {!factor && (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() =>
+              void run(async () => {
+                const result = await supabase!.auth.mfa.enroll({
+                  factorType: 'totp',
+                  friendlyName: 'FTUCHARM',
+                });
+                if (result.error) throw new Error('Không thể thiết lập MFA. Hãy thử lại.');
+                setFactor({ id: result.data.id, qr: result.data.totp.qr_code });
+              })
+            }
+          >
+            Bật xác thực hai bước
           </Button>
-          {!verified && (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  const result = await supabase!.auth.mfa.unenroll({ factorId: factor.id });
-                  if (result.error) throw new Error('Không thể hủy thiết lập. Hãy thử lại.');
-                  setFactor(null);
-                  setCode('');
-                })
-              }
-            >
-              Hủy thiết lập
-            </Button>
-          )}
-        </form>
-      )}
-      <form onSubmit={(e) => void changePassword(e)}>
-        <h3>Đổi mật khẩu</h3>
-        <Field label="Mật khẩu hiện tại">
-          <Input
-            type="password"
-            autoComplete="current-password"
-            required
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            disabled={busy}
-          />
-        </Field>
-        <Field label="Mật khẩu mới" hint="12 ký tự trở lên, tối đa 72 byte.">
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
-          />
-        </Field>
-        <Field label="Nhập lại mật khẩu mới">
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            disabled={busy}
-          />
-        </Field>
-        {needsNonce && (
-          <Field label="Mã xác nhận trong email">
-            <Input
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={nonce}
-              onChange={(e) => setNonce(e.target.value)}
-              disabled={busy}
-            />
-          </Field>
         )}
-        <Turnstile key={captchaVersion} action="auth" onToken={setCaptcha} />
-        <Button disabled={busy}>{busy ? 'Đang xử lý…' : 'Lưu mật khẩu'}</Button>
-      </form>
-      {error && <ErrorState message={error} />}
-      <p role="status">{message}</p>
-      <Link to="/admin" className="text-link">
-        Quản trị
-      </Link>
-      <div className="auth-links">
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              const result = await supabase!.auth.signOut({ scope: 'local' });
-              if (result.error) throw new Error('Không thể đăng xuất. Hãy thử lại.');
-            })
-          }
-        >
-          Đăng xuất
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              const result = await supabase!.auth.signOut({ scope: 'global' });
-              if (result.error) throw new Error('Không thể thu hồi phiên. Hãy thử lại.');
-            })
-          }
-        >
-          Đăng xuất mọi thiết bị
-        </Button>
-      </div>
-    </Card>
+        {factor && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                if (!/^\d{6}$/.test(code)) throw new Error('Nhập mã gồm 6 chữ số.');
+                const result = await supabase!.auth.mfa.challengeAndVerify({
+                  factorId: factor.id,
+                  code,
+                });
+                setCode('');
+                if (result.error)
+                  throw new Error(safeAuthError(result.error, 'Mã không hợp lệ hoặc đã hết hạn.'));
+                setVerified(true);
+                refreshAccess?.();
+                setFactor({ id: factor.id });
+                setMessage('Đã xác minh hai bước.');
+              });
+            }}
+          >
+            {factor.qr && (
+              <img
+                src={
+                  factor.qr.startsWith('data:')
+                    ? factor.qr
+                    : 'data:image/svg+xml;base64,' + btoa(factor.qr)
+                }
+                alt="Quét bằng ứng dụng xác thực"
+                width="200"
+                height="200"
+              />
+            )}
+            <Field label="Mã 6 chữ số">
+              <Input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                disabled={busy}
+              />
+            </Field>
+            <Button disabled={busy} variant="outline">
+              {verified ? 'Xác minh phiên' : 'Xác nhận MFA'}
+            </Button>
+            {!verified && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const result = await supabase!.auth.mfa.unenroll({ factorId: factor.id });
+                    if (result.error) throw new Error('Không thể hủy thiết lập. Hãy thử lại.');
+                    setFactor(null);
+                    setCode('');
+                  })
+                }
+              >
+                Hủy thiết lập
+              </Button>
+            )}
+          </form>
+        )}
+        {googleOnly ? (
+          <p>
+            Bạn đang đăng nhập bằng Google. Mật khẩu được quản lý trong tài khoản Google của bạn.
+          </p>
+        ) : (
+          <form onSubmit={(e) => void changePassword(e)}>
+            <h3>Đổi mật khẩu</h3>
+            <Field label="Mật khẩu hiện tại">
+              <Input
+                type="password"
+                autoComplete="current-password"
+                required
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            <Field label="Mật khẩu mới" hint="12 ký tự trở lên, tối đa 72 byte.">
+              <Input
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            <Field label="Nhập lại mật khẩu mới">
+              <Input
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            {needsNonce && (
+              <Field label="Mã xác nhận trong email">
+                <Input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  required
+                  value={nonce}
+                  onChange={(e) => setNonce(e.target.value)}
+                  disabled={busy}
+                />
+              </Field>
+            )}
+            <Turnstile key={captchaVersion} action="auth" onToken={setCaptcha} />
+            <Button disabled={busy}>{busy ? 'Đang xử lý…' : 'Lưu mật khẩu'}</Button>
+          </form>
+        )}
+        {error && <ErrorState message={error} />}
+        <p role="status">{message}</p>
+        {access?.is_admin && (
+          <Link to="/admin/cau-hinh" className="text-link">
+            Mở quản trị
+          </Link>
+        )}
+        <div className="auth-links">
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() =>
+              void run(async () => {
+                const result = await supabase!.auth.signOut({ scope: 'local' });
+                if (result.error) throw new Error('Không thể đăng xuất. Hãy thử lại.');
+              })
+            }
+          >
+            Đăng xuất
+          </Button>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() =>
+              void run(async () => {
+                const result = await supabase!.auth.signOut({ scope: 'global' });
+                if (result.error) throw new Error('Không thể thu hồi phiên. Hãy thử lại.');
+              })
+            }
+          >
+            Đăng xuất mọi thiết bị
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }

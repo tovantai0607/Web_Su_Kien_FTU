@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import AuthForm from '../components/AuthForm';
 import AccountSecurity from '../components/AccountSecurity';
+import OAuthCallback from '../components/OAuthCallback';
 import type { Contestant } from '@ftu/shared';
 function Profile() {
   const { user } = useAuth();
@@ -186,6 +187,7 @@ function Profile() {
 export default function Account() {
   const { user, loading, recovery } = useAuth();
   const { pathname } = useLocation();
+  if (pathname.endsWith('oauth-callback')) return <OAuthCallback />;
   if (loading) return <div className="page-shell">Đang kiểm tra phiên…</div>;
   if (
     recovery ||

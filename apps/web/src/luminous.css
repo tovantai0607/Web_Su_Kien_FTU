@@ -755,17 +755,6 @@ footer {
   align-items: center;
   flex-wrap: wrap;
 }
-.motion-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--rose);
-  background: none;
-  border: 0;
-  padding: 10px 0;
-  font-size: 10px;
-  min-height: 44px;
-}
 .back-to-top {
   position: fixed;
   right: 20px;
