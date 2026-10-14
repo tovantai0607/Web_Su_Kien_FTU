@@ -44,6 +44,8 @@ Artifacts ignored: `output/demo-test/http-verification.json`, `browser-verificat
 
 ## Chạy lại trên máy này
 
+Sau khi checkout/gộp nhánh hoặc thay đổi cấu hình Wrangler trong lúc server chạy, dừng và chạy lại `npm run dev:demo-db` để nạp đầy đủ Images/R2. Lượt14/10/2026 ghi nhận reload trong khi đổi nhánh làm mất hai bindings này; `/api/health` vẫn trả200 nhưng upload ảnh trả503. Không xóa `.wrangler/state/demo-test` khi khởi động lại. Chi tiết và bài thử thêm đơn một vé xem [báo cáo lỗi runtime](demo-proof-runtime-fix-20261014.md).
+
 ```powershell
 # Chỉ sau khi đã kiểm tra đúng project và được phép ghi DEMO.
 node tools/setup-supabase-demo-local.mjs
