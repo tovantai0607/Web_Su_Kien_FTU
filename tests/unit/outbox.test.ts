@@ -24,7 +24,7 @@ vi.mock('../../apps/api/src/security', () => ({
 }));
 import { sendOutbox } from '../../apps/api/src/outbox';
 import type { Env } from '../../apps/api/src/security';
-const env = { RESEND_API_KEY: 'test-only', EMAIL_FROM: 'FTUCharm <test@example.test>' } as Env;
+const env = { RESEND_API_KEY: 'test-only', EMAIL_FROM: 'FTUCHARM <test@example.test>' } as Env;
 afterEach(() => {
   vi.unstubAllGlobals();
   state.updates = [];

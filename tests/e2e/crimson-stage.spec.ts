@@ -10,8 +10,12 @@ test('crimson stage responds to scroll in both directions and pauses every layer
   const petal = stage.locator('.stage-petal').first();
   await expect(stage).toHaveAttribute('data-running', 'true');
   await expect(petal).toBeAttached();
-  const initial = await petal.evaluate((el) => getComputedStyle(el).transform);
-  await expect.poll(() => petal.evaluate((el) => getComputedStyle(el).transform)).not.toBe(initial);
+  // The fallback animates only when WebGL is unavailable; the GPU scene owns motion otherwise.
+  await expect(page.locator('.luminous-hero')).toHaveAttribute('data-scene-ready', 'true');
+  await expect(stage).toBeHidden();
+  const canvas = page.locator('.ribbon-field canvas');
+  const initial = await canvas.screenshot();
+  await expect.poll(async () => (await canvas.screenshot()).equals(initial)).toBe(false);
   expect(
     await stage
       .locator('.stage-petal')
@@ -23,11 +27,11 @@ test('crimson stage responds to scroll in both directions and pauses every layer
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).not.toBe(start);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).toBe(start);
-  await page.getByRole('button', { name: 'Dừng chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(stage).toHaveAttribute('data-disabled', 'true');
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
   await expect(page.locator('.ribbon-field canvas')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Bật chuyển động', exact: true }).click();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expect(stage).toHaveAttribute('data-running', 'true');
   await page.evaluate(() =>

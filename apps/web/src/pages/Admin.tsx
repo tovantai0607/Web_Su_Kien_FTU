@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import AdminSettings from './AdminSettings';
 import {
   LayoutDashboard,
   Users,
@@ -91,7 +92,8 @@ const defaults: Record<string, Row> = {
   },
 };
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, loading, access, accessLoading, accessError, refreshAccess } = useAuth();
+  const { pathname } = useLocation();
   const [tab, setTab] = useState('overview'),
     [page, setPage] = useState(1),
     [status, setStatus] = useState('pending'),
@@ -114,30 +116,52 @@ export default function Admin() {
           (tab === 'tickets' ? 'overview' : tab) +
           (tab === 'applications' ? `?page=${page - 1}&status=${status}` : ''),
       ),
-    enabled: !!user && !preview,
+    enabled: !!user && !preview && !!access?.is_admin && pathname !== '/admin/cau-hinh',
     retry: false,
   });
-  if (!user || preview)
+  if (loading || accessLoading)
+    return (
+      <div className="page-shell" role="status">
+        Đang kiểm tra quyền quản trị…
+      </div>
+    );
+  if (user && !preview && accessError)
+    return (
+      <div className="page-shell">
+        <ErrorState message={accessError} />
+        <Button onClick={refreshAccess}>Thử lại</Button>
+      </div>
+    );
+  if (user && !preview && access && !access.is_admin)
+    return (
+      <div className="page-shell">
+        <EmptyState title="Trang này chưa được tìm thấy." />
+      </div>
+    );
+  if (!user || preview || !access?.is_admin)
     return (
       <div className="page-shell narrow">
         <PageTitle
           label="Dành cho ban tổ chức"
           title="Quản trị an toàn."
-          description="Tài khoản được cấp quyền và xác thực hai bước mới có thể truy cập."
+          description="Chỉ tài khoản được cấp quyền admin mới có thể truy cập."
         />
         <Card>
           <ShieldCheck size={42} strokeWidth={1} />
           <p>
             {preview
               ? 'Bản xem trước không truy cập hồ sơ riêng tư hoặc cho phép thao tác quản trị.'
-              : 'Đăng nhập và xác minh MFA trong trang tài khoản để tiếp tục.'}
+              : 'Đăng nhập bằng tài khoản được cấp quyền admin để tiếp tục.'}
           </p>
           <Button asChild>
-            <Link to="/tai-khoan/dang-nhap">Mở tài khoản</Link>
+            <Link to={user ? '/tai-khoan/ho-so#bao-mat' : '/tai-khoan/dang-nhap'}>
+              Mở tài khoản
+            </Link>
           </Button>
         </Card>
       </div>
     );
+  if (pathname === '/admin/cau-hinh') return <AdminSettings />;
   const collection =
     tab === 'applications'
       ? ((q.data as { items: Row[]; total: number } | undefined)?.items ?? [])
@@ -192,8 +216,11 @@ export default function Admin() {
   return (
     <div className="admin-layout">
       <aside className="admin-nav">
-        <h2>FTUCharm Studio</h2>
+        <h2>FTUCHARM Studio</h2>
         <p>Ban tổ chức</p>
+        <Link className="text-link" to="/admin/cau-hinh">
+          Cấu hình vote và vé
+        </Link>
         {tabs.map(([value, label, Icon]) => (
           <button
             key={value}
@@ -360,15 +387,8 @@ export default function Admin() {
               >
                 Chuẩn bị hạng mục nam / nữ
               </Button>
-              <Button
-                variant="outline"
-                disabled={busy || !publishId}
-                onClick={() => {
-                  if (window.confirm('Mở bình chọn chung kết 10 phút ngay bây giờ?'))
-                    void action('/admin/rounds/' + publishId + '/open-voting', {});
-                }}
-              >
-                Mở bình chọn 10 phút
+              <Button asChild variant="outline">
+                <Link to="/admin/cau-hinh">Đặt lịch bình chọn</Link>
               </Button>
               <p className="fine-print">
                 Chỉ mở sau khi danh sách chung kết đã công bố và vé đã check-in. Thời gian do
@@ -570,7 +590,7 @@ function RoleManagement({ busy, onSave }: { busy: boolean; onSave: (body: unknow
   return (
     <Card>
       <h2>Quyền theo vai trò</h2>
-      <p>Chỉ SUPER_ADMIN có MFA được cấp hoặc thu hồi quyền. Không thể xóa admin cuối cùng.</p>
+      <p>Chỉ SUPER_ADMIN được cấp hoặc thu hồi quyền. Không thể xóa admin cuối cùng.</p>
       <Field label="ID tài khoản">
         <Input value={userId} onChange={(e) => setUserId(e.target.value)} />
       </Field>

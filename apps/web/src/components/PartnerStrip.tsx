@@ -6,7 +6,7 @@ export default function PartnerStrip() {
         src="/images/partner-strip-original.png"
         width="3000"
         height="298"
-        alt="Đại học Ngoại thương, Đoàn Thanh niên, Hội Sinh viên, LiS, FTUCharm – Duyên dáng Ngoại thương, COSMO Academy và UNI media"
+        alt="Đại học Ngoại thương, Đoàn Thanh niên, Hội Sinh viên, LiS, FTUCHARM – Duyên dáng Ngoại thương, COSMO Academy và UNI media"
         loading="lazy"
       />
     </section>

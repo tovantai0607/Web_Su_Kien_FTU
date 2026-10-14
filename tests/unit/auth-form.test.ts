@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   auth: {
     signUp: vi.fn(),
     signInWithPassword: vi.fn(),
+    signInWithOAuth: vi.fn(),
     resetPasswordForEmail: vi.fn(),
     resend: vi.fn(),
     updateUser: vi.fn(),
@@ -61,6 +62,37 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe('auth workflows with a mocked provider, no real accounts or email', () => {
+  it('starts Google OAuth with a same-origin PKCE callback and minimal identity scopes', async () => {
+    state.auth.signInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com' },
+      error: null,
+    });
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập bằng Google' }));
+    await waitFor(() => expect(state.auth.signInWithOAuth).toHaveBeenCalledOnce());
+    expect(state.auth.signInWithOAuth.mock.calls[0][0]).toEqual({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/tai-khoan/oauth-callback',
+        scopes: 'openid email profile',
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+    expect(state.auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+  it('surfaces Google provider errors without pretending to sign in', async () => {
+    state.auth.signInWithOAuth.mockResolvedValue({
+      data: { url: null },
+      error: { code: 'provider_disabled' },
+    });
+    open('/tai-khoan/dang-ky');
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập bằng Google' }));
+    expect(
+      await screen.findByText(
+        'Chưa thể đăng nhập Google. Hãy thử lại hoặc dùng email và mật khẩu.',
+      ),
+    ).toBeTruthy();
+  });
   it('blocks mismatched passwords and missing captcha before signup', async () => {
     open('/tai-khoan/dang-ky');
     enter();

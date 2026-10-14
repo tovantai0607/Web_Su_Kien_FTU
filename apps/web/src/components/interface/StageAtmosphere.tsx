@@ -50,11 +50,11 @@ export function StageAtmosphere({ subtle = false }: { subtle?: boolean }) {
           ))}
         </div>
       )}
-      <div className="stage-pearls">
-        {Array.from({ length: subtle ? 1 : 3 }, (_, i) => (
-          <span className={`stage-pearl stage-pearl-${i + 1}`} key={i} />
-        ))}
-      </div>
+      {subtle && (
+        <div className="stage-pearls">
+          <span className="stage-pearl stage-pearl-1" />
+        </div>
+      )}
       <div className="stage-smoke stage-smoke-near" />
       {!subtle && <div className="stage-smoke stage-smoke-far" />}
     </div>

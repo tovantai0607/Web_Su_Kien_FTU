@@ -11,7 +11,7 @@ export default defineConfig(({ command, mode }) => ({
       process.env.VITE_PREVIEW_MODE ??
         (command === 'serve'
           ? (loadEnv(mode, fileURLToPath(new URL('../../', import.meta.url)), 'VITE_')
-              .VITE_PREVIEW_MODE ?? 'true')
+              .VITE_PREVIEW_MODE ?? 'false')
           : 'false'),
     ),
   },
@@ -22,11 +22,13 @@ export default defineConfig(({ command, mode }) => ({
     rolldownOptions: {
       output: {
         codeSplitting: {
-          // Keep the existing SDK separately cacheable across visual-only releases.
-          groups:
-            process.env.VITE_PREVIEW_MODE === 'true'
+          // Load Three with the entry point while keeping it cacheable across visual edits.
+          groups: [
+            { name: 'three-vendor', test: /node_modules[\\/]three[\\/]/ },
+            ...(process.env.VITE_PREVIEW_MODE === 'true'
               ? []
-              : [{ name: 'supabase-vendor', test: /node_modules[\\/]@supabase[\\/]/ }],
+              : [{ name: 'supabase-vendor', test: /node_modules[\\/]@supabase[\\/]/ }]),
+          ],
         },
       },
     },

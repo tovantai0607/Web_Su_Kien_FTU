@@ -455,10 +455,6 @@ footer {
 .footer-bottom {
   font-size: 12px;
 }
-.motion-toggle {
-  font-size: 12px;
-  min-height: 44px;
-}
 @keyframes pearl-suspension {
   0%,
   100% {

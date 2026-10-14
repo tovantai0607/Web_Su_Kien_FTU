@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export * from './sales';
+export * from './admin-settings';
 export const uuid = z.string().uuid();
 export const roles = [
   'CONTESTANT',
@@ -227,7 +228,7 @@ export const steps = [
 ];
 export const demoEdition: Edition = {
   id: DEMO_EDITION,
-  title: 'FTUCharm',
+  title: 'FTUCHARM',
   slug: 'preview',
   theme: 'Vẻ đẹp khởi nguồn từ chính bạn',
   year: 2027,
@@ -306,7 +307,7 @@ export type VotingData = {
 export const demoFinalRound: Round = {
   id: '77777777-7777-4777-8777-777777777777',
   edition_id: DEMO_EDITION,
-  title: 'Chung kết FTUCharm (2027)',
+  title: 'Chung kết FTUCHARM (2027)',
   kind: 'final',
   position: 2,
   cutoff: 50,

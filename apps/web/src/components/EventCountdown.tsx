@@ -28,7 +28,7 @@ export default function EventCountdown({ events }: { events: TimelineEvent[] }) 
       <div className="countdown-event">
         <CalendarDays size={24} strokeWidth={1.3} />
         <div>
-          <p>{upcoming ? 'Cùng đếm ngược đến' : 'Hẹn gặp tại FTUCharm'}</p>
+          <p>{upcoming ? 'Cùng đếm ngược đến' : 'Hẹn gặp tại FTUCHARM'}</p>
           <h2>{upcoming?.title ?? 'Lịch chính thức sắp công bố'}</h2>
         </div>
       </div>

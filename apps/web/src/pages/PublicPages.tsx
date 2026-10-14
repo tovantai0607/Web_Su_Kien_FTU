@@ -198,7 +198,7 @@ function Gallery() {
       <PageTitle title="Thư viện" description="Ảnh chính thức sẽ được công bố tại đây." />
       <Suspense fallback={<Skeleton />}>
         <PhotoCarousel
-          label="Thư viện FTUCharm"
+          label="Thư viện FTUCHARM"
           photos={[
             {
               src: '/images/silk-bloom.webp',
@@ -210,7 +210,7 @@ function Gallery() {
             {
               src: '/images/le-phuong-nghi-2025.webp',
               alt: 'Lê Phương Nghi – Hoa khôi Duyên dáng Ngoại thương 2025',
-              caption: 'Dấu ấn FTUCharm 2025',
+              caption: 'Dấu ấn FTUCHARM 2025',
               width: 1958,
               height: 745,
             },
@@ -223,7 +223,7 @@ function Gallery() {
 function About() {
   return (
     <div className="page-shell">
-      <PageTitle title="Về FTUCharm" />
+      <PageTitle title="Về FTUCHARM" />
       <div className="about-layout">
         <img
           src="/images/silk-bloom.webp"

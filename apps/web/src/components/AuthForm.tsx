@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Crown, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import BrandMark from './BrandMark';
 import { Button, Card, Field, Input, ErrorState } from '@ftu/ui';
 import { preview, supabase } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -51,6 +52,32 @@ export default function AuthForm() {
     setCaptchaVersion((v) => v + 1);
   }, [initial]);
   const newPassword = mode === 'signup' || mode === 'reset';
+  async function googleLogin() {
+    if (busy) return;
+    setError('');
+    setMessage('');
+    if (preview || !supabase) {
+      setError('Đăng nhập Google cần kết nối dịch vụ; bản xem trước không đăng nhập thật.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/tai-khoan/oauth-callback',
+          scopes: 'openid email profile',
+          queryParams: { prompt: 'select_account' },
+        },
+      });
+      if (result.error)
+        throw new Error('Chưa thể đăng nhập Google. Hãy thử lại hoặc dùng email và mật khẩu.');
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Không thể kết nối. Hãy thử lại.');
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(event: FormEvent, resend = false) {
     event.preventDefault();
     if (busy) return;
@@ -182,11 +209,41 @@ export default function AuthForm() {
   return (
     <div className="page-shell auth-shell">
       <div className="auth-identity" aria-hidden="true">
-        <Crown size={44} strokeWidth={1} />
-        <span>ftucharm</span>
+        <BrandMark />
       </div>
       <h1>{titles[mode]}</h1>
       <Card className="auth-card">
+        {(mode === 'login' || mode === 'signup') && (
+          <div className="auth-google">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void googleLogin()}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.23c1.89-1.74 2.99-4.31 2.99-7.36Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 22c2.7 0 4.96-.9 6.61-2.41l-3.23-2.51c-.9.6-2.04.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.07v2.6A10 10 0 0 0 12 22Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M6.41 13.92a6 6 0 0 1 0-3.84v-2.6H3.07a10 10 0 0 0 0 9.04l3.34-2.6Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.96c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.48l3.34 2.6C7.2 7.72 9.4 5.96 12 5.96Z"
+                />
+              </svg>
+              Đăng nhập bằng Google
+            </Button>
+            <p>Hoặc dùng email và mật khẩu</p>
+          </div>
+        )}
         <form onSubmit={(e) => void submit(e)} noValidate aria-busy={busy}>
           {mode !== 'reset' && mode !== 'mfa' && (
             <Field label="Email" error={fieldErrors.email}>

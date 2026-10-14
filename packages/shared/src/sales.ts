@@ -35,6 +35,9 @@ export type SalesEvent = {
   available: number;
   categories: SalesCategory[];
   seats: SalesSeat[];
+  pricing_version?: string | null;
+  phases?: { kind: 'EARLY' | 'REGULAR'; open_at: string; close_at: string }[];
+  active_phase?: 'EARLY' | 'REGULAR' | null;
 };
 export type SalesCatalog = { server_time: string; events: SalesEvent[] };
 export type SalesHold = {
@@ -55,6 +58,7 @@ export type SalesHold = {
 };
 export const salesHoldSchema = z
   .object({
+    pricing_version: z.string().max(100).nullable().optional(),
     seat_ids: z
       .array(z.string().uuid())
       .min(1, 'Chọn ít nhất một ghế.')
@@ -63,6 +67,13 @@ export const salesHoldSchema = z
   })
   .strict();
 export function currentSaleState(event: SalesEvent, serverNow: number): SaleState {
+  if (event.phases?.length) {
+    const active = event.phases.find(
+      (p) => serverNow >= Date.parse(p.open_at) && serverNow < Date.parse(p.close_at),
+    );
+    if (active) return event.available === 0 ? 'SOLD_OUT' : 'OPEN';
+    return event.phases.some((p) => serverNow < Date.parse(p.open_at)) ? 'UPCOMING' : 'CLOSED';
+  }
   if (serverNow < Date.parse(event.sale_open_at)) return 'UPCOMING';
   if (serverNow >= Date.parse(event.sale_close_at)) return 'CLOSED';
   return event.available === 0 ? 'SOLD_OUT' : 'OPEN';

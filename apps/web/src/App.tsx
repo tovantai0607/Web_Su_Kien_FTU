@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import BrandMark from './components/BrandMark';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ArrowUp, Camera, MessageCircle, Pause, Play } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowUp, Camera, MessageCircle } from 'lucide-react';
 import { Button, Spinner } from '@ftu/ui';
 import { preview } from './lib/api';
 import Home from './pages/Home';
@@ -25,7 +26,7 @@ function ScrollReset() {
       '/binh-chon': 'Bình chọn chung kết',
       '/ve': 'Thông tin vé',
       '/timeline': 'Hành trình',
-      '/gioi-thieu': 'Về FTUCharm',
+      '/gioi-thieu': 'Về FTUCHARM',
       '/thu-vien': 'Thư viện',
       '/nha-tai-tro': 'Nhà tài trợ',
       '/tai-khoan/dang-nhap': 'Đăng nhập',
@@ -35,13 +36,12 @@ function ScrollReset() {
       '/tai-khoan/ho-so': 'Tài khoản',
       '/admin': 'Quản trị',
     };
-    document.title = `${title[pathname] ?? 'Khám phá'} • FTUCharm (2027)`;
+    document.title = `${title[pathname] ?? 'Khám phá'} • FTUCHARM (2027)`;
   }, [pathname]);
   return null;
 }
 export default function App() {
   const [menu, setMenu] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [allowMotion, setAllowMotion] = useState(() => {
     try {
       return localStorage.getItem('ftucharm-motion-override') === 'on';
@@ -50,14 +50,11 @@ export default function App() {
     }
   });
   const reduced = useSystemReducedMotion();
-  const motionPaused = paused || (reduced && !allowMotion);
-  const toggleMotion = () => {
-    const override = motionPaused && reduced;
-    setPaused(!motionPaused);
-    setAllowMotion(override);
+  const motionPaused = reduced && !allowMotion;
+  const enableMotion = () => {
+    setAllowMotion(true);
     try {
-      if (override) localStorage.setItem('ftucharm-motion-override', 'on');
-      else localStorage.removeItem('ftucharm-motion-override');
+      localStorage.setItem('ftucharm-motion-override', 'on');
     } catch {
       /* The control also works when browser storage is unavailable. */
     }
@@ -67,13 +64,12 @@ export default function App() {
     const syncMotion = (event: StorageEvent) => {
       if (event.key === 'ftucharm-motion-override' || event.key === null) {
         setAllowMotion(event.newValue === 'on');
-        setPaused(false);
       }
     };
     window.addEventListener('storage', syncMotion);
     return () => window.removeEventListener('storage', syncMotion);
   }, []);
-  const { user } = useAuth();
+  const { user, access } = useAuth();
   useEffect(() => setMenu(false), [location.pathname]);
   useEffect(() => {
     document.documentElement.dataset.motion = motionPaused ? 'off' : 'on';
@@ -88,17 +84,8 @@ export default function App() {
       </a>
       {preview && <div className="preview-bar">Bản xem trước · Chưa nhận đăng ký thật</div>}
       <header className="site-header">
-        <Link to="/" className="brand" aria-label="FTUCharm, trang chủ">
-          <img
-            className="brand-logo"
-            src="/images/ftucharm-logo-transparent.webp"
-            width="48"
-            height="44"
-            alt=""
-          />
-          <span>
-            ftu<span className="brand-italic">charm</span>
-          </span>
+        <Link to="/" className="brand" aria-label="FTUCHARM, trang chủ">
+          <BrandMark />
         </Link>
         <nav
           className={menu ? 'main-nav is-open' : 'main-nav'}
@@ -108,7 +95,7 @@ export default function App() {
           <NavLink to="/" end>
             Trang chủ
           </NavLink>
-          <NavLink to="/gioi-thieu">Về FTUCharm</NavLink>
+          <NavLink to="/gioi-thieu">Về FTUCHARM</NavLink>
           <NavLink to="/timeline">Hành trình</NavLink>
           <NavLink to="/thi-sinh">Thí sinh</NavLink>
           <NavLink to="/ve">Vé</NavLink>
@@ -140,7 +127,7 @@ export default function App() {
       {reduced && motionPaused && (
         <aside className="motion-notice" aria-label="Tùy chọn chuyển động">
           <span>Trình duyệt đang yêu cầu giảm chuyển động.</span>
-          <button type="button" onClick={toggleMotion}>
+          <button type="button" onClick={enableMotion}>
             Bật hiệu ứng cho trang này
           </button>
         </aside>
@@ -170,7 +157,7 @@ export default function App() {
       <footer>
         <div className="footer-top">
           <Link className="footer-brand" to="/">
-            ftu<i>charm</i>
+            <BrandMark />
           </Link>
           <div>
             <h3>Khám phá</h3>
@@ -194,7 +181,7 @@ export default function App() {
                 href={officialFacebook}
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Facebook FTUCharm"
+                aria-label="Facebook FTUCHARM"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -210,26 +197,22 @@ export default function App() {
                 href="https://m.me/ftucharm.duyendangngoaithuong"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Nhắn tin cho FTUCharm trên Messenger"
+                aria-label="Nhắn tin cho FTUCHARM trên Messenger"
               >
                 <MessageCircle size={21} />
               </a>
-              <Link to="/thu-vien" aria-label="Thư viện ảnh FTUCharm">
+              <Link to="/thu-vien" aria-label="Thư viện ảnh FTUCHARM">
                 <Camera size={21} />
               </Link>
             </div>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} FTUCharm • Duyên dáng Ngoại thương</span>
+          <span>© {new Date().getFullYear()} FTUCHARM • Duyên dáng Ngoại thương</span>
           <div>
-            <button className="motion-toggle" onClick={toggleMotion} aria-pressed={motionPaused}>
-              {motionPaused ? <Play size={14} /> : <Pause size={14} />}{' '}
-              {motionPaused ? 'Bật chuyển động' : 'Dừng chuyển động'}
-            </button>
             <Link to="/the-le">Thể lệ</Link>
             <Link to="/quyen-rieng-tu">Quyền riêng tư</Link>
-            <Link to="/admin">Ban tổ chức</Link>
+            {access?.is_admin && <Link to="/admin/cau-hinh">Quản trị</Link>}
           </div>
         </div>
       </footer>

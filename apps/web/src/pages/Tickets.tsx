@@ -66,18 +66,26 @@ function EventSchedule({ event }: { event: SalesEvent }) {
 }
 function SaleNotice({ event, now }: { event: SalesEvent; now: number }) {
   const state = currentSaleState(event, now);
+  const phase = event.phases?.find(
+    (p) => now >= Date.parse(p.open_at) && now < Date.parse(p.close_at),
+  );
+  const next = event.phases?.find((p) => now < Date.parse(p.open_at));
   return (
     <div className="sale-notice">
       <Badge>{labels[state]}</Badge>
+      {phase && <Badge>{phase.kind === 'EARLY' ? 'Bán sớm' : 'Bán thường'}</Badge>}
       {state === 'UPCOMING' && (
         <p>
-          Mở bán sau <span className="sales-clock">{countdown(event.sale_open_at, now)}</span>
+          Mở bán sau{' '}
+          <span className="sales-clock">{countdown(next?.open_at ?? event.sale_open_at, now)}</span>
         </p>
       )}
       {state === 'OPEN' && (
         <p>
           Còn {event.available} ghế · Đóng bán sau{' '}
-          <span className="sales-clock">{countdown(event.sale_close_at, now)}</span>
+          <span className="sales-clock">
+            {countdown(phase?.close_at ?? event.sale_close_at, now)}
+          </span>
         </p>
       )}
       {state === 'SOLD_OUT' && (
@@ -101,7 +109,7 @@ export default function Tickets() {
   return (
     <div className="page-shell sales-page">
       <PageTitle
-        label="Đêm hội FTUCharm"
+        label="Đêm hội FTUCHARM"
         title="Hẹn bạn dưới ánh đèn sân khấu."
         description="Xem thông tin và sơ đồ ghế của từng đêm, kể cả khi chưa tới giờ mở bán."
       />
@@ -184,7 +192,7 @@ function TicketDetail({
       return api<SalesHold>(`/events/${event.id}/holds`, {
         method: 'POST',
         headers: { 'Idempotency-Key': request.current.key },
-        body: JSON.stringify({ seat_ids: seats }),
+        body: JSON.stringify({ seat_ids: seats, pricing_version: event.pricing_version }),
       });
     },
     onSuccess: (result) => {
@@ -223,7 +231,7 @@ function TicketDetail({
       </Link>
       {!event && (
         <PageTitle
-          label="Vé FTUCharm"
+          label="Vé FTUCHARM"
           title="Thông tin sự kiện"
           description="Kiểm tra lịch và hạng vé đã được công bố."
         />
@@ -232,7 +240,7 @@ function TicketDetail({
       {event && (
         <>
           <PageTitle
-            label="Vé FTUCharm"
+            label="Vé FTUCHARM"
             title={event.title}
             description="Chọn ghế theo hạng vé. Lượt giữ bắt đầu khi bạn nhận được xác nhận giữ ghế."
           />
