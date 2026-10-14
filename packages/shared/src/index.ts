@@ -12,8 +12,21 @@ export const roles = [
   'SUPER_ADMIN',
 ] as const;
 export type Role = (typeof roles)[number];
+export const contestantDetailsSchema = z.object({
+  cohort: z.string().trim().min(1, 'Nhập khóa học').max(30),
+  class_name: z.string().trim().min(1, 'Nhập lớp').max(80),
+  height_cm: z.number().min(100, 'Chiều cao từ 100 đến 250 cm').max(250),
+  gender: z.enum(['male', 'female'], { error: 'Chọn hạng mục nam hoặc nữ' }),
+});
+export const contestantAdminSchema = contestantDetailsSchema
+  .extend({
+    display_name: z.string().trim().min(2).max(100),
+    number: z.number().int().min(1).max(9999).nullable(),
+  })
+  .strict();
 export const applicationSchema = z
   .object({
+    ...contestantDetailsSchema.shape,
     edition_id: uuid,
     full_name: z.string().trim().min(2, 'Nhập họ tên đầy đủ').max(100),
     email: z.string().email('Email chưa hợp lệ').max(254),
@@ -36,6 +49,8 @@ export const applicationSchema = z
   });
 export const voteSchema = z
   .object({
+    category_id: uuid.optional(),
+    session_id: uuid.optional(),
     round_id: uuid,
     contestant_id: uuid,
     ticket_id: uuid,
@@ -50,6 +65,7 @@ export const reviewSchema = z
   .strict();
 export const profileUpdateSchema = z
   .object({
+    ...contestantDetailsSchema.partial().shape,
     faculty: z.string().trim().min(2).max(150),
     bio: z.string().trim().min(30).max(2000),
     talents: z.string().trim().max(1000),
@@ -99,20 +115,6 @@ export const timelineSchema = z
     published: z.boolean(),
   })
   .strict();
-export const newsSchema = z
-  .object({
-    edition_id: uuid,
-    title: z.string().min(3).max(160),
-    slug: z
-      .string()
-      .regex(/^[a-z0-9-]+$/)
-      .max(160),
-    excerpt: z.string().max(300),
-    body: z.string().min(20).max(20000),
-    category: z.string().max(60),
-    published: z.boolean(),
-  })
-  .strict();
 export const sponsorSchema = z
   .object({
     edition_id: uuid,
@@ -148,6 +150,10 @@ export type Contestant = {
   edition_id: string;
   slug: string;
   display_name: string;
+  cohort: string | null;
+  class_name: string | null;
+  height_cm: number | null;
+  gender: 'male' | 'female' | null;
   number: number | null;
   faculty: string;
   bio: string;
@@ -176,16 +182,6 @@ export type Round = {
   published: boolean;
   vote_open_at: string | null;
   vote_close_at: string | null;
-};
-export type News = {
-  id: string;
-  edition_id: string;
-  title: string;
-  slug: string;
-  excerpt: string;
-  body: string;
-  category: string;
-  published: boolean;
 };
 export type Sponsor = {
   id: string;
@@ -234,7 +230,7 @@ export const demoEdition: Edition = {
   title: 'FTUCharm',
   slug: 'preview',
   theme: 'Vẻ đẹp khởi nguồn từ chính bạn',
-  year: 2026,
+  year: 2027,
   registration_open_at: null,
   registration_close_at: null,
   published: true,
@@ -268,36 +264,78 @@ export const demoContestants: Contestant[] = Array.from({ length: 6 }, (_, i) =>
   display_name: `Thí sinh ${String(i + 1).padStart(2, '0')}`,
   number: i + 1,
   faculty: 'Ngoại thương',
-  bio: 'Mỗi cô gái mang một câu chuyện riêng. Đây là hồ sơ minh họa giao diện, không phải thí sinh đã đăng ký.',
+  cohort: 'K63',
+  class_name: `Anh ${i + 1} – Kinh tế đối ngoại`,
+  height_cm: i % 2 ? 178 : 168,
+  gender: i % 2 ? 'male' : 'female',
+  bio: 'Mỗi thí sinh mang một câu chuyện riêng. Đây là hồ sơ minh họa giao diện, không phải thí sinh đã đăng ký.',
   talents: 'Hồ sơ minh họa',
   stage: 'Hành trình bắt đầu',
   photo_url: null,
   published: true,
 }));
-export const demoNews: News[] = [
-  {
-    id: 'news-1',
-    edition_id: DEMO_EDITION,
-    title: 'Một hành trình. Nhiều phiên bản rực rỡ.',
-    slug: 'hanh-trinh-toa-sang',
-    excerpt: 'Khám phá các chặng đường từ kick-off đến đêm chung kết.',
-    body: 'Hành trình gồm kick-off, mở đơn, sơ khảo, training, bộ ảnh truyền thông, bán kết và chung kết. Lịch chính thức sẽ được ban tổ chức công bố. Nội dung này minh họa bố cục website.',
-    category: 'Hành trình',
-    published: true,
-  },
-  {
-    id: 'news-2',
-    edition_id: DEMO_EDITION,
-    title: 'Sẵn sàng kể câu chuyện của bạn?',
-    slug: 'cam-nang-dang-ky',
-    excerpt: 'Chuẩn bị hồ sơ để bước vào hành trình của chính mình.',
-    body: 'Chuẩn bị phần giới thiệu bản thân, năng khiếu và ba ảnh hồ sơ: chân dung, bán thân, toàn thân. Chỉ nộp hồ sơ khi đã đọc thể lệ và thông báo xử lý dữ liệu do ban tổ chức công bố.',
-    category: 'Cẩm nang',
-    published: true,
-  },
-];
 export function votingState(round: Round, now = Date.now()): 'scheduled' | 'open' | 'closed' {
   if (!round.vote_open_at || !round.vote_close_at) return 'scheduled';
   if (now < Date.parse(round.vote_open_at)) return 'scheduled';
   return now < Date.parse(round.vote_close_at) ? 'open' : 'closed';
+}
+
+export type VoteCategory = {
+  id: string;
+  round_id: string;
+  code: string;
+  name: string;
+  gender: 'male' | 'female' | null;
+};
+export type VoteSession = {
+  id: string;
+  round_id: string;
+  state: string;
+  open_at: string | null;
+  close_at: string | null;
+};
+export type VotingData = {
+  round: Round;
+  contestants: Contestant[];
+  categories: VoteCategory[];
+  session: VoteSession | null;
+  eligible: { category_id: string; contestant_id: string }[];
+  server_time: string;
+};
+
+export const demoFinalRound: Round = {
+  id: '77777777-7777-4777-8777-777777777777',
+  edition_id: DEMO_EDITION,
+  title: 'Chung kết FTUCharm (2027)',
+  kind: 'final',
+  position: 2,
+  cutoff: 50,
+  published: true,
+  vote_open_at: null,
+  vote_close_at: null,
+};
+export function demoVoting(): VotingData {
+  return {
+    round: demoFinalRound,
+    contestants: demoContestants,
+    categories: [
+      {
+        id: '88888888-8888-4888-8888-888888888881',
+        round_id: demoFinalRound.id,
+        code: 'male',
+        gender: 'male',
+        name: 'Nam được yêu thích nhất',
+      },
+      {
+        id: '88888888-8888-4888-8888-888888888882',
+        round_id: demoFinalRound.id,
+        code: 'female',
+        gender: 'female',
+        name: 'Nữ được yêu thích nhất',
+      },
+    ],
+    session: null,
+    eligible: [],
+    server_time: new Date().toISOString(),
+  };
 }

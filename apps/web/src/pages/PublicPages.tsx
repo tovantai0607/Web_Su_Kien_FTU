@@ -1,8 +1,8 @@
 import { lazy, Suspense, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Flower2, CalendarDays, ArrowUpRight } from 'lucide-react';
-import { Badge, Card, Button, EmptyState, SearchBar, Pagination, Skeleton } from '@ftu/ui';
-import type { TimelineEvent, Contestant, News } from '@ftu/shared';
+import { Badge, Button, EmptyState, SearchBar, Pagination, Skeleton } from '@ftu/ui';
+import type { TimelineEvent, Contestant } from '@ftu/shared';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
 import SponsorWall from '../components/SponsorWall';
 import Tribute from '../components/Tribute';
@@ -140,13 +140,37 @@ function ContestantProfile({ slug }: { slug: string }) {
             <div>
               <Badge>Thí sinh #{q.data.number}</Badge>
               <PageTitle title={q.data.display_name} description={q.data.faculty} />
+              <dl className="contestant-facts">
+                <div>
+                  <dt>Tên</dt>
+                  <dd>{q.data.display_name}</dd>
+                </div>
+                <div>
+                  <dt>Khóa</dt>
+                  <dd>{q.data.cohort || 'Chưa cập nhật'}</dd>
+                </div>
+                <div>
+                  <dt>Lớp</dt>
+                  <dd>{q.data.class_name || 'Chưa cập nhật'}</dd>
+                </div>
+                <div>
+                  <dt>Chiều cao</dt>
+                  <dd>{q.data.height_cm ? `${q.data.height_cm} cm` : 'Chưa cập nhật'}</dd>
+                </div>
+                <div>
+                  <dt>SBD</dt>
+                  <dd>
+                    {q.data.number == null ? 'Chưa cấp' : String(q.data.number).padStart(3, '0')}
+                  </dd>
+                </div>
+              </dl>
               <p>{q.data.bio}</p>
               <h2>Tài năng & dấu ấn</h2>
               <p>{q.data.talents}</p>
               <Badge>{q.data.stage}</Badge>
               <div className="profile-actions">
                 <Button asChild>
-                  <Link to="/binh-chon">
+                  <Link to={`/binh-chon?hang-muc=${q.data.gender ?? 'female'}`}>
                     Khám phá bình chọn <ArrowUpRight size={18} />
                   </Link>
                 </Button>
@@ -157,49 +181,6 @@ function ContestantProfile({ slug }: { slug: string }) {
       ) : !q.isPending && !q.isError ? (
         <EmptyState title="Hồ sơ chưa được công bố" />
       ) : null}
-    </div>
-  );
-}
-function NewsPage({ slug }: { slug?: string }) {
-  const q = useContent<News[]>('/news');
-  const [search, setSearch] = useState('');
-  const post = q.data?.find((p) => p.slug === slug);
-  return (
-    <div className="page-shell">
-      <PageTitle title={post?.title ?? 'Tin tức'} />
-      <DataState query={q} />
-      {slug ? (
-        post ? (
-          <article className="prose">
-            <Badge>{post.category}</Badge>
-            <p className="lead">{post.excerpt}</p>
-            <p>{post.body}</p>
-            <Link className="text-link" to="/tin-tuc">
-              Tin khác <ArrowUpRight size={18} />
-            </Link>
-          </article>
-        ) : !q.isPending ? (
-          <EmptyState title="Bài viết chưa được công bố" />
-        ) : null
-      ) : (
-        <>
-          <SearchBar value={search} onChange={setSearch} placeholder="Tìm bài viết" />
-          <div className="article-grid">
-            {q.data
-              ?.filter((p) => p.title.toLowerCase().includes(search.toLowerCase()))
-              .map((p) => (
-                <Card key={p.id}>
-                  <Badge>{p.category}</Badge>
-                  <h2>{p.title}</h2>
-                  <p>{p.excerpt}</p>
-                  <Link className="text-link" to={'/tin-tuc/' + p.slug}>
-                    Đọc thêm <ArrowUpRight size={18} />
-                  </Link>
-                </Card>
-              ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -254,7 +235,7 @@ function About() {
           <Flower2 size={42} strokeWidth={1} />
           <h2>Duyên dáng Ngoại thương</h2>
           <p>
-            Cuộc thi dành cho nữ sinh Đại học Ngoại thương, với các vòng sơ khảo, đào tạo, bán kết
+            Cuộc thi dành cho sinh viên Đại học Ngoại thương, với các vòng sơ khảo, đào tạo, bán kết
             và chung kết.
           </p>
           <p>Theo dõi fanpage để cập nhật lịch và thể lệ chính thức.</p>
@@ -307,8 +288,8 @@ function Legal({ privacy }: { privacy: boolean }) {
           <>
             <h2>Điều kiện đăng ký</h2>
             <p>
-              Cuộc thi dành riêng cho nữ sinh Đại học Ngoại thương (FTU). Ảnh thẻ sinh viên được BTC
-              đối chiếu khi xét duyệt. Những điều kiện khác được công bố trong thể lệ chính thức.
+              Cuộc thi dành cho sinh viên Đại học Ngoại thương (FTU). Ảnh thẻ sinh viên được BTC đối
+              chiếu khi xét duyệt. Những điều kiện khác được công bố trong thể lệ chính thức.
             </p>
             <h2>Hồ sơ & vòng thi</h2>
             <p>
@@ -318,9 +299,9 @@ function Legal({ privacy }: { privacy: boolean }) {
             </p>
             <h2>Bình chọn chung kết</h2>
             <p>
-              Mỗi vé đã check-in được bỏ một phiếu trong một lượt bình chọn. Lượt mở 10 phút theo
-              thời gian server, chỉ dành cho thí sinh đủ điều kiện. Không thể đổi lựa chọn sau khi
-              xác nhận. Số phiếu được lưu bằng transaction tại database.
+              Mỗi vé đã check-in được bỏ một phiếu nam và một phiếu nữ trong mỗi vòng bình chọn.
+              Lượt mở 10 phút theo thời gian server, chỉ dành cho thí sinh đủ điều kiện. Không thể
+              đổi lựa chọn sau khi xác nhận. Số phiếu được lưu bằng transaction tại database.
             </p>
           </>
         )}
@@ -336,7 +317,6 @@ export default function PublicPages() {
   if (path === '/timeline') return <Timeline />;
   if (path === '/thi-sinh') return <Contestants />;
   if (path.startsWith('/thi-sinh/')) return <ContestantProfile slug={path.split('/').at(-1)!} />;
-  if (path.startsWith('/tin-tuc')) return <NewsPage slug={path.split('/')[2]} />;
   if (path === '/nha-tai-tro') return <Sponsors />;
   if (path === '/thu-vien') return <Gallery />;
   if (path === '/gioi-thieu') return <About />;

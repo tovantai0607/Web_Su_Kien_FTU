@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Heart, ShieldCheck, Check, Clock3 } from 'lucide-react';
 import { Button, Card, Badge, EmptyState, Modal, ErrorState } from '@ftu/ui';
-import type { Round, Contestant, Ticket } from '@ftu/shared';
+import type { Round, Contestant, Ticket, VotingData } from '@ftu/shared';
 import { PageTitle, useContent, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -11,6 +11,8 @@ import { Turnstile } from '../components/Turnstile';
 import { AnimatedGroup } from '../components/interface/MotionSystem';
 export default function Voting() {
   const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const gender = params.get('hang-muc') === 'male' ? 'male' : 'female';
   const rounds = useContent<Round[]>('/rounds');
   const [now, setNow] = useState(Date.now()),
     [offset, setOffset] = useState(0),
@@ -23,8 +25,7 @@ export default function Voting() {
   const round = rounds.data?.find((r) => r.kind === 'final');
   const voting = useQuery({
     queryKey: ['voting', round?.id],
-    queryFn: () =>
-      api<{ round: Round; contestants: Contestant[]; server_time: string }>('/voting/' + round!.id),
+    queryFn: () => api<VotingData>('/voting/' + round!.id),
     enabled: !!round,
     refetchInterval: 15000,
   });
@@ -35,7 +36,10 @@ export default function Voting() {
   });
   const ownVotes = useQuery({
     queryKey: ['votes', user?.id],
-    queryFn: () => api<{ ticket_id: string; contestant_id: string }[]>('/me/votes'),
+    queryFn: () =>
+      api<
+        { ticket_id: string; contestant_id: string; round_id: string; category_id: string | null }[]
+      >('/me/votes'),
     enabled: !!user && !preview,
   });
   useEffect(() => {
@@ -45,26 +49,42 @@ export default function Voting() {
   useEffect(() => {
     if (voting.data) setOffset(Date.parse(voting.data.server_time) - Date.now());
   }, [voting.data]);
+  const category = voting.data?.categories?.find((c) => c.gender === gender);
+  const session = voting.data?.session;
+  const hasCategories = !!voting.data?.categories?.length;
   const current = voting.data?.round ?? round;
+  const openAt = hasCategories ? session?.open_at : current?.vote_open_at;
+  const closeAt = hasCategories ? session?.close_at : current?.vote_close_at;
+  const candidates = (voting.data?.contestants ?? []).filter((c) =>
+    hasCategories
+      ? !!category &&
+        c.gender === gender &&
+        (!session ||
+          voting.data?.eligible.some(
+            (e) => e.category_id === category.id && e.contestant_id === c.id,
+          ))
+      : c.gender === gender,
+  );
   const time = now + offset;
   const isOpen =
-    !!current?.vote_open_at &&
-    !!current.vote_close_at &&
-    time >= Date.parse(current.vote_open_at) &&
-    time < Date.parse(current.vote_close_at);
-  const seconds = current?.vote_close_at
-    ? Math.max(0, Math.floor((Date.parse(current.vote_close_at) - time) / 1000))
-    : 600;
+    !!openAt &&
+    !!closeAt &&
+    (!hasCategories || (!!category && session?.state === 'OPEN')) &&
+    time >= Date.parse(openAt) &&
+    time < Date.parse(closeAt);
+  const seconds = closeAt ? Math.max(0, Math.floor((Date.parse(closeAt) - time) / 1000)) : 600;
   const eligible = (tickets.data ?? []).filter(
     (t) =>
       t.round_id === current?.id &&
       t.checked_in_at &&
       t.status === 'issued' &&
-      !ownVotes.data?.some((v) => v.ticket_id === t.id),
+      !ownVotes.data?.some(
+        (v) => v.ticket_id === t.id && (!v.category_id || v.category_id === category?.id),
+      ),
   );
   const onToken = useCallback((v: string) => setToken(v), []);
   async function vote() {
-    if (!selected || !current) return;
+    if (!selected || !current || !eligible.some((t) => t.id === ticket)) return;
     setBusy(true);
     setError('');
     try {
@@ -72,6 +92,7 @@ export default function Voting() {
         method: 'POST',
         body: JSON.stringify({
           round_id: current.id,
+          ...(category && session ? { category_id: category.id, session_id: session.id } : {}),
           contestant_id: selected.id,
           ticket_id: ticket,
           turnstile_token: token,
@@ -89,11 +110,31 @@ export default function Voting() {
   return (
     <div className="page-shell">
       <PageTitle title="Bình chọn" />
+      <div className="vote-categories" role="group" aria-label="Hạng mục bình chọn">
+        {(['female', 'male'] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={gender === value}
+            onClick={() => {
+              setParams({ 'hang-muc': value });
+              setTicket('');
+              setSelected(null);
+              setToken('');
+            }}
+          >
+            {value === 'male' ? 'Nam được yêu thích nhất' : 'Nữ được yêu thích nhất'}
+          </button>
+        ))}
+      </div>
       <div className="vote-status">
         <div>
           <Badge>{isOpen ? 'Bình chọn đang mở' : 'Chờ khoảnh khắc chung kết'}</Badge>
-          <h2>{current?.title ?? 'Khán giả yêu thích'}</h2>
-          <p>Mỗi vé đã check-in được bỏ một phiếu trong lượt bình chọn.</p>
+          <h2>
+            {category?.name ??
+              (gender === 'male' ? 'Nam được yêu thích nhất' : 'Nữ được yêu thích nhất')}
+          </h2>
+          <p>Mỗi vé đã check-in được bỏ một phiếu nam và một phiếu nữ trong vòng bình chọn.</p>
         </div>
         <div className="vote-clock">
           <Clock3 size={25} />
@@ -140,15 +181,20 @@ export default function Voting() {
         </>
       )}
       {user &&
-        ownVotes.data?.some((vote) =>
-          tickets.data?.some((t) => t.id === vote.ticket_id && t.round_id === current?.id),
+        ownVotes.data?.some(
+          (vote) =>
+            (!vote.category_id || vote.category_id === category?.id) &&
+            tickets.data?.some((t) => t.id === vote.ticket_id && t.round_id === current?.id),
         ) && (
           <p className="notice vote-recorded" role="status">
-            <Check size={18} /> Bạn đã có phiếu được ghi nhận trong lượt này.
+            <Check size={18} /> Bạn đã có phiếu được ghi nhận trong hạng mục này.
           </p>
         )}
-      <AnimatedGroup className="contestant-grid vote-grid">
-        {voting.data?.contestants.map((c) => (
+      {current && !voting.isPending && !voting.isError && candidates.length === 0 && (
+        <EmptyState title="Chưa công bố thí sinh cho hạng mục này" />
+      )}
+      <AnimatedGroup key={gender} className="contestant-grid vote-grid">
+        {candidates.map((c) => (
           <Card key={c.id}>
             {c.photo_url && (
               <img
@@ -163,8 +209,11 @@ export default function Voting() {
             <Badge>#{c.number}</Badge>
             <h2>{c.display_name}</h2>
             <p>{c.faculty}</p>
+            <Link className="text-link" to={`/thi-sinh/${c.slug}`}>
+              Xem hồ sơ
+            </Link>
             <Button
-              disabled={!isOpen || !user || !ticket}
+              disabled={!isOpen || !user || !eligible.some((t) => t.id === ticket)}
               onClick={() => {
                 setSelected(c);
                 setSuccess(false);
@@ -193,7 +242,7 @@ export default function Voting() {
           <>
             <p>
               Bạn chọn <strong>{selected?.display_name}</strong>. Vé chỉ được bỏ một phiếu trong
-              lượt này, bạn không thể đổi sau khi xác nhận.
+              hạng mục này, bạn không thể đổi sau khi xác nhận.
             </p>
             <Turnstile key={selected?.id} action="vote" onToken={onToken} />
             {error && <ErrorState message={error} />}

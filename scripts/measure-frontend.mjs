@@ -3,6 +3,9 @@ import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const origin = 'http://127.0.0.1:5173';
+const label = process.argv[2] ?? 'frontend';
+if (!/^[a-z0-9-]+$/.test(label))
+  throw new Error('Measurement label must use lowercase letters, numbers or hyphens.');
 await mkdir('output/qa', { recursive: true });
 const browser = await chromium.launch();
 const report = [];
@@ -66,13 +69,14 @@ try {
           .map((entry) => ({ path: new URL(entry.name).pathname, bytes: entry.encodedBodySize })),
       }))),
     });
-    await page.screenshot({ path: `output/qa/pastel-${viewport.width}.png` });
+    await page.screenshot({ path: `output/qa/${label}-${viewport.width}.png` });
     await context.close();
   }
 } finally {
   await browser.close();
 }
 await writeFile('output/qa/frontend-performance.json', JSON.stringify(report, null, 2));
+await writeFile(`output/qa/${label}-performance.json`, JSON.stringify(report, null, 2));
 console.log(
   JSON.stringify(
     report.map(({ resources, ...entry }) => ({

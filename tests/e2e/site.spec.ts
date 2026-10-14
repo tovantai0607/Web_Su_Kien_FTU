@@ -38,6 +38,10 @@ test('registration validation and reduced motion', async ({ page }) => {
   await page.getByLabel('Email đã xác minh').fill('test@example.test');
   await page.getByLabel('Số điện thoại').fill('0912345678');
   await page.getByLabel('Khoa / ngành học').fill('Kinh tế');
+  await page.getByLabel('Khóa', { exact: true }).fill('K63');
+  await page.getByLabel('Lớp', { exact: true }).fill('Anh 1');
+  await page.getByLabel('Chiều cao (cm)').fill('168');
+  await page.getByLabel('Hạng mục dự thi').selectOption('female');
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
   await expect(page.getByLabel('Câu chuyện của bạn')).toBeVisible();
   await page
@@ -63,11 +67,11 @@ test('tribute, sponsor slots and motion control are accessible', async ({ page }
     'https://www.facebook.com/ftucharm.duyendangngoaithuong',
   );
 });
-test('voting stays closed without configured final round', async ({ page }) => {
+test('gender voting categories are ready but stay closed before opening', async ({ page }) => {
   await page.goto('/binh-chon');
   await expect(page.getByRole('heading', { name: 'Bình chọn', level: 1 })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Chưa có lượt bình chọn công khai' }),
+    page.getByRole('heading', { name: 'Bình chọn chưa mở hoặc đã kết thúc' }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Xác nhận bình chọn' })).toHaveCount(0);
 });

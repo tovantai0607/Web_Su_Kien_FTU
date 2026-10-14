@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
-  Newspaper,
   Heart,
   ShieldCheck,
   Ticket,
@@ -35,10 +34,10 @@ type Row = Record<string, unknown>;
 const tabs = [
   ['overview', 'Tổng quan', LayoutDashboard],
   ['applications', 'Hồ sơ đăng ký', Users],
+  ['contestant-profiles', 'Thông tin thí sinh', Users],
   ['editions', 'Mùa thi', Flower2],
   ['rounds', 'Vòng thi & vote', Heart],
   ['timeline', 'Timeline', CalendarDays],
-  ['news', 'Tin tức', Newspaper],
   ['sponsors', 'Nhà tài trợ', ShieldCheck],
   ['tickets', 'Vé & check-in', Ticket],
   ['emails', 'Email', Mail],
@@ -46,11 +45,19 @@ const tabs = [
   ['roles', 'Phân quyền', ShieldCheck],
 ] as const;
 const defaults: Record<string, Row> = {
+  'contestant-profiles': {
+    display_name: '',
+    number: null,
+    cohort: '',
+    class_name: '',
+    height_cm: 0,
+    gender: '',
+  },
   editions: {
     title: '',
     slug: '',
     theme: '',
-    year: 2026,
+    year: 2027,
     registration_open_at: null,
     registration_close_at: null,
     published: false,
@@ -72,15 +79,6 @@ const defaults: Record<string, Row> = {
     position: 0,
     starts_at: null,
     ends_at: null,
-    published: false,
-  },
-  news: {
-    edition_id: '',
-    title: '',
-    slug: '',
-    excerpt: '',
-    body: '',
-    category: 'Tin tức',
     published: false,
   },
   sponsors: {
@@ -224,7 +222,9 @@ export default function Admin() {
         </p>
         <DataState query={q} />
         {tab === 'overview' && q.isSuccess && <AdminOverview summary={summary} />}
-        {defaults[tab] && <Button onClick={() => edit()}>Thêm mới</Button>}
+        {defaults[tab] && tab !== 'contestant-profiles' && (
+          <Button onClick={() => edit()}>Thêm mới</Button>
+        )}
         {tab === 'roles' && (
           <RoleManagement busy={busy} onSave={(body) => void action('/admin/roles', body)} />
         )}
@@ -268,7 +268,8 @@ export default function Admin() {
                     <td>
                       <strong>
                         {String(
-                          row.full_name ??
+                          row.display_name ??
+                            row.full_name ??
                             row.title ??
                             row.name ??
                             row.action ??
@@ -353,6 +354,15 @@ export default function Admin() {
               <Button
                 variant="outline"
                 disabled={busy || !publishId}
+                onClick={() =>
+                  void action('/admin/rounds/' + publishId + '/prepare-categories', {})
+                }
+              >
+                Chuẩn bị hạng mục nam / nữ
+              </Button>
+              <Button
+                variant="outline"
+                disabled={busy || !publishId}
                 onClick={() => {
                   if (window.confirm('Mở bình chọn chung kết 10 phút ngay bây giờ?'))
                     void action('/admin/rounds/' + publishId + '/open-voting', {});
@@ -404,6 +414,12 @@ export default function Admin() {
                   label={
                     (
                       {
+                        display_name: 'Tên thí sinh',
+                        number: 'SBD',
+                        cohort: 'Khóa',
+                        class_name: 'Lớp',
+                        height_cm: 'Chiều cao (cm)',
+                        gender: 'Hạng mục',
                         title: 'Tiêu đề',
                         slug: 'Đường dẫn',
                         theme: 'Chủ đề',
@@ -423,7 +439,17 @@ export default function Admin() {
                     )[key] ?? key
                   }
                 >
-                  {typeof value === 'boolean' ? (
+                  {key === 'gender' ? (
+                    <select
+                      className="input"
+                      value={String(value)}
+                      onChange={(e) => setValues((v) => ({ ...v, gender: e.target.value }))}
+                    >
+                      <option value="">Chọn hạng mục</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                    </select>
+                  ) : typeof value === 'boolean' ? (
                     <input
                       type="checkbox"
                       checked={value}
@@ -437,18 +463,23 @@ export default function Admin() {
                     />
                   ) : (
                     <Input
-                      type={typeof value === 'number' ? 'number' : 'text'}
+                      type={typeof value === 'number' || key === 'number' ? 'number' : 'text'}
+                      step={key === 'height_cm' ? '0.1' : undefined}
                       value={String(value ?? '')}
                       placeholder={key.endsWith('_at') ? '2026-12-20T12:00:00Z' : undefined}
                       onChange={(e) =>
                         setValues((v) => ({
                           ...v,
                           [key]:
-                            typeof value === 'number'
-                              ? Number(e.target.value)
-                              : key.endsWith('_at') && e.target.value === ''
+                            key === 'number'
+                              ? e.target.value === ''
                                 ? null
-                                : e.target.value,
+                                : Number(e.target.value)
+                              : typeof value === 'number'
+                                ? Number(e.target.value)
+                                : key.endsWith('_at') && e.target.value === ''
+                                  ? null
+                                  : e.target.value,
                         }))
                       }
                     />
@@ -470,6 +501,19 @@ export default function Admin() {
           <h3>{String(review?.full_name ?? '')}</h3>
           <p>{String(review?.email ?? '')}</p>
           <p>{String((review?.contestants as Row)?.bio ?? '')}</p>
+          <p>
+            Khóa: {String((review?.contestants as Row)?.cohort ?? 'Chưa cập nhật')} · Lớp:{' '}
+            {String((review?.contestants as Row)?.class_name ?? 'Chưa cập nhật')}
+          </p>
+          <p>
+            Chiều cao: {String((review?.contestants as Row)?.height_cm ?? 'Chưa cập nhật')} cm ·
+            Hạng mục:{' '}
+            {(review?.contestants as Row)?.gender === 'male'
+              ? 'Nam'
+              : (review?.contestants as Row)?.gender === 'female'
+                ? 'Nữ'
+                : 'Chưa cập nhật'}
+          </p>
           {review && (
             <PrivateMedia
               key={String(review.id)}

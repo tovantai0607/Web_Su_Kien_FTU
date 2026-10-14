@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUpRight, CalendarDays, Ticket, Heart, Flower2 } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, CalendarDays, Ticket, Heart } from 'lucide-react';
 import { Badge, Button, SectionHeading, EmptyState } from '@ftu/ui';
-import type { TimelineEvent, Contestant, News } from '@ftu/shared';
+import type { TimelineEvent, Contestant } from '@ftu/shared';
 import { useContent, DataState, ContestantCard } from '../components/Content';
-import { StageCrown } from '../components/Motion';
+import { StageCrown, StageParallax } from '../components/Motion';
 import { BlurText } from '../components/interface/MotionSystem';
-import { Aurora } from '../components/interface/Aurora';
+import { RibbonField } from '../components/interface/RibbonField';
 import EventCountdown from '../components/EventCountdown';
 import Tribute from '../components/Tribute';
 import SponsorWall from '../components/SponsorWall';
+import PartnerStrip from '../components/PartnerStrip';
+import { StageAtmosphere } from '../components/interface/StageAtmosphere';
 export default function Home() {
   const timeline = useContent<TimelineEvent[]>('/timeline');
   const contestants = useContent<Contestant[]>('/contestants');
-  const news = useContent<News[]>('/news');
   const [step, setStep] = useState(1);
   const events = [...(timeline.data ?? [])].sort((a, b) => a.position - b.position);
   const current = events[step];
@@ -21,7 +22,8 @@ export default function Home() {
     <>
       <div className="crown-story">
         <section className="luminous-hero" aria-label="FTUCharm">
-          <Aurora />
+          <RibbonField />
+          <StageAtmosphere />
           <div className="luminous-hero-grid">
             <div className="luminous-copy">
               <h1>
@@ -30,6 +32,7 @@ export default function Home() {
                 </span>
                 <span className="hero-wordmark">
                   <BlurText text="FTUCHARM" />
+                  <span className="hero-year">(2027)</span>
                 </span>
               </h1>
               <p className="hero-description">
@@ -53,9 +56,9 @@ export default function Home() {
               <div className="crown-orbit">
                 <span />
               </div>
-              <div className="crown-scroll">
+              <StageParallax>
                 <StageCrown />
-              </div>
+              </StageParallax>
               <div className="crown-shadow" />
             </div>
           </div>
@@ -65,6 +68,7 @@ export default function Home() {
           </a>
         </section>
       </div>
+      <PartnerStrip />
       <EventCountdown events={events} />
       <section className="section journey" id="hanh-trinh">
         <SectionHeading title="Hành trình">
@@ -116,6 +120,7 @@ export default function Home() {
         ) : null}
       </section>
       <section className="section contest-intro" data-reveal aria-labelledby="intro-title">
+        <StageAtmosphere subtle />
         <h2 id="intro-title">
           Vẻ đẹp mang
           <br />
@@ -151,6 +156,7 @@ export default function Home() {
         )}
       </section>
       <section className="finale-banner">
+        <StageAtmosphere subtle />
         <div className="banner-orbit" aria-hidden="true" />
         <div>
           <h2>Đêm chung kết</h2>
@@ -164,32 +170,6 @@ export default function Home() {
           <Link to="/binh-chon" className="text-link">
             Bình chọn <Heart size={17} />
           </Link>
-        </div>
-      </section>
-      <section className="section news-section">
-        <SectionHeading title="Tin tức">
-          <Link className="text-link" to="/tin-tuc">
-            Xem tất cả <ArrowUpRight size={18} />
-          </Link>
-        </SectionHeading>
-        <DataState query={news} />
-        <div className="news-grid">
-          {news.data?.slice(0, 2).map((n, i) => (
-            <Link className="news-card" to={'/tin-tuc/' + n.slug} key={n.id}>
-              <div className={'news-art art-' + i}>
-                <Flower2 strokeWidth={0.6} />
-                <span>{i === 0 ? 'The journey' : 'Your story'}</span>
-              </div>
-              <div>
-                <Badge>{n.category}</Badge>
-                <h3>{n.title}</h3>
-                <p>{n.excerpt}</p>
-                <span className="text-link">
-                  Đọc thêm <ArrowUpRight size={18} />
-                </span>
-              </div>
-            </Link>
-          ))}
         </div>
       </section>
       <SponsorWall />

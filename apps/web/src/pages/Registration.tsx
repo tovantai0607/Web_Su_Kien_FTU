@@ -26,6 +26,8 @@ export default function Registration() {
       email: user?.email ?? '',
       phone: '',
       faculty: '',
+      cohort: '',
+      class_name: '',
       bio: '',
       talents: '',
       media_ids: [],
@@ -105,7 +107,7 @@ export default function Registration() {
   );
   async function next() {
     const fields: (keyof ApplicationInput)[][] = [
-      ['full_name', 'email', 'phone', 'faculty'],
+      ['full_name', 'email', 'phone', 'faculty', 'cohort', 'class_name', 'height_cm', 'gender'],
       ['bio', 'talents'],
     ];
     if (await form.trigger(fields[step])) setStep((v) => v + 1);
@@ -131,7 +133,7 @@ export default function Registration() {
     );
   return (
     <div className="page-shell">
-      <PageTitle title="Đăng ký dự thi" description="Dành cho nữ sinh Đại học Ngoại thương." />
+      <PageTitle title="Đăng ký dự thi" description="Dành cho sinh viên Đại học Ngoại thương." />
       <DataState query={edition} />
       <div className="registration-layout">
         <aside>
@@ -200,6 +202,28 @@ export default function Registration() {
                     </Field>
                     <Field label="Khoa / ngành học" error={errors.faculty?.message}>
                       <Input {...form.register('faculty')} />
+                    </Field>
+                    <Field label="Khóa" error={errors.cohort?.message}>
+                      <Input {...form.register('cohort')} placeholder="Ví dụ: K63" />
+                    </Field>
+                    <Field label="Lớp" error={errors.class_name?.message}>
+                      <Input {...form.register('class_name')} />
+                    </Field>
+                    <Field label="Chiều cao (cm)" error={errors.height_cm?.message}>
+                      <Input
+                        type="number"
+                        min="100"
+                        max="250"
+                        step="0.1"
+                        {...form.register('height_cm', { valueAsNumber: true })}
+                      />
+                    </Field>
+                    <Field label="Hạng mục dự thi" error={errors.gender?.message}>
+                      <select className="input" {...form.register('gender')}>
+                        <option value="">Chọn hạng mục</option>
+                        <option value="male">Nam</option>
+                        <option value="female">Nữ</option>
+                      </select>
                     </Field>
                     <div className="form-hint">
                       <Badge>Sinh viên FTU</Badge>

@@ -1,17 +1,35 @@
-import { Children, createContext, useContext, type ReactNode } from 'react';
-import { LazyMotion, MotionConfig, m, useReducedMotion } from 'motion/react';
+import { Children, createContext, useContext, useSyncExternalStore, type ReactNode } from 'react';
+import { LazyMotion, MotionConfig, m } from 'motion/react';
 
 const loadFeatures = () => import('./MotionFeatures').then((module) => module.default);
 const MotionDisabled = createContext(false);
+const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
+function subscribeReducedMotion(notify: () => void) {
+  const query = window.matchMedia(reducedMotionQuery);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+}
+const readReducedMotion = () => window.matchMedia(reducedMotionQuery).matches;
 
-export function InterfaceMotion({ paused, children }: { paused: boolean; children: ReactNode }) {
-  const reduced = useReducedMotion();
-  const disabled = paused || !!reduced;
+export const useSystemReducedMotion = () =>
+  useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => true);
+
+export function InterfaceMotion({
+  paused,
+  allowMotion = false,
+  children,
+}: {
+  paused: boolean;
+  allowMotion?: boolean;
+  children: ReactNode;
+}) {
+  const reduced = useSystemReducedMotion();
+  const disabled = paused || (reduced && !allowMotion);
   return (
     <MotionDisabled.Provider value={disabled}>
       <LazyMotion features={loadFeatures} strict>
         <MotionConfig
-          reducedMotion={disabled ? 'always' : 'user'}
+          reducedMotion={disabled ? 'always' : allowMotion ? 'never' : 'user'}
           transition={{ duration: disabled ? 0 : 0.35 }}
         >
           {children}
@@ -32,8 +50,8 @@ export function BlurText({ text }: { text: string }) {
         <m.span
           aria-hidden="true"
           key={`${word}-${index}`}
-          initial={disabled ? false : { y: 12, filter: 'blur(3px)' }}
-          animate={{ y: 0, filter: 'blur(0px)' }}
+          initial={disabled ? false : { y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
           transition={{
             duration: disabled ? 0 : 0.65,
             delay: disabled ? 0 : index * 0.055,
