@@ -14,7 +14,7 @@ const Registration = lazy(() => import('./pages/Registration'));
 const Account = lazy(() => import('./pages/Account'));
 const Voting = lazy(() => import('./pages/Voting'));
 const Admin = lazy(() => import('./pages/Admin'));
-const Tickets = lazy(() => import('./pages/Tickets'));
+const Tickets = lazy(() => import('./pages/PurchaseTickets'));
 function ScrollReset() {
   const { pathname } = useLocation();
   useEffect(() => {

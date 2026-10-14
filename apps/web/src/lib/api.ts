@@ -6,6 +6,7 @@ import {
   demoFinalRound,
   demoVoting,
   demoSalesCatalog,
+  demoPurchaseCatalog,
   type Edition,
 } from '@ftu/shared';
 import { createAuthStorage } from './auth-policy';
@@ -33,6 +34,8 @@ export const supabase =
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (preview && (!options.method || options.method === 'GET')) {
     const route = path.split('?')[0];
+    if (route === '/purchase-catalog') return demoPurchaseCatalog() as T;
+    if (route.startsWith('/vote-results/')) return [] as T;
     if (route === '/events') return demoSalesCatalog() as T;
     if (route.startsWith('/events/')) return demoSalesCatalog(route.split('/')[2]) as T;
     const fixtures: Record<string, unknown> = {

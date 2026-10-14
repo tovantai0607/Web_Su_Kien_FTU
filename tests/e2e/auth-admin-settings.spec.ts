@@ -70,6 +70,7 @@ async function setup(page: Page, access = { is_admin: true, aal: 'aal2' }) {
   let exchanges = 0,
     settingsRequests = 0;
   const saved: unknown[] = [];
+  let purchaseRequests = 0;
   await page.route('https://auth-test.supabase.co/**', async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/auth/v1/authorize')
@@ -95,6 +96,56 @@ async function setup(page: Page, access = { is_admin: true, aal: 'aal2' }) {
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/me/access') return route.fulfill({ json: { data: access } });
+    if (path === '/api/admin/purchases') {
+      purchaseRequests++;
+      return route.fulfill({
+        json: {
+          data: {
+            rows: [
+              {
+                id: id(70),
+                code: 'DEMO-CUSTOMER-1',
+                buyer: {
+                  name: 'Khách DEMO',
+                  school: 'Trường DEMO',
+                  cohort_class: 'K63',
+                  student_id: 'DEMO-1',
+                  email: 'customer@example.test',
+                  phone: '0000000000',
+                  facebook: 'DEMO',
+                },
+                lines: [
+                  {
+                    product_id: id(80),
+                    name: 'The Intro',
+                    tier: 'EARLY',
+                    bundle_size: 2,
+                    quantity: 1,
+                    ticket_quantity: 2,
+                    unit_price_vnd: 200000,
+                  },
+                ],
+                quantity: 2,
+                total_vnd: 200000,
+                status: 'COMPLETED',
+                evidence_id: id(90),
+                completed_at: new Date().toISOString(),
+                round_id: id(20),
+              },
+            ],
+            count: 1,
+          },
+        },
+      });
+    }
+    if (path === '/api/purchase-evidence/' + id(90))
+      return route.fulfill({
+        contentType: 'image/png',
+        body: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=',
+          'base64',
+        ),
+      });
     if (path === '/api/admin/settings') {
       settingsRequests++;
       return route.fulfill({ json: { data: config } });
@@ -123,6 +174,9 @@ async function setup(page: Page, access = { is_admin: true, aal: 'aal2' }) {
     },
     get settingsRequests() {
       return settingsRequests;
+    },
+    get purchaseRequests() {
+      return purchaseRequests;
     },
     saved,
   };
@@ -225,4 +279,49 @@ test('cancelled or expired callbacks show recovery instructions', async ({ page 
   await expect(
     page.getByText('Liên kết đăng nhập đã hết hạn hoặc không hợp lệ. Hãy thử lại.'),
   ).toBeVisible();
+});
+
+test('admin opens customer records with six columns, proof, CSV and database link', async ({
+  page,
+}) => {
+  const state = await setup(page, { is_admin: true, aal: 'aal1' });
+  await login(page);
+  await page.getByRole('link', { name: 'Mở quản trị', exact: true }).click();
+  await page.getByRole('link', { name: 'Khách đã mua vé', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/ve$/);
+  await expect(page.getByRole('heading', { name: 'Khách đã mua vé', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader')).toHaveCount(6);
+  await expect(page.getByText('customer@example.test', { exact: false })).toBeVisible();
+  await expect(page.getByText('1 đơn đã Hoàn tất · trang 1')).toBeVisible();
+  const prior = state.purchaseRequests;
+  await page.getByRole('button', { name: 'Tải lại danh sách', exact: true }).click();
+  await expect.poll(() => state.purchaseRequests).toBeGreaterThan(prior);
+  await page.getByRole('button', { name: 'Xem minh chứng', exact: true }).click();
+  await expect(page.getByAltText('Minh chứng chuyển khoản của đơn vé')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Database Supabase', exact: true })).toHaveAttribute(
+    'href',
+    'https://supabase.com/dashboard/project/ifgtyslifgegwcguysbb/editor',
+  );
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Tải dữ liệu trang này (CSV)', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('ftucharm-ve.csv');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+});
+
+test('ordinary users cannot request customer records through the direct admin URL', async ({
+  page,
+}) => {
+  const state = await setup(page, { is_admin: false, aal: 'aal1' });
+  await login(page);
+  await page.evaluate(() => {
+    history.pushState({}, '', '/admin/ve');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(page.getByRole('heading', { name: 'Trang này chưa được tìm thấy.' })).toBeVisible();
+  expect(state.purchaseRequests).toBe(0);
+  await expect(page.getByRole('columnheader')).toHaveCount(0);
 });

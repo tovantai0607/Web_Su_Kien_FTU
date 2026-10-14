@@ -22,7 +22,9 @@ export default function Voting() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState(false);
-  const round = rounds.data?.find((r) => r.kind === 'final');
+  const round =
+    rounds.data?.find((r) => r.id === params.get('vong')) ??
+    rounds.data?.find((r) => r.kind === 'final');
   const voting = useQuery({
     queryKey: ['voting', round?.id],
     queryFn: () => api<VotingData>('/voting/' + round!.id),
@@ -110,6 +112,27 @@ export default function Voting() {
   return (
     <div className="page-shell">
       <PageTitle title="Bình chọn" />
+      <label className="field">
+        Vòng bình chọn
+        <select
+          className="input"
+          value={round?.id ?? ''}
+          onChange={(e) => {
+            setParams({ ...Object.fromEntries(params), vong: e.target.value });
+            setTicket('');
+            setSelected(null);
+            setToken('');
+          }}
+        >
+          {rounds.data
+            ?.filter((r) => ['semifinal', 'final'].includes(r.kind))
+            .map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title}
+              </option>
+            ))}
+        </select>
+      </label>
       <div className="vote-categories" role="group" aria-label="Hạng mục bình chọn">
         {(['female', 'male'] as const).map((value) => (
           <button
@@ -117,7 +140,7 @@ export default function Voting() {
             type="button"
             aria-pressed={gender === value}
             onClick={() => {
-              setParams({ 'hang-muc': value });
+              setParams({ ...Object.fromEntries(params), 'hang-muc': value });
               setTicket('');
               setSelected(null);
               setToken('');
@@ -129,12 +152,15 @@ export default function Voting() {
       </div>
       <div className="vote-status">
         <div>
-          <Badge>{isOpen ? 'Bình chọn đang mở' : 'Chờ khoảnh khắc chung kết'}</Badge>
+          <Badge>{isOpen ? 'Bình chọn đang mở' : 'Chờ giờ bình chọn'}</Badge>
           <h2>
             {category?.name ??
               (gender === 'male' ? 'Nam được yêu thích nhất' : 'Nữ được yêu thích nhất')}
           </h2>
-          <p>Mỗi vé hợp lệ được bỏ một phiếu nam và một phiếu nữ trong vòng bình chọn.</p>
+          <p>
+            Mỗi vé Hoàn tất được bỏ một phiếu cho mỗi hạng mục đúng vòng, không cần check-in hoặc
+            chờ email.
+          </p>
         </div>
         <div className="vote-clock">
           <Clock3 size={25} />
@@ -156,7 +182,7 @@ export default function Voting() {
       {round && <DataState query={voting} />}
       {!current && !rounds.isPending && !rounds.isError && (
         <EmptyState title="Chưa có lượt bình chọn công khai">
-          BTC sẽ mở lượt tại đêm chung kết. Bạn có thể khám phá các gương mặt trước khi chọn.
+          BTC sẽ mở lượt theo lịch của từng vòng. Bạn có thể khám phá các gương mặt trước khi chọn.
         </EmptyState>
       )}
       {current && !isOpen && (
@@ -164,10 +190,17 @@ export default function Voting() {
           Thời gian chính thức do BTC cấu hình; giao diện không thể tự mở bình chọn.
         </EmptyState>
       )}
+      {session?.state === 'FINALIZED' && (
+        <PublishedResults
+          session={session.id}
+          contestants={voting.data?.contestants ?? []}
+          categories={voting.data?.categories ?? []}
+        />
+      )}
       {!user && (
         <Card>
           <h3>Đăng nhập bằng tài khoản nhận vé.</h3>
-          <p>Vé phải thuộc tài khoản của bạn và còn hiệu lực trong vòng bình chọn.</p>
+          <p>Vé phải thuộc tài khoản của bạn, đã Hoàn tất gửi minh chứng và đúng vòng bình chọn.</p>
           <Button asChild variant="outline">
             <Link to="/tai-khoan/dang-nhap">Đăng nhập</Link>
           </Button>
@@ -255,6 +288,48 @@ export default function Voting() {
     </div>
   );
 }
+function PublishedResults({
+  session,
+  contestants,
+  categories,
+}: {
+  session: string;
+  contestants: Contestant[];
+  categories: { id: string; name: string }[];
+}) {
+  const q = useQuery({
+    queryKey: ['published-results', session],
+    queryFn: () =>
+      api<{ category_id: string; results: { contestant_id: string; votes: number }[] }[]>(
+        '/vote-results/' + session,
+      ),
+    retry: false,
+  });
+  return (
+    <section aria-label="Kết quả đã công bố">
+      <DataState query={q} />
+      {q.data?.map((group) => (
+        <Card key={group.category_id}>
+          <h2>
+            {categories.find((c) => c.id === group.category_id)?.name ?? 'Hạng mục bình chọn'} — Kết
+            quả
+          </h2>
+          <ol>
+            {[...group.results]
+              .sort((a, b) => b.votes - a.votes || a.contestant_id.localeCompare(b.contestant_id))
+              .map((r) => (
+                <li key={r.contestant_id}>
+                  {contestants.find((c) => c.id === r.contestant_id)?.display_name ?? 'Thí sinh'}:{' '}
+                  {r.votes} phiếu
+                </li>
+              ))}
+          </ol>
+        </Card>
+      ))}
+      {q.isSuccess && !q.data.length && <p>BTC chưa công bố kết quả.</p>}
+    </section>
+  );
+}
 function FieldTicket({
   tickets,
   value,
@@ -266,19 +341,20 @@ function FieldTicket({
 }) {
   return tickets.length ? (
     <label className="field">
-      Vé hợp lệ
+      Vé đủ điều kiện của vòng này
       <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Chọn vé của bạn</option>
         {tickets.map((t) => (
           <option key={t.id} value={t.id}>
-            Ghế {t.seat_label}
+            {t.ticket_code ?? t.seat_label}
           </option>
         ))}
       </select>
     </label>
   ) : (
     <EmptyState title="Không có vé đủ điều kiện hoặc vé đã bình chọn">
-      Kiểm tra trạng thái vé và liên hệ ban tổ chức nếu cần hỗ trợ.
+      Hoàn tất gửi minh chứng mua vé đúng vòng để nhận lượt vote. Phiếu cũ chưa đối chiếu hạng mục
+      cần BTC hỗ trợ.
     </EmptyState>
   );
 }

@@ -1,5 +1,21 @@
 # Tồn kho và trang vé giai đoạn 03
 
+Báo cáo lịch sử trước bổ sung. Trạng thái hiện hành11/11 local/DEMO và contract mới ở [nghiệm thu](supplement-acceptance.md); không dùng các con số/trạng thái lịch sử dưới đây làm tiến độ hiện tại.
+
+## Nhật ký luồng chọn ghế cũ
+
+Contract hiện hành được thay bằng [luồng bổ sung đã triển khai](supplement-acceptance.md) và [runbook](supplement-runbook.md): năm2027, quota30phút, không cap10, không chọn ghế/check-in/provider/email vé tự động. API purchase có namespace riêng; nội dung inventory/seat/payment bên dưới là lịch sử/compatibility, không là nghiệm thu mới.
+
+Hướng dẫn áp dụng bổ sung: đọc `.agents/skills/ftu-ticket-sales/SKILL.md` và reference R01–R14. Các API/tests chọn ghế, check-in, provider hoặc hủy đơn trong lịch sử không là nhiệm vụ bổ sung.
+
+Phạm vi bổ sung mới nhất: Không có nhiệm vụ check-in, camera quét vé, QR vào cửa, mapping QR/check-in hoặc email vé tự động. Không dùng payOS/SePay/webhook; chỉ hiển thị QR chuyển khoản rồi nhận minh chứng/lưu dữ liệu. Không xóa code/schema/check-in cũ của phần dùng chung trong lượt sửa tài liệu.
+
+Mẫu lưu database là Mã vé, Thông tin, Minh chứng chuyển khoản, Loại vé, Số lượng, Combo. Lịch cụ thể trong skill/NGHIEP_VU_HIEN_HANH.md. Kế hoạch 11 bước; trạng thái hiện tại xem Word và nghiệm thu bổ sung; phần code/API/checks lịch sử dưới đây chưa được sửa theo luồng mới.
+
+## Thay đổi nghiệp vụ ngày 14/10/2026
+
+Hướng dẫn hiện hành ở `skill/NGHIEP_VU_HIEN_HANH.md`: chọn loại/cụm vé và combo; Hoàn tất lưu minh chứng/thông tin thành công thì có vé để vote ngay, không chờ BTC duyệt/check-in/email. Email vé do bên khác gửi thủ công. Không dùng chọn ghế, provider/webhook hoặc email vé tự động trong luồng mới. Word bỏ X 03, tổng 2/11 và tiếp theo 03. Code/API/SQL và các tests dưới đây vẫn phản ánh luồng đã triển khai trước khi đổi yêu cầu; chưa triển khai endpoints/guards mới và không được dùng checks cũ để nghiệm thu mới.
+
 ## Kiểm tra bản hợp nhất trước khi đẩy GitHub
 
 Theo yêu cầu đẩy nhánh và gộp main ngày 13/10/2026, đã fetch main tại `1c2b6ed` và hợp nhất vào `codex/stage-03-ticket-inventory`. Giữ giao diện pastel/bảo mật tài khoản từ main, API catalog/giữ ghế và sơ đồ tương tác của giai đoạn 03. Xử lý ba xung đột tại API frontend, PublicPages và E2E; trang vé tĩnh được thay bằng routes Tickets đã có. Không đưa AGENTS.md local, skill/ hoặc tools/ có sẵn vào commit.

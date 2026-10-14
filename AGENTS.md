@@ -1,14 +1,26 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Xác nhận triển khai ngày 14/10/2026
+
+Xác nhận mới nhất sau gộp Git `8115e0f`: SUPER_ADMIN không bắt buộc MFA; chỉ SUPER_ADMIN đóng sớm vote với lý do, phiên đã đóng không mở lại. Dùng quy tắc Git mới theo trả lời người dùng, thay quy tắc cũ trái các điểm này. Trang khách `/admin/ve` chạy ở frontend5173 nối backend8787, dữ liệu Supabase và ảnh R2 local. Đã đối chiếu 11 migration local/remote; không chạy migration trong lượt gộp. Đọc `docs/git-sync-admin-customers-20261014.md` cho bằng chứng và giới hạn mới nhất.
+
+Xác nhận tiếp theo cùng ngày: người dùng chọn **Test DEMO, ghi vào Supabase** và giá vé tạm **100.000đ**, thay giới hạn fixture online cho riêng đợt `test-giao-dich-demo`. Đã tạo mùa/vòng DEMO riêng, sáu cấu hình EARLY/NORMAL, quota thử100/hạng, Combo2/3 bằng2/3 vé (200k/300k, chưa giảm giá), mở cửa sổ thử7 ngày. LIVE chung kết2027 giữ chưa công bố. Backend loopback8787 dùng entry `demo-test.ts`, Auth/ownership thật, Images/R2 local; chỉ ghi đơn/cấu hình trong scope DEMO, admin vẫn kiểm tra quyền/MFA. Chưa là deploy, thanh toán thật, lưu ảnh online hay tải online. Xem `docs/ticket-sales-demo-20261014.md` cho trạng thái và cách chạy. Không tự xóa dữ liệu/ảnh thử đã được tạo.
+
+Mùa/lịch2027; quota30 phút; mỗi đơn/tài khoản không cap ngoài quota. Hoàn tất lưu minh chứng/thông tin thành công có vé/vote ngay, không hủy/thu hồi. BTC cấu hình; local DEMO được duyệt; Supabase chứa dữ liệu thật nên không migration/fixture/load online. Người dùng yêu cầu hoàn tất tất cả11 bước trong lượt triển khai hiện tại, thay quy tắc dừng sau từng bước cho yêu cầu này. Đọc `docs/supplement-acceptance.md`, runbook và Word cho trạng thái mới. Giữ Auth/CMS/registration/shared history, không tự deploy/push/thay secret/gửi email.
+
+## Skill nghiệp vụ bắt buộc cho phần bán vé
+
+Đọc `.agents/skills/ftu-ticket-sales/SKILL.md` và `references/requirements.md` của skill trước khi lập kế hoạch hoặc sửa luồng vé/QR/minh chứng/database/vote. Đây là skill từ bosung.docx và các xác nhận mới nhất; mã R01–R14 dùng để kiểm tra từng mục. Không dùng mô tả payment/check-in/email/hủy đơn cũ để mở rộng phạm vi. File bổ sung và ảnh được giữ làm nguồn; không sửa nguồn để hợp thức hóa phương án.
+
 ## Ngữ cảnh và phạm vi
 
-Website cuộc thi hoa khôi sinh viên: giai đoạn 1 giới thiệu, đăng ký thí sinh, email xác nhận và quản trị; giai đoạn 2 bán vé, chọn/giữ ghế, thanh toán, webhook, QR và check-in; giai đoạn 3 bình chọn theo vòng và chống gian lận. Ưu tiên trải nghiệm điện thoại, bảo mật, chi phí vận hành thấp. Mục tiêu 2.000–3.000 người dùng đồng thời phải được kiểm chứng bằng đo tải, không suy ra từ lựa chọn công nghệ.
+Website cuộc thi hoa khôi sinh viên: giới thiệu/đăng ký/CMS; bán vé theo loại/cụm và combo, QR chuyển khoản/minh chứng; vote theo vòng/hạng mục. Theo yêu cầu 14/10/2026, Hoàn tất lưu thành công ở server ghi nhận số vé để vote ngay, không chờ BTC duyệt/email. Email vé do bên khác gửi thủ công. Không dùng chọn số ghế hoặc payOS/SePay/webhook trong luồng mới. Đọc skill/NGHIEP_VU_HIEN_HANH.md cùng skill/Nhiemvu.md và skill/bosung.docx. Ưu tiên mobile, bảo mật và chi phí thấp; mục tiêu 500–1.000 đồng thời phải đo.
 
 Thư mục dự án trống tại thời điểm thiết lập 13/10/2026. Trước khi đề xuất công nghệ hoặc sửa cấu trúc, kiểm tra code, manifest, lockfile, cấu hình, migration và hướng dẫn trong thư mục con. Không mặc định React, Next.js, Supabase hay Prisma. Giữ phiên bản và kiến trúc hiện hữu trừ khi nhiệm vụ yêu cầu thay đổi.
 
 ## Chọn skill theo nhiệm vụ
 
-Đọc `SKILL.md` của skill phù hợp và chỉ tải references cần thiết. Skill dùng chung ở `C:/Users/ADMIN/.agents/skills/`; không sao chép chúng vào source code. Kiểm tra danh sách skill của phiên đang chạy trước khi gọi; nếu thiếu, báo rõ và dùng tài liệu chính thức.
+Đọc `SKILL.md` của skill phù hợp và chỉ tải references cần thiết. Skill dùng chung trên máy này ở `C:/Users/dell/.agents/skills/`; không sao chép chúng vào source code. Kiểm tra danh sách skill của phiên đang chạy trước khi gọi; nếu thiếu, báo rõ và dùng tài liệu chính thức.
 
 - UI: ưu tiên `ui-ux-pro-max` và `frontend-design`. Với giao diện lớn, xây design system gồm token màu, typography, spacing, component và trạng thái trước khi triển khai. Dùng `building-components` cho composition, typing và accessibility; `web-design-guidelines` để review.
 - Frontend React/Next.js khi đã xác định stack: dùng `vercel-react-best-practices` (thư mục `react-best-practices`). Component tái sử dụng, tránh code trùng, kiểm tra TypeScript bằng script dự án, tối ưu theo số liệu và kiểm tra API theo phiên bản đang cài.
@@ -27,7 +39,7 @@ Giữ design system nhất quán giữa các trang. Thiết kế mobile-first, k
 UI/UX Pro Max được cài ở phạm vi người dùng. Ví dụ `${CLAUDE_PLUGIN_ROOT}` trong bản upstream không áp dụng trong Codex; gọi script bằng đường dẫn tuyệt đối:
 
 ```powershell
-python "C:/Users/ADMIN/.agents/skills/ui-ux-pro-max/scripts/search.py" "error summary validation" --domain ux
+python "C:/Users/dell/.agents/skills/ui-ux-pro-max/scripts/search.py" "error summary validation" --domain ux
 ```
 
 Không truyền dữ liệu riêng tư vào query. Chỉ `--persist` khi cần tạo design system, kèm `--output-dir` trỏ đúng root dự án; đọc MASTER hiện hữu và không dùng `--force` nếu chưa được cho phép.
@@ -39,15 +51,41 @@ Không truyền dữ liệu riêng tư vào query. Chỉ `--persist` khi cần t
 Schema cần primary key, foreign key, unique/check constraints phù hợp; indexes dựa trên truy vấn thực tế và EXPLAIN. Bật và kiểm thử RLS với role thực tế khi cần; trong Supabase phải bảo vệ bảng thuộc exposed schema. Không đưa service-role key vào client. Dùng migration có review và rollback; không sửa production trực tiếp. Các hướng dẫn Supabase chạy SQL để lặp schema chỉ áp dụng cho database local/test đã xác định.
 
 - Đăng ký: xác nhận email bằng token có hạn, dùng một lần; retry gửi email phải idempotent; bảo vệ thông tin cá nhân và ảnh thí sinh.
-- Vé/ghế: giữ ghế có TTL do server quản lý; transaction và constraint ngăn bán trùng. Không giữ database transaction trong lúc gọi payment provider. Xử lý cạnh tranh giữa hết hạn giữ ghế và webhook bằng state machine rõ ràng.
-- Thanh toán: xác minh chữ ký webhook trên payload đúng quy định provider; chống replay; idempotency theo event/payment ID; kiểm tra số tiền, tiền tệ và đơn hàng. Không tin trang redirect client là bằng chứng thanh toán.
-- QR/check-in: mã khó đoán, không chứa thông tin nhạy cảm; check-in bằng cập nhật nguyên tử để hai thiết bị không chấp nhận cùng vé. Có audit trail và phân quyền nhân viên.
-- Bình chọn: xác định điều kiện hợp lệ, thời gian vòng theo server, unique constraint theo chính sách phiếu, chống retry trùng và cập nhật nguyên tử. Kết quả công khai không làm lộ dữ liệu cá nhân.
+- Vé/combos: chọn loại/cụm và số lượng, không chọn ghế; quota và giá do server kiểm tra. Transaction/constraints ngăn vượt quota; Hoàn tất và retry phải ghi quyền vé/vote đúng một lần. Giữ quota30 phút không gia hạn retry, mỗi đơn chỉ giới hạn quota còn lại; sau Hoàn tất không hủy/hoàn/thu hồi.
+- Minh chứng: QR chuyển khoản theo cấu hình, private upload và ownership. Server lưu thông tin/minh chứng/Hoàn tất thành công thì ghi nhận vé để vote ngay; không đợi BTC duyệt. Tách quyền vote khỏi trạng thái đối soát/PAID/doanh thu. Email vé thuộc bên khác gửi thủ công; không tự xử lý thu hồi quyền/phiếu khi chứng từ sai mà chưa chốt chính sách.
+- Bình chọn: mỗi vé ghi nhận từ đơn Hoàn tất một lượt/hạng mục đúng vòng, N vé có N lượt; không chờ email. Thời gian server, unique theo vé/hạng mục, retry nguyên tử, bảo toàn legacy và không lộ PII.
 
 ## Kiểm thử, tải và triển khai
 
-Kiểm thử luồng đăng ký/email, RLS, webhook trùng/sai chữ ký, hai người giữ cùng ghế, hai thiết bị quét cùng QR, vote retry và hết hạn vòng. Dùng dữ liệu giả, môi trường local/staging và tài khoản test; không tạo thanh toán hay gửi email thật trong test.
+Kiểm thử đăng ký/email chung, RLS, upload/Hoàn tất thất bại hoặc retry, tranh quota/combo, quyền vote trước đối soát/email, vote retry và hết hạn vòng. Dùng dữ liệu giả, môi trường local/staging và tài khoản test; không tạo thanh toán hay gửi email thật trong test.
 
 Kiểm tra package scripts rồi chạy lint/typecheck/build/test phù hợp. Báo rõ check chưa chạy hoặc không có, không tuyên bố website đạt chuẩn khi chưa đo. Load test phải có workload, tỷ lệ đọc/ghi, ramp-up, thời lượng, p95/p99 latency, error rate, connection pool, lock contention và ngân sách được xác định. Không chạy tải lên production hoặc dịch vụ ngoài khi chưa được cho phép.
 
 Không commit secrets; dùng cấu hình môi trường và secret store. Kiểm tra đúng môi trường trước migration/deploy. Chuẩn bị rollback, backup phù hợp và quan sát lỗi. Không tự deploy production; preview/staging chỉ thực hiện khi nằm trong phạm vi yêu cầu. Không tự nâng cấp dependency major, đổi provider, xóa dữ liệu hoặc thay secrets. Ưu tiên giải pháp đơn giản, chi phí có căn cứ, tránh hứa khả năng chịu tải chưa kiểm chứng.
+
+## Ngữ cảnh local của người dùng
+
+- Thư mục làm việc: `D:\WED_sk_FTU`; repository chính: https://github.com/tovantai0607/Web_Su_Kien_FTU.git. Trao đổi bằng tiếng Việt.
+- Đã đồng bộ nhánh `main` từ GitHub ngày 13/10/2026 tại commit `8d57978`; codebase hiện đã có. Luôn kiểm tra trạng thái Git thực tế trước tác vụ tiếp theo.
+- `skill/Nhiemvu.md` là phần công việc người dùng được phân công; đọc để xác định phạm vi khi triển khai. Không tự mở rộng sang phần người khác phụ trách.
+- `skill/database.md` chứa thông tin kết nối Supabase người dùng cung cấp; được loại khỏi Git vì có secret key. Không đưa nội dung khóa vào source, giao diện hoặc log.
+- Đọc `skill/Prompt.md` khi cập nhật việc cài đặt skills. Đối chiếu và cập nhật báo cáo tại `skill/CODEX_SKILLS_SETUP_REPORT.md`; không báo cài thành công khi chưa xác minh.
+- Python đã kiểm tra trên máy: `C:\Users\dell\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`. Nếu đường dẫn thay đổi, tìm lại executable; lệnh `python` trên PATH trước đây trỏ tới alias Windows Store.
+- `tools/sepay-sandbox` là bộ thử webhook SePay local đã có trước khi tải code; đọc README của công cụ khi sử dụng, chỉ dùng môi trường test đã xác định.
+
+## Tiến độ triển khai phần việc người thứ hai
+
+- Kế hoạch và bảng nghiệm thu nằm trong `tiến độn.docx` tại gốc dự án, gồm 11 giai đoạn. Đọc trạng thái trong file trước mỗi lượt triển khai.
+- Mỗi lượt chỉ thực thi một giai đoạn theo thứ tự. Không tự chuyển sang giai đoạn tiếp theo; sau khi hoàn tất phải dừng và chờ yêu cầu tiếp tục.
+- Chỉ đánh X vào ô của giai đoạn khi sản phẩm bàn giao, tests và điều kiện nghiệm thu đã đạt; ghi bằng chứng trong tài liệu hoặc commit liên quan. Nếu còn lỗi, thiếu cấu hình hoặc thiếu quyết định nghiệp vụ, giữ ô trống và báo rõ phần còn thiếu.
+- Khi đánh X, cập nhật tổng số giai đoạn hoàn tất và giai đoạn tiếp theo trong file Word; giữ nguyên các ô và nội dung khác. Tạo kế hoạch không đồng nghĩa đã hoàn tất giai đoạn 01.
+
+## Nghiệp vụ và tiến độ sau bổ sung 14/10/2026
+
+Đã nghiệm thu 11/11 local/DEMO theo yêu cầu hoàn tất toàn bộ phần việc. Word và docs/supplement-acceptance.md lưu bằng chứng, không suy ra đã nghiệm thu production. Sau đó người dùng yêu cầu đồng bộ Supabase: đã áp đủ chín migration lên project ifgtyslifgegwcguysbb, schema/history khớp local; xem docs/supabase-sync-20261014.md. Chưa có tài khoản quản trị, cấu hình đợt bán hoặc triển khai Worker trong lượt đồng bộ; không tạo fixture/đo tải online. Không xây email vé tự động; bàn giao dữ liệu có quyền cho bên gửi email thủ công.
+
+## Phạm vi theo bổ sung mới nhất
+
+Không có nhiệm vụ check-in, camera quét vé, QR vào cửa, mapping QR/check-in hoặc email vé tự động. Không dùng payOS/SePay/webhook; chỉ hiển thị QR chuyển khoản rồi nhận minh chứng/lưu dữ liệu. Không xóa code/schema/check-in cũ của phần dùng chung trong lượt sửa tài liệu.
+
+Lưu theo sáu cột ảnh: Mã vé, Thông tin, Minh chứng chuyển khoản, Loại vé, Số lượng, Combo. Lịch năm 2027 trong skill/NGHIEP_VU_HIEN_HANH.md có bán kết 25/4, mở vé sớm chung kết 26/4; không tự suy ra ngày tổ chức chung kết. Kế hoạch 11 bước sau khi bỏ check-in đã nghiệm thu local; cấu hình vận hành thật còn theo báo cáo đồng bộ. Yêu cầu đồng bộ hiện tại cho phép migration đã đối chiếu, không mở rộng thành quyền deploy/push/thay secrets/email/thanh toán hoặc đo tải online.

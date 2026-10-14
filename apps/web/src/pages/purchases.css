@@ -1,0 +1,229 @@
+.purchase-page {
+  --purchase-accent: var(--rose, #922342);
+}
+.purchase-events,
+.purchase-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 24px;
+  margin: 28px 0;
+}
+.purchase-events .card,
+.purchase-products .card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.purchase-events h2,
+.purchase-products h2 {
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+}
+.purchase-notice {
+  padding: 20px;
+  border-left: 3px solid var(--purchase-accent);
+  margin: 20px 0;
+  background: var(--blush);
+}
+.purchase-checkout {
+  margin-top: 32px;
+}
+.purchase-steps {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 28px 0;
+  color: var(--muted);
+}
+.purchase-steps [aria-current] {
+  color: var(--purchase-accent);
+  font-weight: 700;
+  border-bottom: 2px solid currentColor;
+  padding-bottom: 6px;
+}
+.purchase-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.purchase-option .field {
+  flex: 1;
+}
+.purchase-option input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--purchase-accent);
+}
+.purchase-buyer,
+.purchase-payment,
+.purchase-success {
+  margin: 28px 0;
+}
+.purchase-buyer h2 {
+  margin-bottom: 24px;
+}
+.purchase-summary {
+  margin: 24px 0;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+.purchase-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.purchase-proof-actions {
+  display: grid;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.purchase-payment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  max-width: 720px;
+}
+.purchase-countdown {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px;
+  border: 1px solid var(--purchase-accent);
+  border-radius: 16px;
+  background: var(--section);
+  color: var(--ink);
+}
+.purchase-countdown [role='timer'] {
+  display: block;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.purchase-countdown-help {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+.purchase-qr {
+  width: 280px;
+  height: 280px;
+  object-fit: contain;
+}
+.purchase-demo-qr {
+  border: 2px dashed var(--purchase-accent);
+  width: min(280px, 100%);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.purchase-proof-preview {
+  max-height: 400px;
+  width: 100%;
+  object-fit: contain;
+}
+.purchase-history {
+  margin-top: 64px;
+}
+.purchase-records {
+  overflow: auto;
+  margin: 24px 0;
+}
+.purchase-records table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.purchase-records th,
+.purchase-records td {
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid var(--line, #e2cad1);
+  vertical-align: top;
+}
+.purchase-records td {
+  min-width: 130px;
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+.purchase-records td:first-child {
+  min-width: 200px;
+}
+.purchase-records ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.purchase-records img {
+  max-height: 260px;
+  max-width: 280px;
+  object-fit: contain;
+}
+.purchase-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.purchase-admin form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.purchase-admin textarea {
+  min-height: 140px;
+  width: 100%;
+}
+.purchase-config-section,
+.purchase-config-product {
+  border: 1px solid var(--line, #e2cad1);
+  padding: 20px;
+  border-radius: 12px;
+  min-width: 0;
+}
+.purchase-config-section legend,
+.purchase-config-product legend {
+  padding: 0 8px;
+  font-weight: 700;
+}
+.purchase-config-section > * + *,
+.purchase-config-product > * + * {
+  margin-top: 16px;
+}
+.purchase-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+.purchase-config-grid .field {
+  min-width: 0;
+}
+.purchase-config-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.purchase-config-check input {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.purchase-config-form details summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 8px 0;
+}
+@media (max-width: 600px) {
+  .purchase-steps {
+    gap: 10px 16px;
+    font-size: 0.85rem;
+  }
+  .purchase-payment {
+    padding: 24px;
+  }
+}

@@ -153,7 +153,7 @@ it('prepares categories idempotently and opens one session with correct gender a
     db.query('select public.open_voting($1,$2,$3)', [admin, 'aal2', round]),
   ).rejects.toThrow('VOTING_HAS_STARTED');
 });
-it('accepts issued tickets without check-in while rejecting wrong owners and cross-category votes', async () => {
+it('accepts valid tickets without check-in; rejects wrong owners and cross-category votes', async () => {
   await expect(
     db.query('select public.cast_category_vote($1,$2,$3,$4,$5,$6)', [
       user,
@@ -164,7 +164,6 @@ it('accepts issued tickets without check-in while rejecting wrong owners and cro
       session,
     ]),
   ).resolves.toBeDefined();
-  await db.query('update public.tickets set checked_in_at=now() where id=$1', [ticket]);
   await expect(
     db.query('select public.cast_category_vote($1,$2,$3,$4,$5,$6)', [
       other,
