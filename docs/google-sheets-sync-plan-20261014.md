@@ -53,6 +53,7 @@ Git khi bắt đầu: `main` và `origin/main` cùng `6914289de0c4fe42022b9bb0d5
 - UI vote có số tài khoản đã vote và tổng phiếu; không trả thông tin khách. Worker scheduled đóng phiên OPEN hết giờ, không finalize/publish. Database chưa có RPC mới thì UI giữ tương thích bằng participation null.
 - Full suite cuối: **194 tests đạt, một test native bỏ qua**, 22 files đạt; Apps Script unit8/8. Native PostgreSQL127.0.0.1:55433 không chạy (ECONNREFUSED), chưa kiểm chứng race mới bằng nhiều kết nối thật.
 - Playwright Auth/admin hồi quy đạt10/10 desktop/mobile: quyền admin/khách, MFA tùy chọn, danh sách khách/minh chứng/CSV và callback website. Đây không phải nghiệm thu callback Apps Script Google thật.
+- Khi bàn giao Git, public E2E đạt49/50 với2 workers; test animation 3D mobile bị timeout chờ canvas thay đổi. Chạy lại riêng đúng test bằng1 worker đạt1/1 (12,3 giây), không sửa code/test. Không mô tả lần chạy chung là50/50 hoặc khẳng định nguyên nhân timeout đã được chứng minh. CI trên GitHub cần đối chiếu kết quả riêng.
 - Lint/typecheck, production build, Wrangler dry-run đạt. Build có cảnh báo chunk Three.js lớn; dry-run không deploy và chỉ ra cấu hình top-level chưa có domain/MEDIA/IMAGES thật.
 - Read-back Google xác minh18 cột, header cố định, filter, validation combo, metadata bảo vệ/ẩn và phone text. Export/render QA mẫu local: renderer đọc sai text số0 và ô ngày trống khi import; dùng native cell values để đối chiếu chính xác. Chưa kiểm thử workbook có khách thật hay OAuth/trigger end-to-end.
 
