@@ -102,6 +102,159 @@ afterEach(async () => {
 afterAll(async () => {
   await db.close();
 });
+it('automatically closes only expired open voting sessions and never finalizes or publishes them', async () => {
+  await rpc('prepare_gender_voting', [admin, 'aal2', round]);
+  const session = await rpc('open_gender_voting', [admin, 'aal2', round]);
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(0);
+  await db.query(
+    "update public.vote_sessions set close_at=clock_timestamp()+interval '2 seconds',reopen_reason='TEST deadline fixture' where id=$1",
+    [session.id],
+  );
+  await new Promise((resolve) => setTimeout(resolve, 2100));
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(1);
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(0);
+  const { rows } = await db.query<{ state: string }>(
+    'select state from public.vote_sessions where id=$1',
+    [session.id],
+  );
+  expect(rows[0].state).toBe('CLOSED');
+  expect(
+    (await db.query<{ n: number }>('select count(*)::int n from public.vote_result_snapshots'))
+      .rows[0].n,
+  ).toBe(0);
+});
+const editData = (r: Purchase, quantity: number, revision = 0) => ({
+  operation_id: crypto.randomUUID(),
+  expected_revision: revision,
+  code: r.code,
+  buyer: { ...buyer, email: 'contact-only@example.test' },
+  lines: [{ product_id: product, bundle_size: 1, quantity }],
+  evidence_id: r.evidence_id,
+});
+it('sheet edits change contact fields and quantity atomically, retaining owner, audit and idempotency', async () => {
+  const held = await reserve(3),
+    evidence = await proof(held.id);
+  const original = await complete(held.id, evidence.id);
+  const input = editData(original, 2);
+  const edited = await rpc<Purchase & { revision: number }>('edit_sheet_purchase', [
+    admin,
+    'aal1',
+    held.id,
+    input,
+  ]);
+  expect(edited.quantity).toBe(2);
+  expect(edited.revision).toBe(1);
+  expect(edited.buyer.email).toBe('contact-only@example.test');
+  expect(await rpc('edit_sheet_purchase', [admin, 'aal1', held.id, input])).toEqual(edited);
+  const counts = await db.query<{ active: number; archived: number }>(
+    "select count(*) filter(where status='issued')::int active,count(*) filter(where status='void')::int archived from public.tickets where purchase_id=$1",
+    [held.id],
+  );
+  expect(counts.rows[0]).toEqual({ active: 2, archived: 1 });
+  expect(
+    (
+      await db.query<{ user_id: string }>(
+        'select user_id from public.purchase_requests where id=$1',
+        [held.id],
+      )
+    ).rows[0].user_id,
+  ).toBe(user);
+  expect(
+    (
+      await db.query<{ n: number }>(
+        "select count(*)::int n from public.audit_logs where action='sheet_purchase_edited'",
+        [],
+      )
+    ).rows[0].n,
+  ).toBe(1);
+  expect(
+    (
+      await db.query<{ sold_quantity: number }>(
+        'select sold_quantity from public.purchase_products where id=$1',
+        [product],
+      )
+    ).rows[0].sold_quantity,
+  ).toBe(2);
+});
+it('sheet edits count voted ticket identities across categories and never lose recorded votes', async () => {
+  const held = await reserve(3),
+    evidence = await proof(held.id),
+    original = await complete(held.id, evidence.id);
+  await rpc('prepare_gender_voting', [admin, 'aal2', round]);
+  const session = await rpc('open_gender_voting', [admin, 'aal2', round]);
+  const tickets = (
+    await db.query<{ id: string }>(
+      'select id from public.tickets where purchase_id=$1 order by purchase_ordinal',
+      [held.id],
+    )
+  ).rows;
+  const categories = (
+    await db.query<{ id: string; gender: string }>(
+      'select id,gender from public.vote_categories where round_id=$1',
+      [round],
+    )
+  ).rows;
+  for (const category of categories)
+    await rpc('cast_category_vote', [
+      user,
+      round,
+      tickets[2].id,
+      category.gender === 'male' ? male : female,
+      category.id,
+      session.id,
+    ]);
+  const result = await rpc('edit_sheet_purchase', [admin, 'aal1', held.id, editData(original, 1)]);
+  expect(result.quantity).toBe(1);
+  expect(
+    (await db.query<{ n: number }>('select count(*)::int n from public.votes')).rows[0].n,
+  ).toBe(2);
+  expect(
+    (
+      await db.query<{ id: string }>(
+        "select id from public.tickets where purchase_id=$1 and status='issued'",
+        [held.id],
+      )
+    ).rows[0].id,
+  ).toBe(tickets[2].id);
+  expect(await rpc('read_vote_participation', [round])).toEqual({ participants: 1, votes: 2 });
+});
+it('sheet edits reject stale revisions, low quota, missing rights and reduction below voted tickets', async () => {
+  const held = await reserve(3),
+    evidence = await proof(held.id),
+    original = await complete(held.id, evidence.id);
+  await rpc('prepare_gender_voting', [admin, 'aal2', round]);
+  const session = await rpc('open_gender_voting', [admin, 'aal2', round]);
+  const tickets = (
+    await db.query<{ id: string }>(
+      'select id from public.tickets where purchase_id=$1 order by purchase_ordinal',
+      [held.id],
+    )
+  ).rows;
+  const category = (
+    await db.query<{ id: string }>(
+      "select id from public.vote_categories where round_id=$1 and gender='male'",
+      [round],
+    )
+  ).rows[0];
+  for (const ticket of tickets.slice(1))
+    await rpc('cast_category_vote', [user, round, ticket.id, male, category.id, session.id]);
+  for (const [actor, input, message] of [
+    [admin, editData(original, 1), 'SHEET_BELOW_VOTED_TICKETS'],
+    [admin, editData(original, 3, 9), 'SHEET_REVISION_CONFLICT'],
+    [user, editData(original, 3), 'FORBIDDEN'],
+    [admin, editData(original, 101), 'QUOTA_UNAVAILABLE'],
+  ] as const) {
+    await db.exec('savepoint expected_sheet_failure');
+    await expect(rpc('edit_sheet_purchase', [actor, 'aal1', held.id, input])).rejects.toThrow(
+      message,
+    );
+    await db.exec('rollback to savepoint expected_sheet_failure');
+  }
+  expect((await rpc('read_purchase', [user, held.id])).quantity).toBe(3);
+  expect(
+    (await db.query<{ n: number }>('select count(*)::int n from public.votes')).rows[0].n,
+  ).toBe(2);
+});
 it('snapshots the seven fields, type/combo price and exactly 30 minutes without a ten-ticket cap', async () => {
   const r = await reserve(12, 2);
   expect(r.quantity).toBe(24);
