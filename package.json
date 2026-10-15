@@ -17,6 +17,7 @@
     "preview": "vite preview --config apps/web/vite.config.ts --outDir ../../dist --host 127.0.0.1 --port 5173",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:full": "node scripts/qa-full.mjs",
     "test:e2e": "playwright test",
     "test:e2e:auth": "playwright test --config playwright.auth.config.ts",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",

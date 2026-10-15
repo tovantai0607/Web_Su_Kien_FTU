@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated-test';
 import AxeBuilder from '@axe-core/playwright';
 
 test('brand, retired news and complete contestant profiles', async ({ page }) => {

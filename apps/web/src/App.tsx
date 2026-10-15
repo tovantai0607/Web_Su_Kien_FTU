@@ -9,6 +9,7 @@ import { useAuth } from './lib/auth';
 import { MotionPage } from './components/Motion';
 import { officialFacebook } from './config/site-content';
 import { InterfaceMotion, useSystemReducedMotion } from './components/interface/MotionSystem';
+import { trackMobileScroll } from './components/interface/mobileScroll';
 const PublicPages = lazy(() => import('./pages/PublicPages'));
 const Registration = lazy(() => import('./pages/Registration'));
 const Account = lazy(() => import('./pages/Account'));
@@ -41,6 +42,7 @@ function ScrollReset() {
   return null;
 }
 export default function App() {
+  useEffect(trackMobileScroll, []);
   const [menu, setMenu] = useState(false);
   const [allowMotion, setAllowMotion] = useState(() => {
     try {

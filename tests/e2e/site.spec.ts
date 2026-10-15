@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated-test';
 import AxeBuilder from '@axe-core/playwright';
 test('home loads, navigation, all 11 timeline steps and no horizontal overflow', async ({
   page,
@@ -304,7 +304,10 @@ test('account signup has confirmation, password visibility and no preview write'
   await expect(page.getByText('Bản xem trước không tạo tài khoản.')).toBeVisible();
 });
 
-test('crown responds to scroll and becomes static with system reduced motion', async ({ page }) => {
+test('crown keeps desktop parallax, stays steady on touch and respects reduced motion', async ({
+  page,
+  isMobile,
+}) => {
   await page.goto('/');
   await page.locator('.stage-crown img').waitFor();
   await expect(page.locator('.stage-crown img')).toHaveJSProperty('complete', true);
@@ -316,7 +319,8 @@ test('crown responds to scroll and becomes static with system reduced motion', a
   const after = await page
     .locator('.crown-scroll')
     .evaluate((el) => getComputedStyle(el).transform);
-  expect(after).not.toBe(before);
+  if (isMobile) expect(after).toBe(before);
+  else expect(after).not.toBe(before);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
   expect(

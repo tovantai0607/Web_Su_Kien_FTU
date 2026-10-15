@@ -1,0 +1,1287 @@
+{
+  "generated": "2026-10-15",
+  "declarations": 256,
+  "note": "Source declarations, not executed test instances; see run summary.",
+  "cases": [
+    {
+      "file": "tests/db/admin-settings-http.test.ts",
+      "line": 109,
+      "title": "returns only the authenticated account capability and rejects private settings access"
+    },
+    {
+      "file": "tests/db/admin-settings-http.test.ts",
+      "line": 121,
+      "title": "gives content editors a publication entry point while keeping SUPER_ADMIN settings private"
+    },
+    {
+      "file": "tests/db/admin-settings-http.test.ts",
+      "line": 128,
+      "title": "validates phase configuration and stores both category prices through the protected API"
+    },
+    {
+      "file": "tests/db/admin-settings-http.test.ts",
+      "line": 170,
+      "title": "rejects cross-origin mutations and invalid voting windows before database writes"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 54,
+      "title": "preserves supplemental tickets and semifinal voting from the fetched remote baseline"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 161,
+      "title": "allows admins without MFA but rejects regular users and direct authenticated writes"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 174,
+      "title": "keeps MFA required for non-admin staff roles and rejects an invalid assurance value"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 184,
+      "title": "rejects missing assurance even for an admin"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 189,
+      "title": "requires an actually Google-verified account before bootstrap"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 203,
+      "title": "snapshots phase prices and rejects stale quotes after price changes"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 216,
+      "title": "blocks the legacy hold contract from bypassing phase quotes"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 228,
+      "title": "switches sale phases using the database clock and treats close as exclusive"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 258,
+      "title": "rejects overlap and rolls back the entire settings change"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 271,
+      "title": "rejects stale admin revisions instead of losing another save"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 275,
+      "title": "records new prices after a previous hold expires without changing old snapshots"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 291,
+      "title": "opens scheduled voting by time without a cron state transition"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 317,
+      "title": "extends an active vote, freezes its start and can close it early"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 326,
+      "title": "rejects active start changes and close changes without a reason"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 331,
+      "title": "legacy admin edits cannot clear a configured vote window"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 342,
+      "title": "public RPCs and private helpers remain inaccessible to client roles"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 352,
+      "title": "rollback restores the preceding schema and privileged RPCs on an unused migration"
+    },
+    {
+      "file": "tests/db/admin-settings.test.ts",
+      "line": 390,
+      "title": "the optional-MFA rollback restores the previous admin policy without removing accounts"
+    },
+    {
+      "file": "tests/db/browser-journey.test.ts",
+      "line": 34,
+      "title": "QA-JOURNEY desktop/mobile checkout, image correction, retry, vote and admin proof; fixtures destroyed"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 63,
+      "title": "seeds both categories in a draft 2027 season without opening registrations or voting"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 72,
+      "title": "requires role before editing details or preparing voting"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 83,
+      "title": "validates public profile fields and preserves private contact restrictions"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 105,
+      "title": "operational rollback preserves profile data before voting starts"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 124,
+      "title": "prepares categories idempotently and opens one session with correct gender assignments"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 156,
+      "title": "accepts valid tickets without check-in; rejects wrong owners and cross-category votes"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 191,
+      "title": "records exactly one vote per gender and returns the same receipt on retry"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 211,
+      "title": "blocks new votes when the session is closed and keeps existing receipts immutable"
+    },
+    {
+      "file": "tests/db/charm2027.test.ts",
+      "line": 233,
+      "title": "refuses operational rollback once gender ballots exist"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 35,
+      "title": "all tables are protected with RLS"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 41,
+      "title": "anon cannot read private data, write votes, or invoke server-only RPC"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 53,
+      "title": "public data respects unpublished edition"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 59,
+      "title": "a user without reviewer rights cannot approve an application"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 66,
+      "title": "queued retries create only one legacy vote and replay returns its ID"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 87,
+      "title": "wrong owner cannot use a checked-in ticket"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 92,
+      "title": "400 checked-in tickets each create exactly one vote"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 112,
+      "title": "vote after closing rejects even for unused checked-in ticket"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 125,
+      "title": "check-in uses atomic one-time transition"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 136,
+      "title": "registration transaction saves private profile, consent and one outbox message; idempotent retry"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 240,
+      "title": "admin CMS save is atomic with audit record"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 264,
+      "title": "private ownership is enforced by RLS"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 271,
+      "title": "public eligible entries can be read without private contestant identifiers"
+    },
+    {
+      "file": "tests/db/database.test.ts",
+      "line": 277,
+      "title": "manager opens exactly ten minutes once using database time"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 122,
+      "title": "projects published database inventory without owner/hash/payment data"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 131,
+      "title": "shows details before opening but refuses holds; closed sale also refuses"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 145,
+      "title": "hides unconfigured drafts and refuses unpublished events"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 150,
+      "title": "uses server prices, snapshots and one TTL for every seat"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 163,
+      "title": "idempotent retry preserves identity and expiry; changed selection conflicts"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 174,
+      "title": "cannot read/release another owner hold"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 184,
+      "title": "release twice restores stock exactly once"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 193,
+      "title": "rejects occupied/cross-event seats atomically with no partial order"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 198,
+      "title": "validates quantity, duplicates, injected price and missing idempotency"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 210,
+      "title": "requires authentication and rejects foreign Origin before touching stock"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 231,
+      "title": "anon/authenticated cannot execute sales helpers"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 242,
+      "title": "expiry restores all holds once, retains old attempt on retry"
+    },
+    {
+      "file": "tests/db/inventory-http.test.ts",
+      "line": 255,
+      "title": "stage 03 rollback removes only functions and preserves holds/history, then reapplies"
+    },
+    {
+      "file": "tests/db/native-purchases.test.ts",
+      "line": 40,
+      "title": "native concurrent purchase, browser checkout, and optional approved local workload"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 106,
+      "title": "publishes metadata but fails closed without payment or fully allocated quotas"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 118,
+      "title": "counts combo tickets and blocks NORMAL until early sales finish"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 126,
+      "title": "transitions only after 100 completed early tickets and caps the full round at 700"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 136,
+      "title": "rolls unused early quota into the matching normal product while retaining active holds"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 148,
+      "title": "releases expired early holds to normal sales without restarting a reservation"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 167,
+      "title": "keeps price snapshots and idempotency across phase and price changes"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 182,
+      "title": "blocks new reservations at the closing boundary but completes existing holds"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 191,
+      "title": "guards ten minute semifinal voting on the official date"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 202,
+      "title": "denies direct client publication writes and legacy reservation bypasses"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 211,
+      "title": "keeps photos and awards draft until staff supplies an image and explicitly publishes"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 258,
+      "title": "configures the official season idempotently without prices, images, votes or fake people"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 290,
+      "title": "retains rollover quota and permits unchanged config and completion after the sale closes"
+    },
+    {
+      "file": "tests/db/official-program.test.ts",
+      "line": 315,
+      "title": "rolls schema behavior back without deleting publication records or existing purchases"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 109,
+      "title": "QA-PROGRAM exposes only published timeline and excludes DEMO offers"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 122,
+      "title": "QA-PROGRAM hides an unpublished edition, timeline and awards together"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 132,
+      "title": "QA-PUBLISH draft is private, explicit publish exposes photo, eligibility revocation hides it"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 167,
+      "title": "QA-AWARDS publishes manual award without inferring winner and hides withdrawn contestant"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 184,
+      "title": "QA-PERMISSIONS denies guests, ordinary users and editors without MFA before mutations"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 190,
+      "title": "QA-UPLOAD rejects absent online storage and invalid files; successful sanitized image stays draft"
+    },
+    {
+      "file": "tests/db/program-http.test.ts",
+      "line": 224,
+      "title": "QA-BOUNDARY enforces origin, throttle and strict publication input"
+    },
+    {
+      "file": "tests/db/purchase-http.test.ts",
+      "line": 94,
+      "title": "serves public vote participation through the privileged server client without granting the public client execute"
+    },
+    {
+      "file": "tests/db/purchase-http.test.ts",
+      "line": 106,
+      "title": "guards authentication, Origin, input, idempotency and body limits before DB writes"
+    },
+    {
+      "file": "tests/db/purchase-http.test.ts",
+      "line": 125,
+      "title": "completes the real HTTP->SQL flow with a private, transformed proof and idempotent vote rights"
+    },
+    {
+      "file": "tests/db/purchase-rollback.test.ts",
+      "line": 4,
+      "title": "rolls back only an unused release and preserves common season data; reapplication works"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 105,
+      "title": "automatically closes only expired open voting sessions and never finalizes or publishes them"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 126,
+      "title": "closes a scheduled session at its server deadline without an OPEN state transition or result publication"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 169,
+      "title": "sheet edits change contact fields and quantity atomically, retaining owner, audit and idempotency"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 214,
+      "title": "sheet edits count voted ticket identities across categories and never lose recorded votes"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 256,
+      "title": "sheet edits reject stale revisions, low quota, missing rights and reduction below voted tickets"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 293,
+      "title": "snapshots the seven fields, type/combo price and exactly 30 minutes without a ten-ticket cap"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 302,
+      "title": "does not create tickets, financial PAID records or emails while held"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 309,
+      "title": "reservation retry returns the same request and expiry without consuming quota twice"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 317,
+      "title": "conflicting retry is rejected"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 324,
+      "title": "server rejects over-quota and combined bundles exceeding the same product quota"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 327,
+      "title": "validates combo configuration and sale time at the database boundary"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 331,
+      "title": "never exposes buyer data or evidence through the public catalog"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 339,
+      "title": "foreign owner cannot read or attach evidence"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 343,
+      "title": "cannot complete without evidence belonging to the request"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 347,
+      "title": "completion issues distinct codes immediately with no check-in and no PAID claim"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 362,
+      "title": "completion and proof retries cannot duplicate tickets or replace saved proof"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 372,
+      "title": "keeps a saved proof available after reload; upload alone grants no vote entitlement"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 382,
+      "title": "rolls back status, inventory and tickets together if issuance fails after proof is stored"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 403,
+      "title": "completed purchases and their tickets cannot be cancelled, voided or edited"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 411,
+      "title": "MFA and TICKET_STAFF are required to configure sales"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 424,
+      "title": "price changes affect new purchases while held prices and deadlines remain stable"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 442,
+      "title": "configuration rejects quota below completed and active held tickets atomically"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 464,
+      "title": "private tables and privileged RPCs are unavailable to anon/authenticated"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 479,
+      "title": "one completed ticket votes once per category in semifinal, without check-in; retry is idempotent"
+    },
+    {
+      "file": "tests/db/purchases.test.ts",
+      "line": 516,
+      "title": "wrong-round tickets and foreign ownership cannot vote"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 322,
+      "title": "preserves pre-migration ticket and unclassified vote identifiers and ownership"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 342,
+      "title": "enables RLS on every exposed table and revokes private helper execution"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 356,
+      "title": "public catalog excludes drafts and does not reveal private tables or token hashes"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 381,
+      "title": "stock counts mapped manual tickets once and cannot be edited independently"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 396,
+      "title": "checks composite foreign keys prevent cross-event seats and categories"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 411,
+      "title": "owner RLS exposes only their orders, items, reservations and payments"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 434,
+      "title": "authenticated users cannot write financial, hold or vote data directly"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 451,
+      "title": "enforces integer VND and 1-10 tickets without trusting client totals"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 475,
+      "title": "retains price snapshots when configured prices change later"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 489,
+      "title": "rejects two active claims for a seat and claims over an existing ticket"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 504,
+      "title": "requires complete order items and reservations at transaction boundaries"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 515,
+      "title": "releases a cancelled reservation once and keeps transaction history"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 533,
+      "title": "does not extend a hold through retry or permit early expiry"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 554,
+      "title": "does not issue a paid ticket for an unpaid order"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 566,
+      "title": "cannot mark paid without a verified, matching payment"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 591,
+      "title": "records wrong money for review without confirming or issuing additional tickets"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 613,
+      "title": "confirmation and issuance are unique and cannot be reverted to pending"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 645,
+      "title": "test and live transaction identities are distinct and an unsigned event cannot be applied"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 657,
+      "title": "check-in has one immutable event-scoped record and cannot be repeated"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 678,
+      "title": "unmapped legacy tickets prevent publishing and manual issuance bypass"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 700,
+      "title": "allows a mapped ticket to vote once in each category without check-in"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 722,
+      "title": "rejects a different ticket owner, wrong round and an ineligible contestant"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 734,
+      "title": "closed windows reject new votes and existing votes cannot be altered or deleted"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 748,
+      "title": "freezes categories and shared round entries from the first opening"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 763,
+      "title": "reopening requires super-admin approval, records the incident and does not reset quota"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 787,
+      "title": "unclassified historical votes block new category votes and finalization until reviewed"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 814,
+      "title": "a vote manager cannot reopen by supplying another super-admin as approver"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 837,
+      "title": "finalized sessions cannot reopen and snapshots must match immutable database counts"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 881,
+      "title": "transaction rollback restores seats, order rows and stock exactly"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 892,
+      "title": "a duplicate checkout key cannot create a second order or hold"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 919,
+      "title": "expired orders release seats, while late money goes to review without reviving the order"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 956,
+      "title": "applied payment events preserve financial identity while allowing replay counters"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 979,
+      "title": "check-in rejects cross-event foreign keys and a fabricated record without the ticket transition"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 998,
+      "title": "does not open an unconfigured session or allow the legacy RPC to bypass category voting"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 1018,
+      "title": "private trigger functions have neither PUBLIC/client execution nor schema access"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 1034,
+      "title": "guarded schema rollback refuses any populated sales or mapped history"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 1045,
+      "title": "an empty rollout can downgrade and reapply without losing pre-existing tickets, votes or RPC definitions"
+    },
+    {
+      "file": "tests/db/sales-schema.test.ts",
+      "line": 1093,
+      "title": "a failure before migration commit leaves the original schema and historical vote intact"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 195,
+      "title": "Google PKCE callback exchanges once and an admin configures Vietnam vote times and opens the current ticket editor"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 236,
+      "title": "ordinary users cannot fetch private settings while admins can enter without MFA"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 262,
+      "title": "cancelled or expired callbacks show recovery instructions"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 275,
+      "title": "admin opens customer records with six columns, proof, CSV and database link"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 306,
+      "title": "staff previews a round photo, saves a draft and publishes only on explicit confirmation"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 381,
+      "title": "ordinary users cannot request customer records through the direct admin URL"
+    },
+    {
+      "file": "tests/e2e/charm2027.spec.ts",
+      "line": 4,
+      "title": "brand, retired news and complete contestant profiles"
+    },
+    {
+      "file": "tests/e2e/charm2027.spec.ts",
+      "line": 40,
+      "title": "new profile and category controls pass accessibility checks"
+    },
+    {
+      "file": "tests/e2e/charm2027.spec.ts",
+      "line": 52,
+      "title": "motion runs, stops, resumes and respects reduced motion"
+    },
+    {
+      "file": "tests/e2e/crimson-stage.spec.ts",
+      "line": 3,
+      "title": "crimson stage responds to scroll in both directions and pauses every layer"
+    },
+    {
+      "file": "tests/e2e/crimson-stage.spec.ts",
+      "line": 53,
+      "title": "blocked WebGL preserves content, dark background and working navigation"
+    },
+    {
+      "file": "tests/e2e/crimson-stage.spec.ts",
+      "line": 84,
+      "title": "partner groups stay readable and decorative layers cannot intercept clicks"
+    },
+    {
+      "file": "tests/e2e/mobile-scroll.spec.ts",
+      "line": 3,
+      "title": "native mobile swipe pauses decoration, preserves content and resumes without rebuilding WebGL"
+    },
+    {
+      "file": "tests/e2e/mobile-scroll.spec.ts",
+      "line": 52,
+      "title": "small screens retain native scrolling, visible content and usable navigation"
+    },
+    {
+      "file": "tests/e2e/mobile-scroll.spec.ts",
+      "line": 77,
+      "title": "desktop keeps parallax and does not pause decoration for wheel scrolling"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 68,
+      "title": "official homepage and ticket metadata work without preview, prices or photos"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 94,
+      "title": "registration uses server time even if the browser clock claims the registration window is open"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 106,
+      "title": "registration opens at the boundary and closes at midnight after March 21"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 118,
+      "title": "registration remains reachable and shows all three steps without permitting early writes"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 144,
+      "title": "login form keeps a balanced centered width on small phones and wide desktops"
+    },
+    {
+      "file": "tests/e2e/official-program.spec.ts",
+      "line": 165,
+      "title": "round lists and the official gallery remain empty until BTC publishes images"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 3,
+      "title": "home loads, navigation, all 11 timeline steps and no horizontal overflow"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 20,
+      "title": "contestant search works and private contact information never appears"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 31,
+      "title": "registration validation and reduced motion"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 59,
+      "title": "tribute and sponsor slots stay accessible with system reduced motion"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 70,
+      "title": "gender voting categories are ready but stay closed before opening"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 78,
+      "title": "admin is guarded, gallery dialog and keyboard work"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 90,
+      "title": "core public pages pass WCAG AA automated checks"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 116,
+      "title": "ticket details remain viewable before sale opens, without reserving"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 128,
+      "title": "ticket types and combos support quantities over ten and read-only DEMO checkout"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 189,
+      "title": "QR countdown expires after thirty minutes without restarting between steps"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 231,
+      "title": "reference hero copy and ticket purchase remain honest"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 248,
+      "title": "gallery supports keyboard, slide status and lightbox dismissal"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 263,
+      "title": "320px layout and public routes render"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 291,
+      "title": "account signup has confirmation, password visibility and no preview write"
+    },
+    {
+      "file": "tests/e2e/site.spec.ts",
+      "line": 307,
+      "title": "crown keeps desktop parallax, stays steady on touch and respects reduced motion"
+    },
+    {
+      "file": "tests/e2e/stage3d.spec.ts",
+      "line": 3,
+      "title": "reload paints the 3D scene immediately without a fallback frame or removed ornaments"
+    },
+    {
+      "file": "tests/e2e/stage3d.spec.ts",
+      "line": 55,
+      "title": "system reduced motion is respected until the visitor explicitly enables motion"
+    },
+    {
+      "file": "tests/e2e/stage3d.spec.ts",
+      "line": 85,
+      "title": "3D scene renders moving pixels, stops offscreen and falls back after context loss"
+    },
+    {
+      "file": "tests/e2e/stage3d.spec.ts",
+      "line": 121,
+      "title": "system reduced motion removes the GPU scene and preserves the original logo"
+    },
+    {
+      "file": "tests/unit/account-security.test.ts",
+      "line": 65,
+      "title": "does not update password when the current password is incorrect"
+    },
+    {
+      "file": "tests/unit/account-security.test.ts",
+      "line": 73,
+      "title": "requires MFA before a password change when the account has an enrolled factor"
+    },
+    {
+      "file": "tests/unit/account-security.test.ts",
+      "line": 84,
+      "title": "verifies the old password, revokes sessions, and removes password fields after a successful change"
+    },
+    {
+      "file": "tests/unit/account-security.test.ts",
+      "line": 97,
+      "title": "requests the provider reauthentication nonce instead of claiming success"
+    },
+    {
+      "file": "tests/unit/account-security.test.ts",
+      "line": 106,
+      "title": "shows logout failure without reporting a successful session revocation"
+    },
+    {
+      "file": "tests/unit/admin-settings.test.ts",
+      "line": 9,
+      "title": "converts Vietnam datetime-local values without using the device timezone"
+    },
+    {
+      "file": "tests/unit/admin-settings.test.ts",
+      "line": 14,
+      "title": "validates phase order and both ticket categories"
+    },
+    {
+      "file": "tests/unit/admin-settings.test.ts",
+      "line": 31,
+      "title": "does not show an event as open during a gap between sale phases"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 12,
+      "title": "preview GET works and returns public contestant projection"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 19,
+      "title": "preview never returns fake write success"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 27,
+      "title": "cross-origin mutation is rejected before auth or DB"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 35,
+      "title": "private admin and application API deny missing auth"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 41,
+      "title": "malformed bearer tokens cannot reach admin"
+    },
+    {
+      "file": "tests/unit/api.test.ts",
+      "line": 49,
+      "title": "unknown API is 404 and adds security headers"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 65,
+      "title": "starts Google OAuth with a same-origin PKCE callback and minimal identity scopes"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 83,
+      "title": "surfaces Google provider errors without pretending to sign in"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 96,
+      "title": "blocks mismatched passwords and missing captcha before signup"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 112,
+      "title": "requires email confirmation and clears the submitted password"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 124,
+      "title": "rejects auto-confirmed signup if the provider is misconfigured"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 141,
+      "title": "does not navigate past an enrolled MFA factor until a valid code is verified"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 166,
+      "title": "handles reset-email network failure without claiming that mail was sent"
+    },
+    {
+      "file": "tests/unit/auth-form.test.ts",
+      "line": 175,
+      "title": "blocks password reset without a recovery event and revokes sessions after recovery"
+    },
+    {
+      "file": "tests/unit/auth-policy.test.ts",
+      "line": 10,
+      "title": "rejects short passwords and bcrypt byte overflow, including Vietnamese characters"
+    },
+    {
+      "file": "tests/unit/auth-policy.test.ts",
+      "line": 17,
+      "title": "normalizes whitespace without silently modifying the password or email local part"
+    },
+    {
+      "file": "tests/unit/auth-policy.test.ts",
+      "line": 21,
+      "title": "keeps session tokens off disk while a PKCE verifier survives a new page"
+    },
+    {
+      "file": "tests/unit/auth-policy.test.ts",
+      "line": 44,
+      "title": "removes consumed verifiers and tolerates disabled browser storage"
+    },
+    {
+      "file": "tests/unit/auth-policy.test.ts",
+      "line": 62,
+      "title": "does not expose provider internals or identify registered email addresses"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 70,
+      "title": "verifies legacy HS256 through Supabase Auth and preserves signed MFA claims"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 78,
+      "title": "verifies asymmetric tokens with project JWKS and checks the current user"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 82,
+      "title": "rejects signatures made with an unrelated secret"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 88,
+      "title": "rejects a forged MFA claim without a matching signature"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 97,
+      "title": "rejects tokens with invalid scope/time: %j"
+    },
+    {
+      "file": "tests/unit/authentication.test.ts",
+      "line": 106,
+      "title": "fails closed for invalid account or network state: %j"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 7,
+      "title": "rejects invalid email, extra identity/role and duplicate-sized media"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 43,
+      "title": "vote contract rejects forged user identity and missing token"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 57,
+      "title": "window closes at exact boundary"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 66,
+      "title": "invalid reversed round times cannot be saved"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 80,
+      "title": "never accepts SVG/HTML as image"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 84,
+      "title": "strips WebP metadata and validates chunk boundaries"
+    },
+    {
+      "file": "tests/unit/contracts.test.ts",
+      "line": 105,
+      "title": "email escaping and wording do not claim acceptance"
+    },
+    {
+      "file": "tests/unit/demo-test-entry.test.ts",
+      "line": 41,
+      "title": "rejects non-local hosts and LIVE offers before passing to the application"
+    },
+    {
+      "file": "tests/unit/demo-test-entry.test.ts",
+      "line": 57,
+      "title": "rejects writes outside the approved offer and other modules"
+    },
+    {
+      "file": "tests/unit/demo-test-entry.test.ts",
+      "line": 81,
+      "title": "delegates valid DEMO requests to existing application authentication"
+    },
+    {
+      "file": "tests/unit/demo-test-entry.test.ts",
+      "line": 90,
+      "title": "permits admin configuration only within the DEMO scope and retains application authorization"
+    },
+    {
+      "file": "tests/unit/demo-test-entry.test.ts",
+      "line": 116,
+      "title": "restricts public catalog reads to the approved DEMO slug"
+    },
+    {
+      "file": "tests/unit/frontend-display.test.ts",
+      "line": 16,
+      "title": "does not invent a deadline when no schedule is published"
+    },
+    {
+      "file": "tests/unit/frontend-display.test.ts",
+      "line": 21,
+      "title": "uses the next future date, skipping expired and invalid dates"
+    },
+    {
+      "file": "tests/unit/frontend-display.test.ts",
+      "line": 34,
+      "title": "clamps an expired deadline to zero"
+    },
+    {
+      "file": "tests/unit/frontend-display.test.ts",
+      "line": 39,
+      "title": "dashboard distinguishes unavailable metrics from actual zero"
+    },
+    {
+      "file": "tests/unit/frontend-display.test.ts",
+      "line": 50,
+      "title": "marquee duplicates are hidden from assistive technology and inert"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 34,
+      "title": "refuses a reviewed rebase if %s since preview, before writing metadata or rotating an operation"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 67,
+      "title": "blocks activation with a loopback API or missing auth rather than pretending Sheets can reach a local server"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 71,
+      "title": "a background refresh preserves editable cells when the database differs, without rewriting or reordering rows"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 123,
+      "title": "retries an uncertain operation from its saved snapshot even if Sheet cells have since changed"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 140,
+      "title": "consumes an expired PKCE verifier and does not persist an unverified session"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 158,
+      "title": "keeps leading zeros and neutralizes formulas when serializing Sheet cells"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 164,
+      "title": "exports bundle size %i and %i tickets as %i combos without shifting the order metadata"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 199,
+      "title": "fingerprints editable content, ignores read-only metadata, and reads only scoped pending operations"
+    },
+    {
+      "file": "tests/unit/google-sheets-script.test.ts",
+      "line": 213,
+      "title": "writes the correct bundle count, buyer, proof and revision after inserting the derived combo column"
+    },
+    {
+      "file": "tests/unit/outbox.test.ts",
+      "line": 34,
+      "title": "does not claim or send when configuration missing"
+    },
+    {
+      "file": "tests/unit/outbox.test.ts",
+      "line": 40,
+      "title": "uses stable idempotency key and marks sent after provider success"
+    },
+    {
+      "file": "tests/unit/outbox.test.ts",
+      "line": 50,
+      "title": "temporary failure retries with backoff and releases lease"
+    },
+    {
+      "file": "tests/unit/outbox.test.ts",
+      "line": 59,
+      "title": "six failures become failed instead of retrying forever"
+    },
+    {
+      "file": "tests/unit/program-clock.test.ts",
+      "line": 3,
+      "title": "uses inclusive opening and exclusive next-day closing in Vietnam time"
+    },
+    {
+      "file": "tests/unit/purchase-offer-editor.test.ts",
+      "line": 58,
+      "title": "lets BTC edit price, quota and combos while retaining IDs and Vietnam time"
+    },
+    {
+      "file": "tests/unit/purchase-offer-editor.test.ts",
+      "line": 80,
+      "title": "blocks invalid time but permits official information before QR readiness"
+    },
+    {
+      "file": "tests/unit/purchase-offer-editor.test.ts",
+      "line": 97,
+      "title": "adds missing draft tiers without duplicating or changing an existing price"
+    },
+    {
+      "file": "tests/unit/sheet-sync.test.ts",
+      "line": 3,
+      "title": "counts a ticket used in multiple categories only once and rejects insufficient or invalid quantities"
+    },
+    {
+      "file": "tests/unit/sheet-sync.test.ts",
+      "line": 9,
+      "title": "rejects attempts to change ownership or status through a spreadsheet edit"
+    }
+  ]
+}

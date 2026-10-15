@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated-test';
 
 test('crimson stage responds to scroll in both directions and pauses every layer', async ({
   page,
@@ -24,7 +24,11 @@ test('crimson stage responds to scroll in both directions and pauses every layer
   const logo = page.locator('.crown-scroll');
   const start = await logo.evaluate((el) => getComputedStyle(el).transform);
   await page.evaluate(() => window.scrollTo({ top: 300, behavior: 'instant' }));
-  await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).not.toBe(start);
+  // Touch layouts keep the logo steady while the page moves; desktop retains parallax.
+  if (isMobile)
+    await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).toBe(start);
+  else
+    await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).not.toBe(start);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   await expect.poll(() => logo.evaluate((el) => getComputedStyle(el).transform)).toBe(start);
   await page.emulateMedia({ reducedMotion: 'reduce' });
