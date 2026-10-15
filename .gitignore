@@ -29,3 +29,4 @@ __pycache__/
 /skill/database.md
 /supabase/.temp/
 /~$*.docx
+supabase/functions/ftu-proof-transform/magick.wasm

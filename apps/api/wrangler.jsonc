@@ -38,6 +38,10 @@
       "vars": {
         "DEMO_MODE": "false",
         "PUBLIC_EDITION_SLUG": "ftucharm-2027",
+        "DEMO_TEST_OFFER_SLUG": "test-giao-dich-demo",
+        "PURCHASE_PROOF_BUCKET": "ftu-demo-proof-private",
+        "PURCHASE_PROOF_FUNCTION": "ftu-proof-transform",
+        "EMAIL_DELIVERY_ENABLED": "false",
         "ALLOWED_ORIGIN": "https://ftucharm-test.bancotaima1235.workers.dev",
         "SUPABASE_URL": "https://ifgtyslifgegwcguysbb.supabase.co",
         "SUPABASE_JWKS_URL": "https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json",
@@ -45,9 +49,7 @@
       },
       // R2 handles profile/program images; existing Supabase ticket proofs remain private.
       "images": { "binding": "IMAGES" },
-      "r2_buckets": [
-        { "binding": "MEDIA", "bucket_name": "ftucharm-media-private" },
-      ],
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "ftucharm-media-private" }],
       "ratelimits": [
         { "name": "RATE_LIMITER", "namespace_id": "1004", "simple": { "limit": 20, "period": 60 } },
       ],

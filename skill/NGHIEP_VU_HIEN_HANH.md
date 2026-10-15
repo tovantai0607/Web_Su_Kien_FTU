@@ -1,5 +1,13 @@
 # Nghiệp vụ hiện hành theo file bổ sung
 
+## Phân tách DEMO và hai đêm chính thức — xác nhận15/10/2026
+
+Mua/vote DEMO chỉ dành cho tài khoản đăng nhập có quyền quản trị, kiểm tra ở cả giao diện và API. Khách, tài khoản thường và trang công khai mặc định của admin đều xem hai đêm bán kết25/04/2027, chung kết23/05/2027 theo lịch bán chính thức; admin mở thử DEMO từ trang quản trị. Hạng vé chưa có giá hiển thị chờ cập nhật, QR/giá thật BTC bổ sung sau; không nhận đơn khi cấu hình chưa đủ. Không xóa lịch sử DEMO hoặc thay đổi cơ chế Sheet. Chi tiết/bằng chứng: `docs/admin-demo-official-catalog-20261015.md`.
+
+## Hai đợt chung một hạng vé — xác nhận15/10/2026
+
+Khách thấy một hạng The Intro/The Bridge/The Chorus, không tách thêm thẻ vé sớm/vé thường. Giá và số lượng áp dụng theo đợt server đang mở. Admin cấu hình giá đơn/Combo2/Combo3 riêng từng đợt, tổng số vé sớm và phân bổ từng hạng, giờ mở sớm/kết thúc sớm–bắt đầu thường/đóng thường bằng form giờ Việt Nam. Mốc100 vé sớm và lịch bên dưới là mặc định ban đầu, được admin điều chỉnh; tổng700 LIVE/vòng không đổi. Không giảm hạn mức xuống dưới số đã bán/đang giữ; đơn cũ giữ nguyên giá/thời hạn. Vé thường mở khi hết thời gian sớm hoặc bán hết vé sớm theo quy tắc cũ. Xem docs/unified-ticket-sale-phases-20261015.md; trạng thái triển khai online phải được kiểm tra riêng.
+
 ## Bản chính thức2027 — xác nhận mới nhất14/10/2026
 
 Người dùng phê duyệt triển khai local nối Supabase: đăng ký7/3–hết21/3; vé sớm bán kết29–30/3, vé thường đến hết24/4, ảnh bán kết10–11/4, bán kết25/4. Chung kết sớm26/4 09–11h, thường đến hết22/5; chung kết23/5, dự kiến vinh danh23h do BTC bấm công bố. Tổng700 vé/vòng gồm100 sớm và600 thường, BTC phân bổ từng loại. Dư vé sớm chuyển thường cùng loại; giữ30phút chiếm quota và giữ giá cũ. Bán đủ100 sớm thì chuyển thường sớm, tổng bán và giữ không vượt700. Giá/QR/ảnh/địa điểm/giờ chưa có để chờ BTC, không dùng số giả. Vote bán kết10phút trong25/4 chờ BTC đặt giờ; chung kết chưa đặt lịch. Giữ các yêu cầu Hoàn tất→quyền vote, không check-in/webhook/email vé tự động. Runbook: `docs/official-program-2027.md`; các xác nhận DEMO và mốc trái lịch này bên dưới là lịch sử.

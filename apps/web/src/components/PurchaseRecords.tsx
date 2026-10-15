@@ -80,7 +80,7 @@ export default function PurchaseRecords({ admin = false }: { admin?: boolean }) 
               <thead>
                 <tr>
                   {[
-                    'Mã vé',
+                    'Mã đơn',
                     'Thông tin',
                     'Minh chứng chuyển khoản',
                     'Loại vé',
@@ -206,7 +206,7 @@ export function downloadRecords(rows: PurchaseRow[]) {
       .replace(/^[\s]*[=+\-@]/, (v) => "'" + v)
       .replaceAll('"', '""') +
     '"';
-  const header = ['Mã vé', 'Thông tin', 'Minh chứng chuyển khoản', 'Loại vé', 'Số lượng', 'Combo'];
+  const header = ['Mã đơn', 'Thông tin', 'Minh chứng chuyển khoản', 'Loại vé', 'Số lượng', 'Combo'];
   const csv =
     '\uFEFF' +
     [

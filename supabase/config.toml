@@ -1,0 +1,8 @@
+project_id = "ftucharm-local"
+
+[functions.ftu-proof-transform]
+# The handler verifies JWT signature, issuer, audience, expiry and Auth user itself.
+verify_jwt = false
+entrypoint = "./functions/ftu-proof-transform/index.ts"
+import_map = "./functions/ftu-proof-transform/deno.json"
+static_files = ["./functions/ftu-proof-transform/magick.wasm"]

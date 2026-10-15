@@ -8,6 +8,10 @@ export type Env = {
   ALLOWED_ORIGIN: string;
   DEMO_MODE?: string;
   PUBLIC_EDITION_SLUG?: string;
+  DEMO_TEST_OFFER_SLUG?: string;
+  PURCHASE_PROOF_BUCKET?: string;
+  PURCHASE_PROOF_FUNCTION?: string;
+  EMAIL_DELIVERY_ENABLED?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_HOSTNAME?: string;
   RESEND_API_KEY?: string;

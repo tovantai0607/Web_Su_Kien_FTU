@@ -188,38 +188,50 @@ it('QA-PERMISSIONS denies guests, ordinary users and editors without MFA before 
   expect((await db.query('select id from public.program_publications')).rows).toHaveLength(0);
 });
 it('QA-UPLOAD rejects absent online storage and invalid files; successful sanitized image stays draft', async () => {
-  const oldImages = env.IMAGES;
+  const oldScope = env.DEMO_TEST_OFFER_SLUG;
+  env.DEMO_TEST_OFFER_SLUG = 'test-giao-dich-demo';
   try {
-    env.IMAGES = undefined;
-    expect((await request('/admin/public-images', 'POST', {}, token(admin))).status).toBe(503);
-  } finally {
-    env.IMAGES = oldImages;
-  }
-  expect(
-    (await request('/admin/public-images', 'POST', { forged: true }, token(admin))).status,
-  ).toBe(400);
-  const image = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#aa0000' } })
-    .png()
-    .toBuffer();
-  const uploaded = await app.request(
-    'http://localhost/api/admin/public-images',
-    {
-      method: 'POST',
-      headers: {
-        Origin: env.ALLOWED_ORIGIN,
-        Authorization: token(admin),
-        'Content-Type': 'image/png',
+    expect((await request('/admin/public-images', 'POST', {})).status).toBe(401);
+    expect((await request('/admin/public-images', 'POST', {}, token(owner))).status).toBe(403);
+    expect((await request('/admin/public-images', 'POST', {}, token(other))).status).toBe(403);
+    const oldImages = env.IMAGES;
+    try {
+      env.IMAGES = undefined;
+      expect((await request('/admin/public-images', 'POST', {}, token(admin))).status).toBe(503);
+    } finally {
+      env.IMAGES = oldImages;
+    }
+    expect(
+      (await request('/admin/public-images', 'POST', { forged: true }, token(admin))).status,
+    ).toBe(400);
+    const image = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: '#aa0000' },
+    })
+      .png()
+      .toBuffer();
+    const uploaded = await app.request(
+      'http://localhost/api/admin/public-images',
+      {
+        method: 'POST',
+        headers: {
+          Origin: env.ALLOWED_ORIGIN,
+          Authorization: token(admin),
+          'Content-Type': 'image/png',
+        },
+        body: new Uint8Array(image).buffer,
       },
-      body: new Uint8Array(image).buffer,
-    },
-    env,
-  );
-  expect(uploaded.status).toBe(200);
-  const result = (await data(uploaded)) as { photo_url: string };
-  expect(objects.size).toBe(1);
-  const stored = [...objects.values()][0];
-  expect((await sharp(Buffer.from(stored)).metadata()).format).toBe('webp');
-  expect((await request(result.photo_url.replace('/api', ''))).status).toBe(401);
+      env,
+    );
+    expect(uploaded.status).toBe(200);
+    const result = (await data(uploaded)) as { photo_url: string };
+    expect(objects.size).toBe(1);
+    const stored = [...objects.values()][0];
+    expect((await sharp(Buffer.from(stored)).metadata()).format).toBe('webp');
+    expect((await request(result.photo_url.replace('/api', ''))).status).toBe(401);
+    expect((await db.query('select id from public.program_publications')).rows).toHaveLength(0);
+  } finally {
+    env.DEMO_TEST_OFFER_SLUG = oldScope;
+  }
 });
 it('QA-BOUNDARY enforces origin, throttle and strict publication input', async () => {
   expect(
@@ -239,5 +251,52 @@ it('QA-BOUNDARY enforces origin, throttle and strict publication input', async (
     expect((await request('/admin/publications', 'POST', draft, token(admin))).status).toBe(429);
   } finally {
     env.RATE_LIMITER = limiter;
+  }
+});
+
+it('QA-REGISTRATION allows ordinary student-card uploads only in the server window with DEMO configured', async () => {
+  const oldScope = env.DEMO_TEST_OFFER_SLUG;
+  env.DEMO_TEST_OFFER_SLUG = 'test-giao-dich-demo';
+  try {
+    const image = await sharp({
+      create: { width: 40, height: 24, channels: 3, background: '#a02020' },
+    })
+      .png()
+      .toBuffer();
+    const upload = (auth?: string, purpose = 'student_card') =>
+      app.request(
+        `http://localhost/api/media/upload?edition=${edition}&purpose=${purpose}`,
+        {
+          method: 'POST',
+          headers: {
+            Origin: env.ALLOWED_ORIGIN,
+            'Content-Type': 'image/png',
+            ...(auth ? { Authorization: auth } : {}),
+          },
+          body: new Uint8Array(image).buffer,
+        },
+        env,
+      );
+    expect((await upload()).status).toBe(401);
+    expect((await upload(token(owner))).status).toBe(409);
+    expect(objects.size).toBe(0);
+    await db.query(
+      "update public.contest_editions set registration_open_at=now()-interval '1 hour',registration_close_at=now()+interval '1 hour' where id=$1",
+      [edition],
+    );
+    expect((await upload(token(owner), 'portfolio')).status).toBe(403);
+    const response = await upload(token(owner));
+    expect(response.status).toBe(200);
+    const { id } = (await data(response)) as { id: string };
+    const saved = await db.query<{ user_id: string; purpose: string; state: string }>(
+      'select user_id,purpose,state from public.media_assets where id=$1',
+      [id],
+    );
+    expect(saved.rows[0]).toEqual({ user_id: owner, purpose: 'student_card', state: 'ready' });
+    expect(objects.size).toBe(1);
+    expect((await sharp(Buffer.from([...objects.values()][0])).metadata()).format).toBe('webp');
+    expect((await db.query('select * from public.contestant_private')).rows).toHaveLength(0);
+  } finally {
+    env.DEMO_TEST_OFFER_SLUG = oldScope;
   }
 });

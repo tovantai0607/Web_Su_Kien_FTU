@@ -48,9 +48,10 @@ test('registration validation and reduced motion', async ({ page }) => {
     .getByLabel('Câu chuyện của bạn')
     .fill('Câu chuyện thử nghiệm để kiểm tra giao diện, không gửi dữ liệu thật.');
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
-  await expect(page.getByRole('heading', { name: 'Ảnh hồ sơ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ảnh thẻ sinh viên' })).toBeVisible();
   await page.getByRole('button', { name: 'Gửi hồ sơ' }).click();
-  await expect(page.getByText('Cần 3 ảnh hồ sơ')).toBeVisible();
+  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU', { exact: true })).toHaveCount(1);
+  await expect(page.locator('input[type=file]')).toHaveCount(1);
   await expect(page.getByLabel('Ảnh thẻ sinh viên FTU', { exact: true })).toBeVisible();
   await expect(page.getByText('Cần ảnh thẻ sinh viên FTU', { exact: true })).toBeVisible();
   await expect(page.getByText('Hồ sơ đã được tiếp nhận.', { exact: true })).toHaveCount(0);

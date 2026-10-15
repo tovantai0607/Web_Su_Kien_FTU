@@ -27,6 +27,9 @@ describe('contracts & safety', () => {
       turnstile_token: 'token',
     };
     expect(applicationSchema.safeParse(data).success).toBe(true);
+    expect(applicationSchema.safeParse({ ...data, media_ids: [] }).success).toBe(true);
+    expect(applicationSchema.safeParse({ ...data, media_ids: undefined }).success).toBe(true);
+    expect(applicationSchema.safeParse({ ...data, media_ids: [id] }).success).toBe(false);
     expect(applicationSchema.safeParse({ ...data, email: 'bad' }).success).toBe(false);
     expect(applicationSchema.safeParse({ ...data, user_id: id }).success).toBe(false);
     expect(applicationSchema.safeParse({ ...data, role: 'SUPER_ADMIN' }).success).toBe(false);

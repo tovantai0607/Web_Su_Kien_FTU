@@ -31,6 +31,13 @@ afterEach(() => {
   state.attempts = 1;
 });
 describe('email outbox retry', () => {
+  it('cannot send real email in online-test even if a provider key is accidentally present', async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    await sendOutbox({ ...env, EMAIL_DELIVERY_ENABLED: 'false' });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(state.updates).toEqual([]);
+  });
   it('does not claim or send when configuration missing', async () => {
     const fetcher = vi.fn();
     vi.stubGlobal('fetch', fetcher);

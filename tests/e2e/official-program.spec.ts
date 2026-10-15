@@ -25,6 +25,9 @@ async function setup(page: Page, time = '2027-02-20T12:00:00+07:00', state = 'UP
       event_date: '2027-04-25',
       total_quota: 700,
       early_quota: 100,
+      early_open_at: '2027-03-29T00:00:00+07:00',
+      early_close_at: '2027-03-31T00:00:00+07:00',
+      normal_close_at: '2027-04-25T00:00:00+07:00',
       products: [],
       checkout_enabled: false,
       phase: 'UPCOMING',
@@ -79,6 +82,11 @@ test('official homepage and ticket metadata work without preview, prices or phot
   await expect(
     page.getByText('Chưa nhận đơn. Giá, phân bổ loại vé và QR chuyển khoản đang chờ BTC cấu hình.'),
   ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Hạng vé dự kiến' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Intro', exact: true })).toBeVisible();
+  await expect(page.getByText('Chờ cập nhật giá', { exact: true })).toHaveCount(3);
+  await expect(page.getByLabel('Lịch mở bán')).toContainText('29 thg 3, 2027');
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toHaveCount(0);
   for (const width of info.project.name === 'mobile' ? [320, 390] : [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -90,6 +98,58 @@ test('official homepage and ticket metadata work without preview, prices or phot
       .violations,
   ).toEqual([]);
   expect(writes).toEqual([]);
+  await page.screenshot({
+    path: info.outputPath('official-ticket-pending-price.png'),
+    fullPage: true,
+  });
+});
+
+test('guests see both official nights and cannot open DEMO voting', async ({ page }) => {
+  await setup(page);
+  await page.route('**/api/purchase-catalog', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          server_time: new Date().toISOString(),
+          offers: [
+            {
+              id: id(3),
+              slug: 'ban-ket-2027',
+              title: 'Đêm bán kết FTUCharm 2027',
+              mode: 'LIVE',
+              event_date: '2027-04-25',
+              products: [],
+              checkout_enabled: false,
+            },
+            {
+              id: id(8),
+              slug: 'chung-ket-2027',
+              title: 'Đêm chung kết FTUCharm 2027',
+              mode: 'LIVE',
+              event_date: '2027-05-23',
+              products: [],
+              checkout_enabled: false,
+            },
+            {
+              id: id(9),
+              slug: 'test-giao-dich-demo',
+              title: 'Đợt thử DEMO',
+              mode: 'DEMO',
+              products: [],
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await page.goto('/ve');
+  await expect(page.getByRole('heading', { name: 'Đêm bán kết FTUCharm 2027' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Đêm chung kết FTUCharm 2027' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Xem vé & combo' })).toHaveCount(2);
+  await expect(page.getByText('Đợt thử DEMO', { exact: true })).toHaveCount(0);
+  await page.goto('/binh-chon?demo=1&vong=' + id(99));
+  await expect(page.getByText('DEMO chỉ dành cho tài khoản admin')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Bảng xếp hạng DEMO' })).toHaveCount(0);
 });
 test('registration uses server time even if the browser clock claims the registration window is open', async ({
   page,
@@ -136,8 +196,23 @@ test('registration remains reachable and shows all three steps without permittin
     .fill('Câu chuyện của thí sinh kiểm thử, chỉ chuẩn bị thông tin trên trình duyệt.');
   await page.locator('textarea[name=talents]').fill('Hát và biểu diễn nghệ thuật.');
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
-  await expect(page.getByRole('heading', { name: 'Ảnh hồ sơ' })).toBeVisible();
-  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU')).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Ảnh thẻ sinh viên' })).toBeVisible();
+  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU')).toBeEnabled();
+  await expect(page.locator('input[type=file]')).toHaveCount(1);
+  await page
+    .getByLabel('Ảnh thẻ sinh viên FTU')
+    .setInputFiles({
+      name: 'student-card-test.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1sAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+  await expect(page.getByAltText('Ảnh thẻ sinh viên đã chọn trên máy')).toBeVisible();
+  await expect(
+    page.getByText('Đã chọn ảnh trên máy, chưa tải lên server.', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Gửi hồ sơ' })).toBeDisabled();
   expect(writes).toEqual([]);
 });
@@ -172,4 +247,79 @@ test('round lists and the official gallery remain empty until BTC publishes imag
   await page.goto('/thu-vien');
   await expect(page.getByText('Ảnh chính thức chờ công bố')).toBeVisible();
   await expect(page.locator('img[src*="silk-bloom"]')).toHaveCount(0);
+});
+
+test('ticket types stay grouped when the server switches from early to normal sales', async ({
+  page,
+}, info) => {
+  const writes = await setup(page);
+  let phase = 'EARLY';
+  await page.route('**/api/purchase-catalog*', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          server_time: new Date().toISOString(),
+          offers: [
+            {
+              id: id(3),
+              slug: 'ban-ket-2027',
+              title: 'Đêm bán kết FTUCharm 2027',
+              mode: 'LIVE',
+              total_quota: 700,
+              early_quota: 100,
+              phase,
+              checkout_enabled: true,
+              early_close_at: '2027-04-01T10:00:00+07:00',
+              products: ['The Intro', 'The Bridge', 'The Chorus'].flatMap((name, i) =>
+                ['EARLY', 'NORMAL'].map((tier, j) => ({
+                  id: id(100 + i * 2 + j),
+                  name,
+                  tier,
+                  available: 20,
+                  price_vnd: j ? 160000 : 100000,
+                  combo2_vnd: j ? 300000 : 190000,
+                  combo3_vnd: j ? 450000 : 280000,
+                  opens_at: '2027-03-29T00:00:00+07:00',
+                  closes_at: j ? '2027-04-25T00:00:00+07:00' : '2027-04-01T10:00:00+07:00',
+                  state: tier === phase ? 'OPEN' : tier === 'EARLY' ? 'CLOSED' : 'UPCOMING',
+                })),
+              ),
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await page.clock.install();
+  await page.goto('/ve/ban-ket-2027');
+  await expect(page.locator('.purchase-products > .card')).toHaveCount(3);
+  await expect(page.getByRole('heading', { name: 'The Intro', exact: true })).toHaveCount(1);
+  await page.getByLabel('Số lượng vé đơn The Intro EARLY', { exact: true }).fill('1');
+  await expect(page.locator('.purchase-summary')).toContainText('100.000');
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toBeEnabled();
+  phase = 'NORMAL';
+  await page.clock.fastForward(16000);
+  await expect(page.getByLabel('Số lượng vé đơn The Intro NORMAL', { exact: true })).toHaveValue(
+    '0',
+  );
+  await expect(page.locator('.purchase-products > .card')).toHaveCount(3);
+  await expect(
+    page.getByText('Đợt bán đã thay đổi. Kiểm tra giá hiện tại và chọn lại số lượng vé.'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toBeDisabled();
+  await page.getByLabel('Số lượng vé đơn The Intro NORMAL', { exact: true }).fill('1');
+  await expect(page.locator('.purchase-summary')).toContainText('160.000');
+  await page.getByRole('button', { name: 'Xác nhận vé & combo' }).click();
+  await expect(page.getByLabel('Họ tên', { exact: true })).toBeVisible();
+  for (const width of info.project.name === 'mobile' ? [320, 390] : [1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+  expect(writes).toEqual([]);
 });

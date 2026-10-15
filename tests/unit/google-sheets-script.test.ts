@@ -31,6 +31,227 @@ function script(properties: Record<string, string> = {}) {
   vm.runInContext(readFileSync('tools/google-sheets/Code.gs', 'utf8'), context);
   return context;
 }
+it('renders a Combo3 as one row while retaining each member code and leaving unassigned buyers blank', () => {
+  const code = script();
+  const base = {
+    prefix: 'DM',
+    round_id: 'round',
+    status: 'ISSUED',
+    buyer: { name: 'DEMO', phone: '0000000000' },
+    order_code: 'order',
+    request_id: 'id',
+    line: { name: 'Intro', tier: 'EARLY', bundle_size: 3, group_code: 'group' },
+  };
+  const records = [1, 2, 3].map((n) => ({
+    ...base,
+    code: 'DM0000' + n,
+    sequence: n,
+    ticket_id: 'ticket-' + n,
+  }));
+  records.push({
+    code: 'DM00004',
+    sequence: 4,
+    prefix: 'DM',
+    round_id: 'round',
+    status: 'AVAILABLE',
+  } as (typeof records)[number]);
+  const rows = code.ftuCodeRows_(records);
+  expect(rows.map((r: unknown[]) => r[0])).toEqual(['cb3_3_DM00001-DM00003', 'DM00004']);
+  expect(rows[0][1]).toBe('DM00001\nDM00002\nDM00003');
+  expect(rows[0][15]).toBe(3);
+  expect(rows[0][10]).toBe('0000000000');
+  expect(rows[0][16]).toBe('Combo 3');
+  expect(rows[0][17]).toBe(1);
+  expect(rows[1].slice(4, 15)).toEqual(Array(11).fill(''));
+  const malicious = records.slice(0, 3).map((record) => ({
+    ...record,
+    buyer: { name: '=IMPORTDATA("https://invalid.test")', phone: '0000000000' },
+  }));
+  expect(code.ftuCodeRows_(malicious)[0][5]).toBe('\'=IMPORTDATA("https://invalid.test")');
+});
+function comboMembers(start: number, quantity: number, bundle = 2, request = 'order') {
+  return Array.from({ length: quantity }, (_, index) => ({
+    prefix: 'DM',
+    round_id: 'round',
+    code: 'DM' + String(start + index).padStart(5, '0'),
+    sequence: start + index,
+    ticket_id: 'ticket-' + (start + index),
+    status: 'ISSUED',
+    request_id: request,
+    order_code: request,
+    buyer: { name: request, email: request + '@example.test' },
+    evidence_id: 'proof-' + request,
+    line: {
+      product_id: 'intro',
+      name: 'Intro',
+      tier: 'EARLY',
+      bundle_size: bundle,
+      group_code: request + ':1:' + (Math.floor(index / bundle) + 1),
+    },
+  }));
+}
+it('combines two Combo2 selections into cb2_4 with four members, without mixing buyers or types', () => {
+  const code = script();
+  const rows = code.ftuCodeRows_([
+    ...comboMembers(12, 4),
+    ...comboMembers(16, 2, 2, 'second'),
+    ...comboMembers(18, 2).map((row) => ({
+      ...row,
+      line: { ...row.line, product_id: 'bridge', name: 'Bridge' },
+    })),
+  ]);
+  expect(rows.map((row: unknown[]) => row[0])).toEqual([
+    'cb2_4_DM00012-DM00015',
+    'cb2_2_DM00016-DM00017',
+    'cb2_2_DM00018-DM00019',
+  ]);
+  expect(rows[0][15]).toBe(4);
+  expect(rows[0][17]).toBe(2);
+  expect(rows[0][20].split('\n')).toHaveLength(4);
+  expect(rows[1][5]).toBe('second');
+  const gaps = code.ftuCodeRows_([...comboMembers(1, 2), ...comboMembers(4, 2)]);
+  expect(gaps[0][0]).toBe('cb2_4_DM00001-DM00002+DM00004-DM00005');
+});
+it('refuses duplicate codes, incomplete combos or inconsistent buyer data before writing a grouped view', () => {
+  const code = script();
+  const members = comboMembers(1, 2);
+  expect(() => code.ftuCodeRows_([members[0], members[0]])).toThrow('bị trùng');
+  expect(() => code.ftuCodeRows_([members[0]])).toThrow('nhóm thiếu');
+  expect(() =>
+    code.ftuCodeRows_([members[0], { ...members[1], buyer: { name: 'wrong' } }]),
+  ).toThrow('không khớp');
+});
+it('shows one single ticket plus one Combo3 as two rows for the same four-ticket order', () => {
+  const code = script();
+  const rows = code.ftuCodeRows_([...comboMembers(12, 1, 1), ...comboMembers(13, 3, 3)]);
+  expect(rows.map((row: unknown[]) => [row[0], row[15], row[17]])).toEqual([
+    ['DM00012', 1, ''],
+    ['cb3_3_DM00013-DM00015', 3, 1],
+  ]);
+  expect(new Set(rows.map((row: unknown[]) => row[21])).size).toBe(1);
+  expect(new Set(rows.map((row: unknown[]) => row[5])).size).toBe(1);
+});
+it('rewrites the grouped view idempotently in one call and refuses a source that loses an existing code', () => {
+  const code = script();
+  const headers = vm.runInContext('FTU_CODE_HEADERS', code);
+  let view: unknown[][] = comboMembers(1, 4).map((member) => [member.code, member.code]);
+  const writes: unknown[][][] = [];
+  const sheet = {
+    getLastRow: () => view.length + 1,
+    getMaxRows: () => 100,
+    getRange: (row: number) => ({
+      getValues: () => (row === 1 ? [headers] : view.map((r) => [r[1]])),
+      setValues: (values: unknown[][]) => {
+        writes.push(values);
+        view = values.filter((r) => r[0] !== '');
+      },
+    }),
+  };
+  const book = { getSheetByName: () => sheet };
+  code.writeFtuTicketCodeTab_(book, 'DM', comboMembers(1, 4));
+  expect(writes[0]).toHaveLength(4);
+  expect(writes[0][0][0]).toBe('cb2_4_DM00001-DM00004');
+  expect(writes[0].slice(1).every((row) => row.every((value) => value === ''))).toBe(true);
+  code.writeFtuTicketCodeTab_(book, 'DM', comboMembers(1, 4));
+  expect(view).toHaveLength(1);
+  expect(() => code.writeFtuTicketCodeTab_(book, 'DM', comboMembers(1, 2))).toThrow('nguồn giảm');
+  expect(writes).toHaveLength(2);
+});
+it('routes the mixed LIVE registry into separate semifinal/final tabs and keeps DEMO isolated', () => {
+  const code = script();
+  const headers = vm.runInContext('FTU_CODE_HEADERS', code);
+  const written: Record<string, unknown[][]> = {};
+  const lookups: string[] = [];
+  code.LockService = {
+    getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
+  };
+  code.assertPrivateFtuSheet_ = () => undefined;
+  code.SpreadsheetApp = {
+    openById: () => ({
+      getSheetByName: (name: string) => {
+        lookups.push(name);
+        return {
+          getLastRow: () => 1,
+          getMaxRows: () => 1450,
+          getRange: (row: number, _column: number, count: number) => ({
+            getValues: () => (row === 1 ? [headers] : Array.from({ length: count }, () => [''])),
+            setValues: (values: unknown[][]) => {
+              written[name] = values;
+            },
+          }),
+        };
+      },
+    }),
+  };
+  code.ftuApi_ = (path: string) => {
+    const prefixes = path.includes('mode=LIVE') ? ['BK', 'CK'] : ['DM'];
+    return {
+      count: prefixes.length,
+      rows: prefixes.map((prefix) => ({
+        prefix,
+        code: prefix + '00001',
+        sequence: 1,
+        round_id: prefix,
+        status: 'AVAILABLE',
+      })),
+    };
+  };
+  code.syncFtuTicketCodes();
+  expect(lookups).toEqual(['Vé bán kết', 'Vé chung kết', 'Vé DEMO']);
+  expect(
+    Object.fromEntries(
+      Object.entries(written).map(([name, rows]) => [name, rows.map((row) => row[0])]),
+    ),
+  ).toEqual({
+    'Vé bán kết': ['BK00001'],
+    'Vé chung kết': ['CK00001'],
+    'Vé DEMO': ['DM00001'],
+  });
+});
+it('collects all pages before grouping a Combo3 crossing a 200-row API boundary', () => {
+  const code = script();
+  const headers = vm.runInContext('FTU_CODE_HEADERS', code);
+  const records = [
+    ...Array.from({ length: 198 }, (_, index) => ({
+      prefix: 'DM',
+      round_id: 'round',
+      code: 'DM' + String(index + 1).padStart(5, '0'),
+      sequence: index + 1,
+      status: 'AVAILABLE',
+    })),
+    ...comboMembers(199, 3, 3),
+  ];
+  const written: Record<string, unknown[][]> = {};
+  const pages: number[] = [];
+  code.LockService = {
+    getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
+  };
+  code.assertPrivateFtuSheet_ = () => undefined;
+  code.SpreadsheetApp = {
+    openById: () => ({
+      getSheetByName: (name: string) => ({
+        getLastRow: () => 1,
+        getMaxRows: () => 700,
+        getRange: () => ({
+          getValues: () => [headers],
+          setValues: (rows: unknown[][]) => {
+            written[name] = rows;
+          },
+        }),
+      }),
+    }),
+  };
+  code.ftuApi_ = (path: string) => {
+    if (path.includes('mode=LIVE')) return { count: 0, rows: [] };
+    const page = Number(new URL('https://example.test' + path).searchParams.get('page'));
+    pages.push(page);
+    return { count: records.length, rows: records.slice(page * 200, (page + 1) * 200) };
+  };
+  code.syncFtuTicketCodes();
+  expect(pages).toEqual([0, 1]);
+  expect(written['Vé DEMO']).toHaveLength(199);
+  expect(written['Vé DEMO'][198][0]).toBe('cb3_3_DM00199-DM00201');
+});
 it.each(['sheet changed', 'database changed'])(
   'refuses a reviewed rebase if %s since preview, before writing metadata or rotating an operation',
   (change) => {

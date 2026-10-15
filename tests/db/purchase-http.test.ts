@@ -91,6 +91,108 @@ afterAll(async () => {
   objects.clear();
   await db.close();
 });
+it('serves both official nights publicly, restricts DEMO to admins, and fences writes before mutation', async () => {
+  const scoped = {
+    ...env,
+    PUBLIC_EDITION_SLUG: 'ftucharm-2027',
+    DEMO_TEST_OFFER_SLUG: 'ban-ket-local',
+  };
+  const call = (path: string, body?: unknown, user: string | null = owner) =>
+    app.request(
+      'http://localhost/api' + path,
+      {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {
+          Origin: env.ALLOWED_ORIGIN,
+          ...(user ? { Authorization: token(user, user === admin ? 'aal2' : 'aal1') } : {}),
+          'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+      scoped,
+    );
+  await db.exec('begin');
+  try {
+    await db.exec(
+      (await readFile('tools/configure-official-program-2027.sql', 'utf8'))
+        .replace(/^begin;\s*$/m, '')
+        .replace(/^commit;\s*$/m, ''),
+    );
+    const catalog = await responseData<{ offers: { mode: string; slug: string }[] }>(
+      await call('/purchase-catalog', undefined, null),
+    );
+    expect(catalog.offers).toHaveLength(2);
+    expect(catalog.offers.every((o) => o.mode === 'LIVE')).toBe(true);
+    expect(catalog.offers.map((o) => o.slug).sort()).toEqual(['ban-ket-2027', 'chung-ket-2027']);
+    const rounds = await responseData<{ id: string }[]>(await call('/rounds'));
+    expect(rounds).toHaveLength(2);
+    expect(rounds.map((r) => r.id)).not.toContain(fixture(20));
+    for (const path of [
+      '/purchase-catalog?slug=ban-ket-local',
+      '/rounds?demo=1',
+      '/voting/' + fixture(20),
+    ]) {
+      expect((await call(path, undefined, null)).status).toBe(401);
+      expect((await call(path)).status).toBe(403);
+      expect((await call(path, undefined, admin)).status).toBe(200);
+    }
+    const demoCatalog = await responseData<{ offers: { mode: string }[] }>(
+      await call('/purchase-catalog?slug=ban-ket-local', undefined, admin),
+    );
+    expect(demoCatalog.offers.map((o) => o.mode)).toEqual(['DEMO']);
+    const voting = await responseData<{ demo_leaderboard: { rows: unknown[]; session_id: null } }>(
+      await call('/voting/' + fixture(20), undefined, admin),
+    );
+    expect(voting.demo_leaderboard).toEqual({ rows: [], session_id: null });
+    expect((await call('/purchases', { ...selection(), offer_id: fixture(99) })).status).toBe(403);
+    // Official registration reaches its own strict validation; DEMO purchase guards stay intact.
+    expect((await call('/contestants/apply', {})).status).toBe(400);
+    expect((await call('/purchases', selection())).status).toBe(403);
+    expect((await call('/votes', { round_id: fixture(20) })).status).toBe(403);
+    expect(
+      (await call('/purchases', { ...selection(), offer_id: fixture(99) }, admin)).status,
+    ).toBe(403);
+    expect((await call('/purchases', selection(), admin)).status).toBe(200);
+    // Previously created DEMO orders remain intact, but their ordinary owner cannot open them.
+    const old = await responseData<Purchase>(await request('/purchases', selection()));
+    expect((await call('/purchases/' + old.id)).status).toBe(403);
+    const png = new Uint8Array(
+      await sharp({
+        create: {
+          width: 16,
+          height: 16,
+          channels: 3,
+          background: '#ffffff',
+        },
+      })
+        .png()
+        .toBuffer(),
+    );
+    const proof = await responseData<{ id: string }>(
+      await request(`/purchases/${old.id}/evidence`, png, owner, { 'Content-Type': 'image/png' }),
+    );
+    expect((await request(`/purchases/${old.id}/complete`, { evidence_id: proof.id })).status).toBe(
+      200,
+    );
+    expect(await responseData<Ticket[]>(await request('/me/tickets'))).toHaveLength(1);
+    expect(await responseData<Ticket[]>(await call('/me/tickets'))).toEqual([]);
+    expect((await call('/purchase-evidence/' + proof.id)).status).toBe(403);
+    expect((await call('/purchase-evidence/' + proof.id, undefined, admin)).status).toBe(200);
+    expect(await responseData<Purchase[]>(await call('/me/purchases'))).toEqual([]);
+    expect(
+      (
+        await responseData<{ rows: Purchase[] }>(
+          await call('/admin/sheets/purchases', undefined, admin),
+        )
+      ).rows,
+    ).toHaveLength(1);
+    expect((await call('/voting/' + rounds[0].id, undefined, null)).status).toBe(200);
+  } finally {
+    await db.exec('rollback');
+    objects.clear();
+  }
+});
 it('serves public vote participation through the privileged server client without granting the public client execute', async () => {
   const privileges = await db.query<{ allowed: boolean }>(
     "select has_function_privilege('anon','public.read_vote_participation(uuid)','EXECUTE') allowed",
@@ -102,6 +204,7 @@ it('serves public vote participation through the privileged server client withou
     response,
   );
   expect(data.participation).toEqual({ participants: 0, votes: 0 });
+  expect((data as { demo_leaderboard?: unknown }).demo_leaderboard).toBeNull();
 });
 it('guards authentication, Origin, input, idempotency and body limits before DB writes', async () => {
   expect(
@@ -229,4 +332,30 @@ it('completes the real HTTP->SQL flow with a private, transformed proof and idem
   expect((await request('/purchase-evidence/' + replacementId)).status).toBe(200);
   const currentProof = await request('/purchases/' + purchase.id);
   expect((await responseData<Purchase>(currentProof)).evidence_id).toBe(replacementId);
+});
+
+it('exports the role-protected code register and returns only the caller’s own display codes', async () => {
+  await query('select public.configure_ticket_code_stock($1,$2,$3,$4)', [
+    fixture(40),
+    'DM',
+    50,
+    600,
+  ]);
+  const forbidden = await request('/admin/sheets/ticket-codes?mode=DEMO', undefined, other);
+  expect(forbidden.status).toBe(403);
+  const result = await request('/admin/sheets/ticket-codes?mode=DEMO', undefined, admin, {
+    Authorization: token(admin, 'aal2'),
+  });
+  expect(result.status).toBe(200);
+  const register = await responseData<{ count: number; rows: { code: string }[] }>(result);
+  expect(register.count).toBe(50);
+  expect(register.rows[0].code).toBe('DM00001');
+  const own = await responseData<(Ticket & { display_code: string })[]>(
+    await request('/me/tickets'),
+  );
+  expect(own.length).toBeGreaterThan(0);
+  expect(own.every((t) => /^DM\d{5}$/.test(t.display_code))).toBe(true);
+  expect(new Set(own.map((t) => t.display_code)).size).toBe(own.length);
+  const otherTickets = await responseData<Ticket[]>(await request('/me/tickets', undefined, other));
+  expect(otherTickets).toHaveLength(0);
 });

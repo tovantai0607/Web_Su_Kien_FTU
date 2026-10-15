@@ -14,6 +14,7 @@ import {
 import { PageTitle, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { currentTicketProducts } from '../lib/ticket-phases';
 import PurchaseRecords, { EvidenceImage } from '../components/PurchaseRecords';
 import './purchases.css';
 
@@ -50,19 +51,24 @@ const labels: Record<keyof Buyer, string> = {
 const states = {
   OPEN: 'Đang mở bán',
   UPCOMING: 'Sắp mở bán',
-  SOLD_OUT: 'Hết quota',
+  SOLD_OUT: 'Hết vé',
   CLOSED: 'Đã đóng bán',
 };
 export default function PurchaseTickets() {
   const { eventSlug } = useParams(),
-    { user } = useAuth();
+    { user, access, loading, accessLoading } = useAuth();
+  const demoAllowed = !!user && !!access?.is_admin && !accessLoading;
   const catalog = useQuery({
-    queryKey: ['purchase-catalog', eventSlug],
+    queryKey: ['purchase-catalog', eventSlug, user?.id, demoAllowed],
     queryFn: () =>
       api<PurchaseCatalog>('/purchase-catalog' + (eventSlug ? '?slug=' + eventSlug : '')),
     refetchInterval: 15000,
+    enabled: !eventSlug || (!loading && !accessLoading),
+    retry: false,
   });
-  const offer = catalog.data?.offers.find((e) => e.slug === eventSlug);
+  const offers =
+    catalog.data?.offers.filter((o) => o.mode === 'LIVE' || demoAllowed || preview) ?? [];
+  const offer = offers.find((e) => e.slug === eventSlug);
   return (
     <div className="page-shell purchase-page">
       <PageTitle
@@ -79,13 +85,13 @@ export default function PurchaseTickets() {
       <DataState query={catalog} />
       {catalog.isSuccess &&
         !eventSlug &&
-        (!catalog.data.offers.length ? (
+        (!offers.length ? (
           <EmptyState title="BTC chưa công bố đợt vé">
             Theo dõi thông báo để biết lịch mở bán.
           </EmptyState>
         ) : (
           <div className="purchase-events">
-            {catalog.data.offers.map((event) => (
+            {offers.map((event) => (
               <Card key={event.id}>
                 <Ticket size={32} />
                 <Badge>{event.mode === 'DEMO' ? 'DEMO' : 'FTUCharm 2027'}</Badge>
@@ -105,6 +111,7 @@ export default function PurchaseTickets() {
                   </p>
                 )}
                 <p>{event.venue || 'Địa điểm do BTC công bố'}</p>
+                <SaleSchedule offer={event} />
                 <p>
                   {event.products.length
                     ? 'Loại vé, giá và combo được công bố trong chi tiết đợt vé.'
@@ -129,6 +136,7 @@ export default function PurchaseTickets() {
       )}
       {offer && (
         <>
+          <SaleSchedule offer={offer} />
           {offer.total_quota != null && (
             <p className="purchase-notice">
               Tổng {offer.total_quota} vé; tối đa {offer.early_quota} vé sớm. Vé sớm còn dư chuyển
@@ -140,7 +148,20 @@ export default function PurchaseTickets() {
               Chưa nhận đơn. Giá, phân bổ loại vé và QR chuyển khoản đang chờ BTC cấu hình.
             </p>
           )}
-          <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />
+          {offer.products.length ? (
+            <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />
+          ) : (
+            <section aria-label="Hạng vé dự kiến" className="purchase-products">
+              {['The Intro', 'The Bridge', 'The Chorus'].map((name) => (
+                <Card key={name}>
+                  <Ticket aria-hidden="true" size={28} />
+                  <h2>{name}</h2>
+                  <Badge>Chờ cập nhật giá</Badge>
+                  <p>Vé đơn, Combo 2 và Combo 3 sẽ được BTC cấu hình trước khi nhận đơn.</p>
+                </Card>
+              ))}
+            </section>
+          )}
         </>
       )}
       {user && !preview && (
@@ -149,6 +170,20 @@ export default function PurchaseTickets() {
           <PurchaseRecords />
         </section>
       )}
+    </div>
+  );
+}
+function SaleSchedule({ offer }: { offer: Offer }) {
+  if (!offer.early_open_at || !offer.early_close_at || !offer.normal_close_at) return null;
+  return (
+    <div className="purchase-sale-schedule" aria-label="Lịch mở bán">
+      <p>
+        <strong>Vé sớm:</strong> {dates(offer.early_open_at)} – {dates(offer.early_close_at)}
+      </p>
+      <p>
+        <strong>Vé thường:</strong> {dates(offer.early_close_at)} – {dates(offer.normal_close_at)}
+      </p>
+      <small>Giờ Việt Nam. Có thể chuyển đợt hoặc đóng sớm khi hết vé.</small>
     </div>
   );
 }
@@ -229,9 +264,15 @@ function Checkout({ offer }: { offer: Offer }) {
     setFileUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-  const lines: PurchaseSelection['lines'] = offer.products.flatMap((product) =>
+  const products = currentTicketProducts(offer);
+  const lines: PurchaseSelection['lines'] = products.flatMap((product) =>
     ([1, 2, 3] as const).flatMap((bundle_size) => {
       if (!preview && product.state !== 'OPEN') return [];
+      if (
+        (bundle_size === 2 && product.combo2_vnd === null) ||
+        (bundle_size === 3 && product.combo3_vnd === null)
+      )
+        return [];
       const quantity = quantities[product.id + ':' + bundle_size] ?? 0;
       return quantity > 0 ? [{ product_id: product.id, bundle_size, quantity }] : [];
     }),
@@ -401,7 +442,7 @@ function Checkout({ offer }: { offer: Offer }) {
                 Chọn vé & combo
               </h2>
               <div className="purchase-products">
-                {offer.products.map((p) => (
+                {products.map((p) => (
                   <Card key={p.id}>
                     <Badge>
                       {p.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'} · {states[p.state]}
@@ -411,8 +452,35 @@ function Checkout({ offer }: { offer: Offer }) {
                       {money(p.price_vnd)} / vé · còn {p.available} vé
                     </p>
                     <p>
-                      {dates(p.opens_at)} – {dates(p.closes_at)}
+                      {dates(
+                        p.tier === 'NORMAL' && offer.early_close_at
+                          ? offer.early_close_at
+                          : p.opens_at,
+                      )}{' '}
+                      – {dates(p.closes_at)}
                     </p>
+                    {offer.products.filter((phase) => phase.name === p.name).length > 1 && (
+                      <details className="purchase-phase-details">
+                        <summary>Xem giá và lịch các đợt</summary>
+                        {offer.products
+                          .filter((phase) => phase.name === p.name)
+                          .map((phase) => (
+                            <p key={phase.id}>
+                              <strong>
+                                {phase.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'}:{' '}
+                                {money(phase.price_vnd)} / vé
+                              </strong>
+                              <br />
+                              {dates(
+                                phase.tier === 'NORMAL' && offer.early_close_at
+                                  ? offer.early_close_at
+                                  : phase.opens_at,
+                              )}{' '}
+                              – {dates(phase.closes_at)}
+                            </p>
+                          ))}
+                      </details>
+                    )}
                     {([1, 2, 3] as const).map((size) => {
                       const price =
                         size === 1 ? p.price_vnd : size === 2 ? p.combo2_vnd : p.combo3_vnd;
@@ -462,8 +530,13 @@ function Checkout({ offer }: { offer: Offer }) {
               </div>
               <p>
                 Combo 2 gồm 2 vé; Combo 3 gồm 3 vé cùng loại. BTC bố trí vị trí gần nhau. Hết vé
-                sớm, chọn vé thường đã được mở bán.
+                sớm, cùng hạng vé sẽ chuyển sang giá vé thường theo lịch BTC cấu hình.
               </p>
+              {!count && Object.values(quantities).some((q) => q > 0) && (
+                <p role="status">
+                  Đợt bán đã thay đổi. Kiểm tra giá hiện tại và chọn lại số lượng vé.
+                </p>
+              )}
               <p className="purchase-summary">
                 <strong>
                   {count} vé · {money(total)}
@@ -724,7 +797,16 @@ function Checkout({ offer }: { offer: Offer }) {
                 hạng mục của vòng này. Vé được BTC gửi email thủ công.
               </p>
               <Button asChild>
-                <Link to={'/binh-chon?vong=' + purchase.round_id}>Đến bình chọn</Link>
+                <Link
+                  to={
+                    '/binh-chon?' +
+                    (offer.mode === 'DEMO' && !preview ? 'demo=1&' : '') +
+                    'vong=' +
+                    purchase.round_id
+                  }
+                >
+                  Đến bình chọn
+                </Link>
               </Button>
             </Card>
           )}

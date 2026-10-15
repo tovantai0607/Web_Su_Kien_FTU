@@ -62,12 +62,12 @@ export default function Registration() {
   });
   useEffect(() => {
     if (loading) return;
-    if (draftOwner.current && user?.id && draftOwner.current !== user.id) {
+    if (draftOwner.current && draftOwner.current !== user?.id) {
       registrationDrafts.clear();
-      draftOwner.current = user.id;
+      draftOwner.current = user?.id;
       form.reset({
         full_name: '',
-        email: user.email ?? '',
+        email: user?.email ?? '',
         phone: '',
         faculty: '',
         cohort: '',
@@ -83,7 +83,7 @@ export default function Registration() {
       setSelectedCard(null);
       return;
     }
-    if (user?.id) draftOwner.current = user.id;
+    if (user?.id) draftOwner.current = user?.id;
     if (success) {
       registrationDrafts.clear();
       return;

@@ -5,6 +5,14 @@ description: Áp dụng nghiệp vụ bán vé FTUCharm từ skill/bosung.docx k
 
 # Bán vé FTUCharm theo bổ sung
 
+Xác nhận15/10/2026 về quyền DEMO: chỉ tài khoản đã đăng nhập có quyền vào quản trị được mua/vote DEMO; ẩn nút phải đi cùng kiểm tra Auth/role trên API và link trực tiếp. Trang công khai mặc định hiển thị hai đêm LIVE2027 theo lịch chính thức cho mọi tài khoản; admin vào DEMO bằng link riêng trong quản trị. Giá/QR LIVE chưa cung cấp giữ chờ cấu hình, không dùng dữ liệu DEMO thay thế. Giữ lịch sử/Sheet và phạm vi ghi chỉ DEMO của online-test; xem `docs/admin-demo-official-catalog-20261015.md`.
+
+Xác nhận15/10/2026 về giao diện đợt bán: vé sớm/vé thường nằm trong cùng một hạng, khách chỉ thấy một bộ chọn vé/combo theo đợt đang áp dụng. Admin chỉnh giá đơn/combo cho từng đợt, số vé sớm và lịch mở sớm/kết thúc sớm–bắt đầu thường/đóng thường; không khóa các giá trị này vào100 vé hoặc lịch mặc định. Tổng700 vé/vòng LIVE2027 giữ nguyên. Server kiểm tra quota gồm vé đã bán/giữ, giữ snapshot giá của đơn cũ và30 phút; chuyển đợt theo server. Xem `docs/unified-ticket-sale-phases-20261015.md`; migration mới chỉ kiểm thử local, không suy ra online đã cập nhật.
+
+Đính chính15/10/2026: kho mã hiển thị ba tab riêng `Vé bán kết` (700BK), `Vé chung kết` (700CK), `Vé DEMO` (50DM ban đầu); mỗi nhóm combo của cùng đơn/loại hiển thị một dòng (ví dụ cb2_4_DM00012-DM00015,4 vé/2 combo); vé đơn và kho chưa cấp giữ riêng từng mã. Database giữ mã/UUID từng vé để vote. Không gộp BK/CK vào một tab. Đây là cấu trúc hiện hành thay mô tả hai tab kho mã ở lượt đầu bên dưới.
+
+Xác nhận15/10/2026 về mã riêng từng vé:700BK+700CK LIVE2027,50DM ban đầu, hậu tố5 chữ số; Combo3 có3 mã cùng nhóm để BTC xếp gần. Kho mã trống không phải vé đã cấp/vote. Migration register đã áp độc lập; giữ UUID/mã lịch sử/votes, không tái dùng mã đã cấp. Ba tab kho mã giữ đủ mã thành viên, hiển thị gộp combo theo xác nhận mới nhất; tab cũ là Mã đơn theo dòng loại/combo. Đọc `docs/ticket-code-register-20261015.md` ở root; snapshot đã có, tự làm mới Google còn cần owner triển khai Apps Script, không tự suy ra đã hoạt động từ link website.
+
 Xác nhận mới nhất14/10/2026: người dùng yêu cầu triển khai toàn bộ kế hoạch bản chính thức2027 local nối Supabase. Tổng700 vé/vòng gồm100 sớm/600 thường, BTC phân bổ loại/giá/QR; dư vé sớm chuyển thường cùng loại, giữ30phút vẫn chiếm quota. Ảnh bán kết10–11/4, bán kết25/4, chung kết23/5 và BTC công bố vinh danh dự kiến23h cùng ngày. Vote bán kết10phút trong25/4 do BTC đặt giờ; chung kết chờ lịch. Xem `docs/official-program-2027.md` và xác nhận đầu reference; các ghi chú DEMO dưới đây là lịch sử. Không tạo fixture/đơn thử LIVE, gửi email hoặc deploy Internet trong lượt này.
 
 Skill này dành cho repository FTUCharm. Đọc [yêu cầu và bảng đối chiếu](references/requirements.md) trước khi sửa phần liên quan. Đối chiếu với [file bổ sung](../../../skill/bosung.docx), cả ba ảnh, yêu cầu mới nhất của người dùng và AGENTS.md ở gốc.

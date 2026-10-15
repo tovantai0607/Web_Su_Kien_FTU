@@ -194,6 +194,8 @@ export type Sponsor = {
   published: boolean;
 };
 export type Ticket = {
+  display_code?: string | null;
+  group_code?: string | null;
   ticket_code?: string | null;
   id: string;
   edition_id: string;
@@ -298,6 +300,10 @@ export type VoteSession = {
   close_at: string | null;
 };
 export type VotingData = {
+  demo_leaderboard?: {
+    session_id: string | null;
+    rows: { category_id: string; contestant_id: string; votes: number; rank: number }[];
+  } | null;
   participation?: { participants: number; votes: number } | null;
   round: Round;
   contestants: Contestant[];

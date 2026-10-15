@@ -18,6 +18,8 @@ import {
   type Principal,
 } from './security';
 import { officialEdition } from './program';
+import { proofStorage, remoteProofTransform } from './proof-storage';
+import { demoOffer, requireDemoAdmin, visiblePurchaseRows } from './demo-scope';
 
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 function failure(error: { message: string } | null) {
@@ -29,6 +31,7 @@ function failure(error: { message: string } | null) {
     SALE_NOT_CONFIGURED: [409, 'BTC đang chuẩn bị giá và phân bổ vé.'],
     PROGRAM_QUOTA_EXCEEDED: [400, 'Quota vượt giới hạn vé sớm hoặc tổng vé của vòng.'],
     PROGRAM_CAPACITY_FIXED: [400, 'Giữ nguyên hạn mức vé đã chốt của vòng.'],
+    INVALID_SALE_PHASES: [400, 'Kiểm tra số vé sớm và thứ tự giờ mở/đóng hai đợt bán.'],
     QUOTA_BELOW_ALLOCATED: [409, 'Quota không được thấp hơn số vé đã giữ hoặc Hoàn tất.'],
     IDEMPOTENCY_CONFLICT: [409, 'Yêu cầu gửi lại có nội dung khác.'],
     SALE_CLOSED: [409, 'Loại vé chưa mở bán hoặc đã đóng bán.'],
@@ -70,15 +73,25 @@ const id = (value: string) => {
     throw new HTTPException(400, { message: 'Mã không hợp lệ.' });
   return value;
 };
-async function transformPurchaseProof(request: Request, env: Env) {
-  if (!env.IMAGES || !env.MEDIA)
-    throw new HTTPException(503, { message: 'Lưu ảnh minh chứng chưa được cấu hình.' });
+async function transformPurchaseProof(
+  request: Request,
+  env: Env,
+  purchaseId: string,
+  staff = false,
+) {
+  proofStorage(env);
   const mime = request.headers.get('Content-Type');
   if (mime !== 'image/jpeg' && mime !== 'image/png')
     throw new HTTPException(400, { message: 'Chọn ảnh JPG hoặc PNG, tối đa 5 MB.' });
   const raw = await request.arrayBuffer();
   if (!raw.byteLength || raw.byteLength > 5242880 || imageSignature(new Uint8Array(raw)) !== mime)
     throw new HTTPException(400, { message: 'Ảnh không hợp lệ hoặc quá 5 MB.' });
+  if (!env.IMAGES) {
+    const clean = stripWebPMetadata(
+      await remoteProofTransform(request, env, raw, purchaseId, staff),
+    );
+    return clean;
+  }
   let info: Awaited<ReturnType<ImagesBinding['info']>>;
   try {
     info = await env.IMAGES.info(new Blob([raw]).stream());
@@ -103,9 +116,16 @@ purchases.get('/purchase-catalog', async (c) => {
   const slug = c.req.query('slug') ?? null;
   if (slug && !/^[a-z0-9-]{1,100}$/.test(slug))
     throw new HTTPException(400, { message: 'Đợt vé không hợp lệ.' });
+  const demoRequested = !!c.env.DEMO_TEST_OFFER_SLUG && slug === c.env.DEMO_TEST_OFFER_SLUG;
+  if (demoRequested) await requireDemoAdmin(c.req.raw, c.env);
   const { data, error } = await service(c.env).rpc('purchase_catalog', { p_slug: slug });
   failure(error);
-  if (c.env.PUBLIC_EDITION_SLUG) {
+  if (demoRequested) {
+    data.offers = data.offers.filter(
+      (o: { mode: string; slug: string }) =>
+        o.mode === 'DEMO' && o.slug === c.env.DEMO_TEST_OFFER_SLUG,
+    );
+  } else if (c.env.PUBLIC_EDITION_SLUG || c.env.DEMO_TEST_OFFER_SLUG) {
     const edition = await officialEdition(c.env);
     data.offers = data.offers.filter(
       (o: { mode: string; edition_id: string }) =>
@@ -119,11 +139,17 @@ purchases.post('/purchases', async (c) => {
   const key = id(c.req.header('Idempotency-Key') ?? '');
   const paymentConfig = await service(c.env)
     .from('purchase_offers')
-    .select('mode,qr_path,published,edition_id')
+    .select('mode,slug,qr_path,published,edition_id')
     .eq('id', input.offer_id)
     .maybeSingle();
   failure(paymentConfig.error);
-  if (c.env.PUBLIC_EDITION_SLUG) {
+  if (c.env.DEMO_TEST_OFFER_SLUG) {
+    if (
+      paymentConfig.data?.mode !== 'DEMO' ||
+      paymentConfig.data.slug !== c.env.DEMO_TEST_OFFER_SLUG
+    )
+      throw new HTTPException(403, { message: 'Chỉ được đặt vé trong đợt DEMO.' });
+  } else if (c.env.PUBLIC_EDITION_SLUG) {
     const edition = await officialEdition(c.env);
     if (paymentConfig.data?.mode !== 'LIVE' || paymentConfig.data.edition_id !== edition?.id)
       throw new HTTPException(409, { message: 'Đợt vé chưa mở bán.' });
@@ -163,6 +189,8 @@ purchases.get('/purchases/:id', async (c) => {
     p_request: id(c.req.param('id')),
   });
   failure(error);
+  if (c.env.DEMO_TEST_OFFER_SLUG && data.payment?.mode === 'DEMO')
+    await requireDemoAdmin(c.req.raw, c.env, c.get('principal'));
   return c.json({ data });
 });
 purchases.post('/purchases/:id/complete', async (c) => {
@@ -185,10 +213,11 @@ purchases.post('/purchases/:id/evidence', async (c) => {
   if (owned.data.evidence_id) return c.json({ data: { id: owned.data.evidence_id } });
   if (owned.data.status !== 'HELD')
     throw new HTTPException(409, { message: 'Đơn đã hết hạn hoặc Hoàn tất.' });
-  const clean = await transformPurchaseProof(c.req.raw, c.env);
+  const clean = await transformPurchaseProof(c.req.raw, c.env, requestId);
   const evidenceId = crypto.randomUUID();
   const object = `private/purchases/${principal.id}/${requestId}/${evidenceId}.webp`;
-  await c.env.MEDIA!.put(object, clean, { httpMetadata: { contentType: 'image/webp' } });
+  const storage = proofStorage(c.env);
+  await storage.put(object, clean);
   const attached = await db.rpc('attach_purchase_evidence', {
     p_user: principal.id,
     p_request: requestId,
@@ -199,24 +228,34 @@ purchases.post('/purchases/:id/evidence', async (c) => {
   // A simultaneous retry may have won; remove only this request's unused object.
   // On an uncertain network failure the DB may already have committed. Keep the private object
   // until reconciliation confirms it is unreferenced; never delete a possibly attached proof.
-  if (!attached.error && attached.data?.id !== evidenceId) await c.env.MEDIA!.delete(object);
+  if (!attached.error && attached.data?.id !== evidenceId) await storage.remove(object);
   failure(attached.error);
   return c.json({ data: attached.data });
 });
 purchases.get('/purchase-evidence/:id', async (c) => {
   const { data, error } = await service(c.env)
     .from('purchase_evidence')
-    .select('user_id,object_key,mime')
+    .select('user_id,object_key,mime,request_id')
     .eq('id', id(c.req.param('id')))
     .maybeSingle();
   failure(error);
   if (!data) throw new HTTPException(404, { message: 'Không tìm thấy ảnh.' });
+  if (c.env.DEMO_TEST_OFFER_SLUG) {
+    const purchase = await service(c.env)
+      .from('purchase_requests')
+      .select('round_id')
+      .eq('id', data.request_id)
+      .maybeSingle();
+    failure(purchase.error);
+    if (!purchase.data) throw new HTTPException(404, { message: 'Không tìm thấy đơn.' });
+    if (purchase.data.round_id === (await demoOffer(c.env)).round_id)
+      await requireDemoAdmin(c.req.raw, c.env, c.get('principal'));
+  }
   if (data.user_id !== c.get('principal').id)
     await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
-  if (!c.env.MEDIA) throw new HTTPException(503, { message: 'Lưu ảnh chưa cấu hình.' });
-  const object = await c.env.MEDIA.get(data.object_key);
+  const object = await proofStorage(c.env).get(data.object_key);
   if (!object) throw new HTTPException(404, { message: 'Không tìm thấy ảnh.' });
-  return new Response(object.body, {
+  return new Response(object, {
     headers: {
       'Content-Type': data.mime,
       'Cache-Control': 'private, no-store',
@@ -234,7 +273,9 @@ purchases.get('/me/purchases', async (c) => {
     .order('created_at', { ascending: false })
     .limit(100);
   failure(error);
-  return c.json({ data });
+  return c.json({
+    data: await visiblePurchaseRows(data ?? [], c.req.raw, c.env, c.get('principal')),
+  });
 });
 purchases.get('/admin/purchases', async (c) => {
   await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
@@ -259,18 +300,36 @@ purchases.get('/admin/sheets/purchases', async (c) => {
   const page = Number(c.req.query('page') ?? '0');
   if (!Number.isSafeInteger(page) || page < 0 || page > 100000)
     throw new HTTPException(400, { message: 'Trang không hợp lệ.' });
-  const { data, error, count } = await service(c.env)
+  let query = service(c.env)
     .from('purchase_requests')
     .select(
       'id,code,buyer,lines,quantity,total_vnd,evidence_id,offer_id,round_id,revision,completed_at',
       { count: 'exact' },
     )
-    .eq('status', 'COMPLETED')
+    .eq('status', 'COMPLETED');
+  if (c.env.DEMO_TEST_OFFER_SLUG) query = query.eq('offer_id', (await demoOffer(c.env)).id);
+  const { data, error, count } = await query
     .order('completed_at')
     .order('id')
     .range(page * 100, page * 100 + 99);
   failure(error);
   return c.json({ data: { rows: data, count, server_time: new Date().toISOString() } });
+});
+purchases.get('/admin/sheets/ticket-codes', async (c) => {
+  const principal = c.get('principal');
+  await authorize(principal, c.env, ['TICKET_STAFF']);
+  const mode = z.enum(['LIVE', 'DEMO']).safeParse(c.req.query('mode'));
+  const page = Number(c.req.query('page') ?? '0');
+  if (!mode.success || !Number.isSafeInteger(page) || page < 0 || page > 10000)
+    throw new HTTPException(400, { message: 'Bộ lọc mã vé không hợp lệ.' });
+  const { data, error } = await service(c.env).rpc('read_ticket_code_register', {
+    p_actor: principal.id,
+    p_aal: principal.aal,
+    p_mode: mode.data,
+    p_page: page,
+  });
+  failure(error);
+  return c.json({ data });
 });
 purchases.post('/admin/sheets/purchases/:id', async (c) => {
   const principal = c.get('principal');
@@ -299,7 +358,7 @@ purchases.post('/admin/sheets/purchases/:id/evidence', async (c) => {
   failure(purchase.error);
   if (!purchase.data || purchase.data.status !== 'COMPLETED')
     throw new HTTPException(404, { message: 'Không tìm thấy đơn đã Hoàn tất.' });
-  const clean = await transformPurchaseProof(c.req.raw, c.env);
+  const clean = await transformPurchaseProof(c.req.raw, c.env, requestId, true);
   const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', clean))]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
@@ -316,18 +375,14 @@ purchases.post('/admin/sheets/purchases/:id/evidence', async (c) => {
   }
   const object = `private/purchases/${purchase.data.user_id}/${requestId}/${evidenceId}.webp`;
   // Never overwrite a possibly committed image on retry or a concurrent upload.
-  const stored = await c.env.MEDIA!.put(object, clean, {
-    onlyIf: { etagDoesNotMatch: '*' },
-    httpMetadata: { contentType: 'image/webp' },
-  });
+  const storage = proofStorage(c.env);
+  const stored = await storage.put(object, clean, true);
   if (!stored) {
-    const prior = await c.env.MEDIA!.get(object);
+    const prior = await storage.get(object);
     if (!prior)
       throw new HTTPException(503, { message: 'Chưa xác nhận được ảnh đã lưu. Vui lòng thử lại.' });
     const priorSha = [
-      ...new Uint8Array(
-        await crypto.subtle.digest('SHA-256', await new Response(prior.body).arrayBuffer()),
-      ),
+      ...new Uint8Array(await crypto.subtle.digest('SHA-256', await prior.arrayBuffer())),
     ]
       .map((byte) => byte.toString(16).padStart(2, '0'))
       .join('');
@@ -423,8 +478,12 @@ purchases.get('/vote-results/:id', async (c) => {
     .maybeSingle();
   failure(edition.error);
   if (!edition.data) return c.json({ data: [] });
-  if (c.env.PUBLIC_EDITION_SLUG && edition.data.slug !== c.env.PUBLIC_EDITION_SLUG)
-    return c.json({ data: [] });
+  if (c.env.PUBLIC_EDITION_SLUG || c.env.DEMO_TEST_OFFER_SLUG) {
+    const demo =
+      c.env.DEMO_TEST_OFFER_SLUG && session.data.round_id === (await demoOffer(c.env)).round_id;
+    if (demo) await requireDemoAdmin(c.req.raw, c.env);
+    else if (edition.data.id !== (await officialEdition(c.env))?.id) return c.json({ data: [] });
+  }
   const { data, error } = await db
     .from('vote_result_snapshots')
     .select('category_id,results')

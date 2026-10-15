@@ -1,3 +1,4 @@
+-- Student card is required. Portfolio images remain optional for legacy clients.
 create or replace function public.apply_contestant(p_user uuid,p_data jsonb,p_key uuid,p_hash text) returns jsonb language plpgsql security definer set search_path='' as $$
 declare e public.contest_editions; cid uuid; code text; result jsonb; cached public.api_idempotency;mid uuid; card_id uuid; portfolio_ids jsonb := coalesce(p_data->'media_ids','[]'::jsonb);
 begin

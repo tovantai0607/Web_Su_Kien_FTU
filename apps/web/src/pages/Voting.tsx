@@ -4,16 +4,24 @@ import { useQuery } from '@tanstack/react-query';
 import { Heart, ShieldCheck, Check, Clock3 } from 'lucide-react';
 import { Button, Card, Badge, EmptyState, Modal, ErrorState } from '@ftu/ui';
 import type { Round, Contestant, Ticket, VotingData } from '@ftu/shared';
-import { PageTitle, useContent, DataState } from '../components/Content';
+import { PageTitle, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Turnstile } from '../components/Turnstile';
 import { AnimatedGroup } from '../components/interface/MotionSystem';
 export default function Voting() {
-  const { user } = useAuth();
+  const { user, access, loading, accessLoading } = useAuth();
   const [params, setParams] = useSearchParams();
+  const demoRequested = params.get('demo') === '1';
+  const demoAllowed = !!user && !!access?.is_admin && !accessLoading;
+  const canRead = !demoRequested || demoAllowed;
   const gender = params.get('hang-muc') === 'male' ? 'male' : 'female';
-  const rounds = useContent<Round[]>('/rounds');
+  const rounds = useQuery({
+    queryKey: ['voting-rounds', demoRequested, user?.id, demoAllowed],
+    queryFn: () => api<Round[]>('/rounds' + (demoRequested ? '?demo=1' : '')),
+    enabled: canRead,
+    retry: false,
+  });
   const [now, setNow] = useState(Date.now()),
     [offset, setOffset] = useState(0),
     [selected, setSelected] = useState<Contestant | null>(null),
@@ -22,12 +30,14 @@ export default function Voting() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState(false);
-  const round =
-    rounds.data?.find((r) => r.id === params.get('vong')) ??
-    rounds.data?.find((r) => r.kind === 'semifinal') ??
-    rounds.data?.find((r) => r.kind === 'final');
+  const round = canRead
+    ? params.get('vong')
+      ? rounds.data?.find((r) => r.id === params.get('vong'))
+      : (rounds.data?.find((r) => r.kind === 'semifinal') ??
+        rounds.data?.find((r) => r.kind === 'final'))
+    : undefined;
   const voting = useQuery({
-    queryKey: ['voting', round?.id],
+    queryKey: ['voting', round?.id, user?.id, demoAllowed],
     queryFn: () => api<VotingData>('/voting/' + round!.id),
     enabled: !!round,
     refetchInterval: 15000,
@@ -102,7 +112,9 @@ export default function Voting() {
         }),
       });
       setSuccess(true);
+      setTicket('');
       void ownVotes.refetch();
+      void voting.refetch();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -110,6 +122,19 @@ export default function Voting() {
       setToken('');
     }
   }
+  if (demoRequested && !demoAllowed)
+    return (
+      <div className="page-shell">
+        <PageTitle title="Bình chọn DEMO" />
+        <EmptyState
+          title={
+            loading || accessLoading ? 'Đang kiểm tra quyền' : 'DEMO chỉ dành cho tài khoản admin'
+          }
+        >
+          <Link to="/binh-chon">Xem bình chọn chính thức</Link>
+        </EmptyState>
+      </div>
+    );
   return (
     <div className="page-shell">
       <PageTitle title="Bình chọn" />
@@ -187,6 +212,47 @@ export default function Voting() {
       </div>
       <DataState query={rounds} />
       {round && <DataState query={voting} />}
+      {demoAllowed && demoRequested && voting.data?.demo_leaderboard && (
+        <section aria-label="Bảng xếp hạng DEMO" className="vote-leaderboard">
+          <Card>
+            <h2>Bảng xếp hạng DEMO</h2>
+            <p>Kết quả tạm của vòng thử, cập nhật mỗi 15 giây và sau khi bạn vote thành công.</p>
+            <Button
+              variant="outline"
+              disabled={voting.isFetching}
+              onClick={() => void voting.refetch()}
+            >
+              Cập nhật BXH
+            </Button>
+            {!session ? (
+              <p>BTC chưa mở phiên bình chọn DEMO.</p>
+            ) : voting.data.demo_leaderboard.session_id !== session.id ? (
+              <p>Đang tải kết quả của phiên hiện tại.</p>
+            ) : !category ? (
+              <p>BTC chưa cấu hình hạng mục bình chọn DEMO.</p>
+            ) : (
+              <>
+                <h3>{category.name}</h3>
+                <ol>
+                  {voting.data.demo_leaderboard.rows
+                    .filter((row) => row.category_id === category.id)
+                    .map((row) => (
+                      <li key={row.contestant_id}>
+                        Hạng {row.rank} ·{' '}
+                        {voting.data?.contestants.find((person) => person.id === row.contestant_id)
+                          ?.display_name ?? 'Thí sinh'}{' '}
+                        — <strong>{row.votes} phiếu</strong>
+                      </li>
+                    ))}
+                </ol>
+                {!voting.data.demo_leaderboard.rows.some(
+                  (row) => row.category_id === category.id,
+                ) && <p>Chưa có thí sinh đủ điều kiện trong phiên DEMO.</p>}
+              </>
+            )}
+          </Card>
+        </section>
+      )}
       {!current && !rounds.isPending && !rounds.isError && (
         <EmptyState title="Chưa có lượt bình chọn công khai">
           BTC sẽ mở lượt theo lịch của từng vòng. Bạn có thể khám phá các gương mặt trước khi chọn.
@@ -353,7 +419,7 @@ function FieldTicket({
         <option value="">Chọn vé của bạn</option>
         {tickets.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.ticket_code ?? t.seat_label}
+            {t.display_code ?? t.ticket_code ?? t.seat_label}
           </option>
         ))}
       </select>
