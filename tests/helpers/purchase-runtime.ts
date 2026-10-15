@@ -48,6 +48,7 @@ const calls: Record<string, string[]> = {
     'p_sha256',
   ],
   read_vote_participation: ['p_round'],
+  save_program_publication: ['p_actor', 'p_aal', 'p_data'],
 };
 export function databaseAdapter(query: Query) {
   return {
@@ -99,6 +100,8 @@ class TableQuery {
         'vote_eligible_contestants',
         'vote_result_snapshots',
         'contest_editions',
+        'timeline_events',
+        'program_publications',
       ].includes(table)
     )
       throw new Error('Unexpected table: ' + table);
@@ -118,6 +121,11 @@ class TableQuery {
   }
   eq(col: string, value: unknown) {
     this.filters.push(`${identifier(col)}=$${this.values.push(value)}`);
+    return this;
+  }
+  is(col: string, value: null) {
+    if (value !== null) throw new Error('Test adapter only supports IS NULL');
+    this.filters.push(`${identifier(col)} is null`);
     return this;
   }
   in(col: string, values: unknown[]) {
@@ -214,19 +222,16 @@ export function localEnvironment(origin = 'http://127.0.0.1:5173') {
       },
       input: (stream: ReadableStream) => ({
         transform: () => ({
-          output: async () => ({
-            response: async () => {
-              const b = Buffer.from(await new Response(stream).arrayBuffer());
-              return new Response(
-                new Uint8Array(
-                  await sharp(b)
-                    .resize({ width: 1600, withoutEnlargement: true })
-                    .webp({ quality: 85 })
-                    .toBuffer(),
-                ),
-              );
-            },
-          }),
+          output: async () => {
+            const b = Buffer.from(await new Response(stream).arrayBuffer());
+            const clean = new Uint8Array(
+              await sharp(b)
+                .resize({ width: 1600, withoutEnlargement: true })
+                .webp({ quality: 85 })
+                .toBuffer(),
+            );
+            return { response: () => new Response(clean) };
+          },
         }),
       }),
     },

@@ -1,5 +1,6 @@
 import { Children, createContext, useContext, useSyncExternalStore, type ReactNode } from 'react';
 import { LazyMotion, MotionConfig, m } from 'motion/react';
+import { compactMotionQuery } from './mobileScroll';
 
 const loadFeatures = () => import('./MotionFeatures').then((module) => module.default);
 const MotionDisabled = createContext(false);
@@ -10,6 +11,14 @@ function subscribeReducedMotion(notify: () => void) {
   return () => query.removeEventListener('change', notify);
 }
 const readReducedMotion = () => window.matchMedia(reducedMotionQuery).matches;
+function subscribeCompactMotion(notify: () => void) {
+  const query = window.matchMedia(compactMotionQuery);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+}
+const readCompactMotion = () => window.matchMedia(compactMotionQuery).matches;
+export const useCompactMotion = () =>
+  useSyncExternalStore(subscribeCompactMotion, readCompactMotion, () => true);
 
 export const useSystemReducedMotion = () =>
   useSyncExternalStore(subscribeReducedMotion, readReducedMotion, () => true);

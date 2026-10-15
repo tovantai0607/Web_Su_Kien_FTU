@@ -50,6 +50,7 @@ it.skipIf(!process.env.FTU_TEST_DATABASE_URL)(
     const control = new pg.Client({ connectionString: url.href });
     await control.connect();
     const database = 'ftu_supplement_' + Date.now();
+    if (!/^ftu_supplement_\d+$/.test(database)) throw new Error('Unsafe test database name');
     await control.query(`create database ${database}`);
     url.pathname = '/' + database;
     const setup = new pg.Client({ connectionString: url.href });
@@ -530,6 +531,10 @@ it.skipIf(!process.env.FTU_TEST_DATABASE_URL)(
       }
       await pool?.end();
       await setup.end();
+      objects.clear();
+      // Only the database created by this run is disposable. Never target a
+      // supplied database name, a remote host, or pre-existing shared fixtures.
+      await control.query(`drop database ${database} with (force)`);
       await control.end();
     }
   },

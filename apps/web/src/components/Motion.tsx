@@ -1,9 +1,10 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { useMotionDisabled } from './interface/MotionSystem';
+import { useCompactMotion, useMotionDisabled } from './interface/MotionSystem';
 
 export function StageParallax({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const disabled = useMotionDisabled();
+  const compact = useCompactMotion();
   useEffect(() => {
     const element = root.current;
     const section = element?.closest('section');
@@ -16,7 +17,7 @@ export function StageParallax({ children }: { children: ReactNode }) {
     let visible = true;
     const draw = () => {
       frame = 0;
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden || compact) return;
       const progress = Math.max(
         0,
         Math.min(1, -section.getBoundingClientRect().top / section.offsetHeight),
@@ -39,8 +40,10 @@ export function StageParallax({ children }: { children: ReactNode }) {
     });
     observer.observe(section);
     document.addEventListener('visibilitychange', syncVisibility);
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule);
+    if (!compact) {
+      window.addEventListener('scroll', schedule, { passive: true });
+      window.addEventListener('resize', schedule);
+    }
     draw();
     return () => {
       cancelAnimationFrame(frame);
@@ -51,7 +54,7 @@ export function StageParallax({ children }: { children: ReactNode }) {
       section.dataset.stageRunning = 'false';
       element.style.transform = 'none';
     };
-  }, [disabled]);
+  }, [disabled, compact]);
   return (
     <div ref={root} className="crown-scroll">
       {children}

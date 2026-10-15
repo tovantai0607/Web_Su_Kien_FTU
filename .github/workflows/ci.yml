@@ -16,9 +16,10 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # The isolated Vitest browser journey also launches Chromium.
+      - run: npx --no-install playwright install --with-deps chromium
       - run: npm test
       - run: npm run build
-      - run: npx --no-install playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm run test:e2e:auth
       - run: npx --no-install wrangler deploy --config apps/api/wrangler.jsonc --dry-run

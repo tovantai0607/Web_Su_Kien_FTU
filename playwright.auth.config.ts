@@ -16,6 +16,7 @@ export default defineConfig({
       VITE_PREVIEW_MODE: 'false',
       VITE_SUPABASE_URL: 'https://auth-test.supabase.co',
       VITE_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+      VITE_TURNSTILE_SITE_KEY: '',
     },
     url: 'http://127.0.0.1:4174',
     reuseExistingServer: false,

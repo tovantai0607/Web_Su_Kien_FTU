@@ -88,6 +88,7 @@ beforeAll(async () => {
   await db.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
 });
 afterAll(async () => {
+  objects.clear();
   await db.close();
 });
 it('serves public vote participation through the privileged server client without granting the public client execute', async () => {
