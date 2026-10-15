@@ -31,6 +31,15 @@ Baseline website trước push: HTTP 200, stylesheet `/assets/index-C_aruxXX.css
 
 Sau push, kiểm tra version mới, stylesheet mới, `GET /api/health`, `GET /api/program` phải là `ftucharm-2027`; trên mobile vuốt phải tạm dừng decoration rồi tiếp tục cùng canvas, menu đăng ký phải dùng được. Bằng chứng kết quả thực tế được lưu ở `output/git-sync-20261015/` và báo lại khi hoàn tất; tài liệu này mô tả quy trình, không tự xác nhận deploy thành công trước khi kiểm tra.
 
+## Kết quả triển khai lần đồng bộ này
+
+- Atomic push 12 nhánh GitHub về merge commit `42a7290c7b93498c0f17a3d67da14436183c1070` đã được đọc lại từ remote và xác nhận.
+- Cloudflare Builds tự triển khai từ main thành công trong 54 giây, build `f5ddca9f-bd04-440c-8c32-e1825afd6f24`, version `f92ea2a1-f038-4579-81fd-2e83e43f79cc` nhận 100% traffic lúc 04:46:47 UTC.
+- Website tải stylesheet mới `/assets/index-LRjF4qC9.css`. Trình duyệt 390px xác nhận không tràn ngang, không preview, logo bỏ parallax/filter, scene render được và dừng khi ngoài màn hình, nút về đầu trang hoạt động. Menu mở được form đăng ký ba bước với lịch server vẫn khóa gửi sớm; không nhập hoặc gửi dữ liệu.
+- Health/program trả HTTP 200, mùa `ftucharm-2027`. Script kiểm tra đã chỉnh đúng envelope `{data: ...}` của `/api/program`.
+- Nhánh local `local-build-87315c8` là bản lưu lịch sử riêng, không có trên GitHub và không phải ancestor của main; giữ nguyên, không ghi đè hoặc đưa code cũ vào main.
+- Commit bổ sung tài liệu/kịch bản kiểm tra sau deploy không đổi mã ứng dụng, được đẩy đồng bộ các nhánh theo cùng quy trình fast-forward. Version cuối cùng và trạng thái CI được lưu trong bằng chứng local và báo cáo bàn giao.
+
 ## Hoàn tác
 
 Version trước push ở trên dùng làm mốc rollback nếu bản mới lỗi. Revert commit ứng dụng rồi push main theo quy trình Git để giữ lịch sử; không reset/force-push và không hoàn tác database vì lượt này không đổi schema/dữ liệu. Chỉ rollback Worker khi đã xác nhận sự cố và các giới hạn về tài nguyên liên kết. R2/Images online vẫn chưa được kích hoạt trong phạm vi này.

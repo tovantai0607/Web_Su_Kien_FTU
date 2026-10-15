@@ -29,8 +29,8 @@ for (const endpoint of ['/api/health', '/api/program']) {
   assert.equal(response.status, 200, endpoint);
   const data = await response.json();
   if (endpoint === '/api/program') {
-    assert.equal(data.edition.slug, 'ftucharm-2027');
-    result.program = { slug: data.edition.slug, timelineEvents: data.timeline.length };
+    assert.equal(data.data.edition.slug, 'ftucharm-2027');
+    result.program = { slug: data.data.edition.slug, timelineEvents: data.data.timeline.length };
   }
 }
 const browser = await chromium.launch({ headless: true });
