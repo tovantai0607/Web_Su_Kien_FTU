@@ -17,6 +17,12 @@ it('rolls back only an unused release and preserves common season data; reapplic
     const before = (await db.query('select id,title,year from public.contest_editions order by id'))
       .rows;
     await db.exec(
+      await readFile('supabase/rollbacks/20261015041125_ticket_code_register.sql', 'utf8'),
+    );
+    await db.exec(
+      await readFile('supabase/rollbacks/20261015032157_sheet_quota_staging_safety.sql', 'utf8'),
+    );
+    await db.exec(
       await readFile('supabase/rollbacks/20261015024905_vote_deadline_closure.sql', 'utf8'),
     );
     await db.exec(
@@ -36,6 +42,12 @@ it('rolls back only an unused release and preserves common season data; reapplic
     );
     await db.exec(
       await readFile('supabase/migrations/20261015024905_vote_deadline_closure.sql', 'utf8'),
+    );
+    await db.exec(
+      await readFile('supabase/migrations/20261015032157_sheet_quota_staging_safety.sql', 'utf8'),
+    );
+    await db.exec(
+      await readFile('supabase/migrations/20261015041125_ticket_code_register.sql', 'utf8'),
     );
     await db.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
     await expect(

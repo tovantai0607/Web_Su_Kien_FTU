@@ -48,6 +48,8 @@ const calls: Record<string, string[]> = {
     'p_sha256',
   ],
   read_vote_participation: ['p_round'],
+  read_ticket_code_register: ['p_actor', 'p_aal', 'p_mode', 'p_page'],
+  read_own_ticket_codes: ['p_user'],
 };
 export function databaseAdapter(query: Query) {
   return {
@@ -99,6 +101,7 @@ class TableQuery {
         'vote_eligible_contestants',
         'vote_result_snapshots',
         'contest_editions',
+        'program_publications',
       ].includes(table)
     )
       throw new Error('Unexpected table: ' + table);

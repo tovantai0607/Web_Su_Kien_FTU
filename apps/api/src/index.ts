@@ -41,6 +41,7 @@ import {
 import { sendOutbox } from './outbox';
 import { purchases } from './purchases';
 import { program, officialEdition, publishedRoundPhotos } from './program';
+import { demoOffer, enforceDemoWrite } from './demo-scope';
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export const app = new Hono<AppEnv>();
 const publicFields =
@@ -100,7 +101,8 @@ app.onError((error, c) => {
 app.get('/api/health', (c) =>
   c.json({
     status: 'ok',
-    mode: c.env.DEMO_MODE === 'true' ? 'preview' : 'live',
+    mode:
+      c.env.DEMO_MODE === 'true' ? 'preview' : c.env.DEMO_TEST_OFFER_SLUG ? 'demo-test' : 'live',
     server_time: new Date().toISOString(),
   }),
 );
@@ -189,6 +191,10 @@ const queryEdition = (c: Context<AppEnv>) => {
 };
 async function publicEdition(c: Context<AppEnv>) {
   const requested = queryEdition(c);
+  if (c.env.DEMO_TEST_OFFER_SLUG && /^\/api\/(?:rounds|voting\/|votes$)/.test(c.req.path)) {
+    const offer = await demoOffer(c.env);
+    return !requested || requested === offer.edition_id ? (offer.edition_id as string) : null;
+  }
   if (c.env.PUBLIC_EDITION_SLUG) {
     const edition = await officialEdition(c.env);
     return edition && (!requested || requested === edition.id) ? (edition.id as string) : null;
@@ -396,6 +402,7 @@ app.use('/api/*', async (c, next) => {
   );
   const { success } = await c.env.RATE_LIMITER.limit({ key });
   if (!success) return c.json({ error: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.' }, 429);
+  await enforceDemoWrite(c.req.raw, c.env);
   await next();
 });
 app.get('/api/events', async (c) => {
@@ -540,6 +547,24 @@ app.get('/api/me/tickets', async (c) => {
     .select('id,edition_id,round_id,seat_label,checked_in_at,status,ticket_code')
     .eq('user_id', c.get('principal').id);
   dbError(error);
+  if (data?.length) {
+    const codes = await service(c.env).rpc('read_own_ticket_codes', {
+      p_user: c.get('principal').id,
+    });
+    if (codes.error && codes.error.code !== 'PGRST202') dbError(codes.error);
+    const byId = new Map<string, { display_code: string; group_code: string }>(
+      (codes.data ?? []).map(
+        (row: { ticket_id: string; display_code: string; group_code: string }) => [
+          row.ticket_id,
+          { display_code: row.display_code, group_code: row.group_code },
+        ],
+      ),
+    );
+    return ok(
+      c,
+      data.map((ticket) => ({ ...ticket, ...byId.get(ticket.id) })),
+    );
+  }
   return ok(c, data);
 });
 app.get('/api/me/votes', async (c) => {

@@ -193,6 +193,8 @@ export type Sponsor = {
   published: boolean;
 };
 export type Ticket = {
+  display_code?: string | null;
+  group_code?: string | null;
   ticket_code?: string | null;
   id: string;
   edition_id: string;

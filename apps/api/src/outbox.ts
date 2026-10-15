@@ -20,6 +20,7 @@ export function emailTemplate(template: string, payload: Record<string, string>)
   };
 }
 export async function sendOutbox(env: Env) {
+  if (env.EMAIL_DELIVERY_ENABLED === 'false') return;
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
   const db = service(env);
   const { data: jobs, error } = await db.rpc('claim_emails');

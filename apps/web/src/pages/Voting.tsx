@@ -353,7 +353,7 @@ function FieldTicket({
         <option value="">Chọn vé của bạn</option>
         {tickets.map((t) => (
           <option key={t.id} value={t.id}>
-            {t.ticket_code ?? t.seat_label}
+            {t.display_code ?? t.ticket_code ?? t.seat_label}
           </option>
         ))}
       </select>

@@ -1,5 +1,17 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Kho mã vé đã xác nhận ngày15/10/2026
+
+Đính chính mới nhất: bán kết và chung kết là hai tab riêng. Hiển thị Sheet gộp các vé cùng loại/combo của một đơn thành một dòng: hai Combo2 là4 vé, nhãn cb2_4_<dải mã>; giữ từng UUID/mã vé trong database và cột thành viên. Không gộp khác đơn/loại/vòng. Mã nhóm là nhãn hiển thị, không thay khóa vote. Bảng Data dùng `Vé bán kết` (700BK), `Vé chung kết` (700CK), `Vé DEMO` (50DM ban đầu). Đã tách tab chính thức gộp cũ, đối chiếu đủ1400 dòng×24 cột không đổi và giữ11 vé DEMO đã cấp. Apps Script định tuyến theo tiền tố BK/CK/DM; không tạo lại tab gộp.
+
+Người dùng chốt700 mã BK và700 mã CK cho2 vòng LIVE2027,50 DM ban đầu cho DEMO,5 chữ số sau tiền tố. Mỗi vé1 mã; Combo3 giữ3 vé cùng nhóm để BTC bố trí gần, không chọn ghế. Đã áp migration độc lập `20261015041125_ticket_code_register`, tạo1450 slot trên Supabase;11 vé DEMO cũ được liên kếtDM, không sửa mã lịch sử/UUID/order/vote. Trigger database gắn mã khi Hoàn tất trong transaction, không cấp quyền cho slot trống, không dùng lại mã đã cấp. Ba tab `Vé bán kết`/`Vé chung kết`/`Vé DEMO` đã có snapshot; hai tab cũ đổi nhãn A1 thànhMã đơn. Đọc `docs/ticket-code-register-20261015.md`. Tự đồng bộ Google vẫn cần owner triển khai Apps Script/trigger; công cụ Drive kết nối chưa có thao tác triển khai Script và tìm chưa thấy project. Không dùng URL Worker làm URL callback Apps Script, không coi snapshot là realtime. Remote14 migration;3 migration pending từ lượt trước chưa được áp.
+
+## Chuẩn bị trước deploy ngày15/10/2026
+
+Người dùng đã chọn project Supabase hiện tại, chỉ thử dữ liệu DEMO, và Supabase Storage cho minh chứng với xử lý ảnh an toàn. Đã tạo bucket private `ftu-demo-proof-private` và sao chép/so hash5 minh chứng DEMO từ R2 local; giữ nguyên ảnh local và các dòng đơn/vé/phiếu. Bảng Data đã có bản chụp5 đơn COMPLETED/11 vé/6 dòng, đủ19 cột gồm số lượng combo; chưa deploy Apps Script/trigger mỗi phút. Source adapter, Edge codec, quota Sheet và fence DEMO được chuẩn bị local; đọc `docs/predeploy-storage-sheet-fixes-20261015.md` cùng báo cáo readiness để biết kiểm tra/giới hạn/activation còn thiếu. Không suy ra website online cũ đã đọc được ảnh mới hoặc đồng bộ hai chiều đã chạy.
+
+Git main đã nối Cloudflare Builds: push/merge main sẽ deploy `online-test`. Lượt sửa trước deploy chưa cho phép tự push/deploy; chuẩn bị review/test xong trước bước kích hoạt. Ba migration Sheets/deadline/quota chưa áp remote trong lượt này; không dùng database thật để lặp SQL. Function ảnh chỉ DEMO, phải bundle WASM và giữ xác thực/kiểm tra ảnh, không thay bằng lưu raw khi thiếu runtime.
+
 ## Khôi phục form đăng ký và cân đối đăng nhập
 
 Yêu cầu tiếp theo14/10/2026: mục Dự thi và form đăng ký ba bước phải luôn truy cập được, kể cả khách chưa đăng nhập hoặc ngoài lịch nhận hồ sơ. Cho xem/chuẩn bị thông tin trên trang, không lưu nháp PII vào browser storage. Chỉ tải ảnh/gửi hồ sơ khi đăng nhập và trong07–21/03/2027; giữ kiểm tra lịch server/database. Không ẩn cả form hoặc đổi link Dự thi sang timeline khi chưa mở đơn. Mobile có mục Đăng ký thí sinh trong menu. Khung auth dùng padding cố định theo px, không dùng padding phần trăm của page-shell khiến form hẹp trên màn hình lớn.

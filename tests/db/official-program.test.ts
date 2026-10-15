@@ -102,6 +102,84 @@ afterEach(async () => {
 afterAll(async () => {
   await db.close();
 });
+const sheetEdit = (
+  p: Purchase,
+  lines: { product_id: string; bundle_size: number; quantity: number }[],
+  revision = 0,
+) =>
+  rpc<Purchase>('edit_sheet_purchase', [
+    admin,
+    'aal1',
+    p.id,
+    {
+      operation_id: crypto.randomUUID(),
+      expected_revision: revision,
+      code: p.code,
+      buyer,
+      lines,
+      evidence_id: p.evidence_id,
+    },
+  ]);
+it('rejects the 700-to-790 Sheet edit after early rollover, retaining order and stock atomically', async () => {
+  const original = await complete(await reserve(early, 10));
+  await db.query(
+    "update public.purchase_offers set early_open_at=clock_timestamp()-interval '1 day',early_close_at=clock_timestamp()-interval '1 minute' where id=$1",
+    [offer],
+  );
+  await complete(await reserve(normal, 690));
+  await expect(
+    sheetEdit(original, [{ product_id: early, bundle_size: 1, quantity: 100 }]),
+  ).rejects.toThrow('QUOTA_UNAVAILABLE');
+  expect((await rpc('read_purchase', [user, original.id])).quantity).toBe(10);
+  expect(
+    (
+      await db.query<{ n: number }>(
+        'select sum(sold_quantity)::int n from public.purchase_products where offer_id=$1',
+        [offer],
+      )
+    ).rows[0].n,
+  ).toBe(700);
+});
+it('accepts edits within projected rollover capacity and handles bundle counts without counting tickets twice', async () => {
+  await db.query(
+    "update public.purchase_offers set early_open_at=clock_timestamp()-interval '1 day',early_close_at=clock_timestamp()-interval '1 minute' where id=$1",
+    [offer],
+  );
+  const original = await complete(await reserve(normal, 600));
+  const edited = await sheetEdit(original, [{ product_id: normal, bundle_size: 2, quantity: 350 }]);
+  expect(edited.quantity).toBe(700);
+  expect(
+    (await rpc<PurchaseCatalog>('purchase_catalog', ['official-test'])).offers[0].products.find(
+      (p) => p.id === normal,
+    )?.available,
+  ).toBe(0);
+});
+it('preserves held early quota when a Sheet edit increases normal sales', async () => {
+  await reserve(early, 20);
+  await db.query(
+    "update public.purchase_offers set early_open_at=clock_timestamp()-interval '1 day',early_close_at=clock_timestamp()-interval '1 minute' where id=$1",
+    [offer],
+  );
+  const original = await complete(await reserve(normal, 600));
+  await expect(
+    sheetEdit(original, [{ product_id: normal, bundle_size: 1, quantity: 681 }]),
+  ).rejects.toThrow('QUOTA_UNAVAILABLE');
+  expect(
+    (await sheetEdit(original, [{ product_id: normal, bundle_size: 1, quantity: 680 }])).quantity,
+  ).toBe(680);
+});
+it('does not transfer rollover capacity to a different ticket type through Sheet edits', async () => {
+  const original = await complete(await reserve(early, 1));
+  await db.query('update public.purchase_products set name=$1 where id=$2', ['Other type', normal]);
+  // Use the existing early order to check a change to a normal type with no matching early allocation.
+  await db.query(
+    "update public.purchase_offers set early_open_at=clock_timestamp()-interval '1 day',early_close_at=clock_timestamp()-interval '1 minute' where id=$1",
+    [offer],
+  );
+  await expect(
+    sheetEdit(original, [{ product_id: normal, bundle_size: 1, quantity: 601 }]),
+  ).rejects.toThrow('QUOTA_UNAVAILABLE');
+});
 
 it('publishes metadata but fails closed without payment or fully allocated quotas', async () => {
   await db.query('update public.purchase_offers set qr_path=null where id=$1', [offer]);
