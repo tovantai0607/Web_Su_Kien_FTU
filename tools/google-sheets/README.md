@@ -16,6 +16,8 @@ Máy local `127.0.0.1:5173/8787` không được Apps Script Google truy cập. 
 
 Mỗi dòng là một lựa chọn loại/combo của đơn. Cùng mã đơn có thể có nhiều dòng, UUID ẩn liên kết đúng đơn. Sửa các thông tin chung ở một dòng sẽ được truyền sang các dòng cùng đơn; không đổi UUID, chủ đơn hoặc vòng bằng sửa email. Số lượng cột K là số **vé**: Combo2 phải chia hết2, Combo3 chia hết3. Đổi loại vé theo nhãn hạng/tier đang có trong cấu hình cùng đợt. Không tự tạo/xóa đơn bằng chèn/xóa dòng.
 
+Cột M **Số lượng combo** là số suy ra, không phải tổng số vé: K=4/L=Combo2 → M=2; K=6/L=Combo3 → M=2; vé Đơn → M=0. Đổi lượng/nhãn ở K:L; M được tính lại, không có hai trường nhập số lượng cạnh tranh. Trạng thái ở N, thời điểm ở O, metadata ẩn P:S. Cả hai tab dùng19 cột; installer chặn schema cũ18 cột để không nhận nhầm UUID/revision.
+
 Minh chứng mới: nhập link file ảnh Drive dạng `/file/d/<id>/...` hoặc file ID. Owner script phải đọc được ảnh; chỉ JPG/PNG≤5MB. API kiểm tra ảnh, xử lý WebP và lưu phiên bản mới; ảnh cũ vẫn xem được theo quyền. Cột trạng thái chỉ báo đã đồng bộ khi transaction database thành công. Lỗi quota, số vé đã vote hoặc revision sẽ giữ nguyên database và báo ở dòng.
 
 Tab `Database hiện hành` là nguồn chỉ đọc được cập nhật đầy đủ. `Khách mua vé` là bản chỉnh sửa: job không ghi đè A:L của dòng đã có, không xóa/sắp xếp dòng. Khi database đổi ngoài Sheet, giữ ô hiện có và đánh dấu cần đối chiếu. Owner mở callback web app, nhập UUID đơn, bấm **Xem hai bản**, rồi xác nhận gửi bản chỉnh sửa đã xem. Nếu ô/revision đổi sau preview thì từ chối, cần xem lại. Có thể sửa draft theo tab nguồn trước khi xem/xác nhận; không tự tải lại đè lên người đang gõ. Luồng này có source và unit, chưa nghiệm thu Google thật.

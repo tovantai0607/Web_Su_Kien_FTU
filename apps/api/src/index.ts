@@ -342,7 +342,8 @@ app.get('/api/voting/:id', async (c) => {
       .order('open_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    db.rpc('read_vote_participation', { p_round: id }),
+    // This aggregate RPC is intentionally server-only; the public read client cannot execute it.
+    service(c.env).rpc('read_vote_participation', { p_round: id }),
   ]);
   dbError(categories.error);
   dbError(sessions.error);

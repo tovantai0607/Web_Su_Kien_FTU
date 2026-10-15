@@ -19,6 +19,7 @@ const FTU_HEADERS = [
   'Loại vé',
   'Số lượng vé',
   'Combo',
+  'Số lượng combo',
   'Trạng thái đồng bộ',
   'Cập nhật cuối',
   '_id',
@@ -65,7 +66,7 @@ function databaseFtuOrder_(id) {
 }
 function reviewFtuConflict(id) {
   assertPrivateFtuSheet_();
-  const current = ftuRows_().filter((row) => row[14] === id),
+  const current = ftuRows_().filter((row) => row[15] === id),
     purchase = databaseFtuOrder_(id);
   if (!current.length) throw new Error('Không tìm thấy dòng đơn trong bảng.');
   const review = {
@@ -99,19 +100,19 @@ function confirmFtuRebase(id, revision, signature, nonce) {
       review.signature !== signature
     )
       throw new Error('Cần xem lại hai bản trước khi gửi.');
-    const current = ftuRows_().filter((row) => row[14] === id);
+    const current = ftuRows_().filter((row) => row[15] === id);
     if (editableSignature_(current) !== signature)
       throw new Error('Ô đã thay đổi sau khi xem; đối chiếu lại.');
     const purchase = databaseFtuOrder_(id);
     if (purchase.revision !== revision)
       throw new Error('Database đã đổi sau khi xem; đối chiếu lại.');
-    if (editableSignature_(ftuRows_().filter((row) => row[14] === id)) !== signature)
+    if (editableSignature_(ftuRows_().filter((row) => row[15] === id)) !== signature)
       throw new Error('Ô đã thay đổi trong lúc đối chiếu; xem lại.');
     // Explicitly reviewed rebase; no editable cells are overwritten. A competing old
     // operation still has its old revision, so database row locks cannot let both win.
     const sheet = ftuSheet_();
     ftuRows_().forEach((row, index) => {
-      if (row[14] === id) sheet.getRange(index + 2, 16).setValue(revision);
+      if (row[15] === id) sheet.getRange(index + 2, 17).setValue(revision);
     });
     props.setProperty('FTU_PENDING_' + id, Utilities.getUuid());
     props.deleteProperty(key);
@@ -215,6 +216,11 @@ function installFtuSync() {
   restrictFtuSharing();
   ftuConfig_();
   const sheet = ftuSheet_();
+  const headers = sheet.getRange(1, 1, 1, FTU_HEADERS.length).getValues()[0];
+  if (headers.some((value, index) => value !== FTU_HEADERS[index]))
+    throw new Error(
+      'Cấu trúc bảng không khớp; cần cột Số lượng combo ở M và UUID/revision ở P:S trước khi bật đồng bộ.',
+    );
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   sheet.getRange(1, 12, sheet.getMaxRows(), 1).setNumberFormat('@');
   // Verify connectivity and authorization before creating background jobs.
@@ -305,7 +311,7 @@ function ftuSheet_() {
 }
 function ftuRows_() {
   const sheet = ftuSheet_();
-  return sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 18).getValues();
+  return sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 19).getValues();
 }
 function ftuRow_(purchase, line) {
   const buyer = purchase.buyer;
@@ -322,6 +328,7 @@ function ftuRow_(purchase, line) {
     line.name + ' · ' + (line.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'),
     line.ticket_quantity,
     line.bundle_size === 1 ? 'Đơn' : 'Combo ' + line.bundle_size,
+    line.bundle_size === 1 ? 0 : line.ticket_quantity / line.bundle_size,
     'Đã đồng bộ',
     new Date(),
     purchase.id,
@@ -360,11 +367,11 @@ function syncFtuPurchases() {
     const dirty = {};
     existing.forEach((row) => {
       if (
-        row[14] &&
-        baseline[row[14]] &&
-        editableSignature_(existing.filter((r) => r[14] === row[14])) !== baseline[row[14]]
+        row[15] &&
+        baseline[row[15]] &&
+        editableSignature_(existing.filter((r) => r[15] === row[15])) !== baseline[row[15]]
       )
-        dirty[row[14]] = true;
+        dirty[row[15]] = true;
     });
     Object.keys(dirty).forEach((id) => {
       if (!pending[id]) {
@@ -375,7 +382,7 @@ function syncFtuPurchases() {
     const sheet = ftuSheet_();
     let appendRow = Math.max(sheet.getLastRow() + 1, 2);
     all.forEach((purchase) => {
-      const current = ftuRows_().filter((row) => row[14] === purchase.id);
+      const current = ftuRows_().filter((row) => row[15] === purchase.id);
       if (pending[purchase.id] || dirty[purchase.id]) {
         return;
       }
@@ -395,7 +402,7 @@ function syncFtuPurchases() {
             appendRow + rows.length - 1 - sheet.getMaxRows(),
           );
         sheet
-          .getRange(appendRow, 1, rows.length, 18)
+          .getRange(appendRow, 1, rows.length, 19)
           .setValues(rows.map((row) => row.map(safeFtuCell_)));
         appendRow += rows.length;
       }
@@ -422,13 +429,13 @@ function mirrorFtuDatabase_(purchases) {
   if (sheet.getMaxRows() < rows.length + 1)
     sheet.insertRowsAfter(sheet.getMaxRows(), rows.length + 1 - sheet.getMaxRows());
   const old = sheet.getLastRow();
-  sheet.getRange(1, 1, 1, 18).setValues([FTU_HEADERS]);
+  sheet.getRange(1, 1, 1, 19).setValues([FTU_HEADERS]);
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   if (rows.length)
-    sheet.getRange(2, 1, rows.length, 18).setValues(rows.map((row) => row.map(safeFtuCell_)));
+    sheet.getRange(2, 1, rows.length, 19).setValues(rows.map((row) => row.map(safeFtuCell_)));
   if (old > rows.length + 1)
-    sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 18).clearContent();
-  sheet.hideColumns(15, 4);
+    sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 19).clearContent();
+  sheet.hideColumns(16, 4);
 }
 
 function editableSignature_(rows) {
@@ -494,25 +501,26 @@ function updateFtuMetadata_(id, purchase) {
   const sheet = ftuSheet_();
   const current = ftuRows_();
   const changed =
-    editableSignature_(current.filter((row) => row[14] === id)) !==
+    editableSignature_(current.filter((row) => row[15] === id)) !==
     editableSignature_(purchase.lines.map((line) => ftuRow_(purchase, line)));
   current.forEach((row, index) => {
-    if (row[14] !== id) return;
+    if (row[15] !== id) return;
     const line = purchase.lines.find(
       (line) =>
-        line.product_id === row[17] &&
+        line.product_id === row[18] &&
         line.bundle_size === { Đơn: 1, 'Combo 2': 2, 'Combo 3': 3 }[String(row[11])],
     );
     sheet
-      .getRange(index + 2, 13, 1, 6)
+      .getRange(index + 2, 13, 1, 7)
       .setValues([
         [
+          ftuComboCount_(row),
           changed ? 'Database đã lưu — ô khác cần đối chiếu' : 'Đã đồng bộ',
           new Date(),
           id,
           purchase.revision,
           purchase.evidence_id,
-          line?.product_id || row[17],
+          line?.product_id || row[18],
         ],
       ]);
   });
@@ -537,17 +545,23 @@ function writeFtuBaseline_(baseline) {
 function safeFtuCell_(value) {
   return typeof value === 'string' && /^\s*[=+\-@]/.test(value) ? "'" + value : value;
 }
+function ftuComboCount_(row) {
+  const size = { Đơn: 1, 'Combo 2': 2, 'Combo 3': 3 }[String(row[11])];
+  const tickets = Number(row[10]);
+  if (!size || !Number.isSafeInteger(tickets) || tickets < 1 || tickets % size !== 0) return '';
+  return size === 1 ? 0 : tickets / size;
+}
 function markFtuRows_(id, message) {
   const sheet = ftuSheet_();
   ftuRows_().forEach((row, index) => {
-    if (row[14] === id) sheet.getRange(index + 2, 13).setValue(message);
+    if (row[15] === id) sheet.getRange(index + 2, 14).setValue(message);
   });
 }
 function writeFtuOrder_(id, operation) {
   const rows = operationRows_(
     id,
     operation,
-    ftuRows_().filter((row) => row[14] === id),
+    ftuRows_().filter((row) => row[15] === id),
   );
   if (!rows.length) throw new Error('Không tìm thấy dòng đơn; không tự xóa đơn.');
   const first = rows[0];
@@ -555,7 +569,7 @@ function writeFtuOrder_(id, operation) {
     rows.some(
       (row) =>
         JSON.stringify(row.slice(0, 9)) !== JSON.stringify(first.slice(0, 9)) ||
-        row[15] !== first[15],
+        row[16] !== first[16],
     )
   )
     throw new Error('Các dòng cùng đơn phải có thông tin người mua và revision thống nhất.');
@@ -575,7 +589,7 @@ function writeFtuOrder_(id, operation) {
       (product) =>
         product.name + ' · ' + (product.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường') === row[9],
     );
-    const original = products.find((product) => product.id === row[17]);
+    const original = products.find((product) => product.id === row[18]);
     const product = matches.find((product) => product.offer_id === original?.offer_id);
     const size = { Đơn: 1, 'Combo 2': 2, 'Combo 3': 3 }[String(row[11])];
     const count = Number(row[10]);
@@ -584,11 +598,11 @@ function writeFtuOrder_(id, operation) {
     return { product_id: product.id, bundle_size: size, quantity: count / size };
   });
   // Replacing a proof requires uploading a new file through the protected API, not trusting a cell URL.
-  let evidence = String(first[16]);
+  let evidence = String(first[17]);
   if (String(first[8]) !== evidence) evidence = uploadFtuProof_(id, String(first[8]), operation);
   const result = ftuApi_('/admin/sheets/purchases/' + id, 'post', {
     operation_id: operation,
-    expected_revision: Number(first[15]),
+    expected_revision: Number(first[16]),
     code: String(first[0]),
     buyer,
     lines,
@@ -655,15 +669,21 @@ function onFtuPurchaseEdit(event) {
     const pending = readFtuPending_();
     const start = event.range.getRow() - 2,
       end = start + event.range.getNumRows();
+    if (event.range.getColumn() <= 12 && event.range.getColumn() + event.range.getNumColumns() > 10)
+      rows
+        .slice(start, end)
+        .forEach((row, index) =>
+          sheet.getRange(start + index + 2, 13).setValue(ftuComboCount_(row)),
+        );
     const ids = new Set(
       rows
         .slice(start, end)
-        .map((row) => row[14])
+        .map((row) => row[15])
         .filter(Boolean),
     );
     ids.forEach((id) => {
-      const edited = rows.slice(start, end).find((row) => row[14] === id);
-      const commonRows = rows.slice(start, end).filter((row) => row[14] === id);
+      const edited = rows.slice(start, end).find((row) => row[15] === id);
+      const commonRows = rows.slice(start, end).filter((row) => row[15] === id);
       if (
         event.range.getColumn() <= 9 &&
         commonRows.some(
@@ -679,7 +699,7 @@ function onFtuPurchaseEdit(event) {
           // Propagate only the columns in this edit, preserving unrelated buyer fields.
           const column = event.range.getColumn(),
             count = Math.min(event.range.getNumColumns(), 10 - column);
-          if (row[14] === id && (index < start || index >= end))
+          if (row[15] === id && (index < start || index >= end))
             sheet
               .getRange(index + 2, column, 1, count)
               .setValues([edited.slice(column - 1, column - 1 + count).map(safeFtuCell_)]);

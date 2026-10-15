@@ -123,6 +123,41 @@ it('automatically closes only expired open voting sessions and never finalizes o
       .rows[0].n,
   ).toBe(0);
 });
+it('closes a scheduled session at its server deadline without an OPEN state transition or result publication', async () => {
+  await rpc('prepare_gender_voting', [admin, 'aal2', round]);
+  await rpc('save_voting_settings', [
+    admin,
+    'aal1',
+    round,
+    new Date(Date.now() + 800).toISOString(),
+    new Date(Date.now() + 2800).toISOString(),
+    null,
+  ]);
+  expect(
+    (
+      await db.query<{ state: string }>(
+        'select state from public.vote_sessions where round_id=$1',
+        [round],
+      )
+    ).rows[0].state,
+  ).toBe('SCHEDULED');
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(0);
+  await new Promise((resolve) => setTimeout(resolve, 2900));
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(1);
+  expect(await rpc('close_due_vote_sessions', [100])).toBe(0);
+  expect(
+    (
+      await db.query<{ state: string }>(
+        'select state from public.vote_sessions where round_id=$1',
+        [round],
+      )
+    ).rows[0].state,
+  ).toBe('CLOSED');
+  expect(
+    (await db.query<{ n: number }>('select count(*)::int n from public.vote_result_snapshots'))
+      .rows[0].n,
+  ).toBe(0);
+});
 const editData = (r: Purchase, quantity: number, revision = 0) => ({
   operation_id: crypto.randomUUID(),
   expected_revision: revision,
