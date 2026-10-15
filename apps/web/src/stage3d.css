@@ -163,6 +163,23 @@
     animation-duration: 12s;
   }
 }
+/* Keep native touch scrolling free of decorative GPU work. Preserve the last
+   painted frame, then resume the same scene once the gesture/momentum ends. */
+html[data-mobile-scrolling='true']
+  :is(.stage-crown, .logo-piece, .stage-atmosphere *, .marquee-track) {
+  animation-play-state: paused;
+}
+@media (max-width: 900px), (pointer: coarse) {
+  .stage-crown {
+    filter: none;
+  }
+  .reveal-item {
+    transition: opacity 250ms ease;
+  }
+  .reveal-item.reveal-waiting {
+    transform: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-motion-override='on'])) .stage-crown > img {
     opacity: 1;

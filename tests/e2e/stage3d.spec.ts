@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated-test';
 
 test('reload paints the 3D scene immediately without a fallback frame or removed ornaments', async ({
   page,

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isMobileScrolling, mobileScrollEvent } from './mobileScroll';
 
 /** Twisted silk with real depth, surface normals and double-sided lighting. */
 function silkGeometry(phase: number) {
@@ -158,7 +159,7 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
   };
   const render = (now: number) => {
     frame = 0;
-    if (disposed || lost || !visible || document.hidden) {
+    if (disposed || lost || !visible || document.hidden || isMobileScrolling()) {
       previous = 0;
       return;
     }
@@ -199,7 +200,7 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     if (host.dataset.sceneReady !== 'true') host.dataset.sceneReady = 'true';
   };
   const sync = () => {
-    const running = visible && !document.hidden && !lost && !disposed;
+    const running = visible && !document.hidden && !lost && !disposed && !isMobileScrolling();
     host.dataset.sceneRunning = String(running);
     if (running && !frame) frame = requestAnimationFrame(render);
     else if (!running) {
@@ -218,6 +219,7 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     pointerX = pointerY = 0;
   };
   const onScroll = () => {
+    if (mobile || !visible || document.hidden || isMobileScrolling()) return;
     scroll = Math.max(0, Math.min(1, -host.getBoundingClientRect().top / height));
   };
   const onLost = (event: Event) => {
@@ -242,6 +244,7 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
   host.addEventListener('pointerleave', leave);
   window.addEventListener('scroll', onScroll, { passive: true });
   document.addEventListener('visibilitychange', sync);
+  document.addEventListener(mobileScrollEvent, sync);
   canvas.addEventListener('webglcontextlost', onLost);
   canvas.addEventListener('webglcontextrestored', onRestored);
   resize();
@@ -261,6 +264,7 @@ export function mountStage(canvas: HTMLCanvasElement, host: HTMLElement) {
     host.removeEventListener('pointerleave', leave);
     window.removeEventListener('scroll', onScroll);
     document.removeEventListener('visibilitychange', sync);
+    document.removeEventListener(mobileScrollEvent, sync);
     canvas.removeEventListener('webglcontextlost', onLost);
     canvas.removeEventListener('webglcontextrestored', onRestored);
     disposeObject(scene);

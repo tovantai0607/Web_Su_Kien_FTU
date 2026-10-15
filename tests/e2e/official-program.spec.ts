@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './isolated-test';
 import AxeBuilder from '@axe-core/playwright';
 import { demoEdition } from '@ftu/shared';
 const id = (n: number) => `99020000-0000-4000-8000-${String(n).padStart(12, '0')}`;

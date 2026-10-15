@@ -88,6 +88,7 @@ beforeAll(async () => {
   await db.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
 });
 afterAll(async () => {
+  objects.clear();
   await db.close();
 });
 it('serves the approved DEMO catalog and vote round alongside an official homepage, and fences writes before mutation', async () => {
