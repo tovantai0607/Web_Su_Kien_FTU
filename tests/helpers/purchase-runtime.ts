@@ -105,9 +105,23 @@ class TableQuery {
         'contest_editions',
         'timeline_events',
         'program_publications',
+        'media_assets',
       ].includes(table)
     )
       throw new Error('Unexpected table: ' + table);
+  }
+  async insert(data: Record<string, unknown>) {
+    if (this.table !== 'media_assets') throw new Error('Unexpected insert table');
+    try {
+      const columns = Object.keys(data).map(identifier);
+      await this.query(
+        `insert into public.${this.table} (${columns.join(',')}) values (${columns.map((_, i) => '$' + (i + 1)).join(',')})`,
+        Object.values(data),
+      );
+      return { error: null };
+    } catch (e) {
+      return { error: { message: (e as Error).message } };
+    }
   }
   select(fields: string, options?: { count?: string }) {
     if (

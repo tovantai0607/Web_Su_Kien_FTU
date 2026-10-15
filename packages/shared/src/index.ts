@@ -37,14 +37,15 @@ export const applicationSchema = z
     talents: z.string().trim().max(1000),
     media_ids: z
       .array(uuid)
-      .length(3, 'Cần 3 ảnh hồ sơ')
-      .refine((ids) => new Set(ids).size === ids.length, 'Ba ảnh hồ sơ phải khác nhau'),
+      .refine((ids) => ids.length === 0 || ids.length === 3, 'Ảnh hồ sơ cũ phải đủ bộ 3 ảnh')
+      .refine((ids) => new Set(ids).size === ids.length, 'Ảnh hồ sơ phải khác nhau')
+      .optional(),
     student_card_media_id: z.string().uuid('Cần ảnh thẻ sinh viên FTU'),
     consent: z.literal(true, { error: 'Bạn cần chấp nhận thể lệ và thông báo dữ liệu' }),
     turnstile_token: z.string().min(1).max(2048),
   })
   .strict()
-  .refine((data) => !data.media_ids.includes(data.student_card_media_id), {
+  .refine((data) => !(data.media_ids ?? []).includes(data.student_card_media_id), {
     message: 'Ảnh thẻ sinh viên phải khác ảnh hồ sơ',
     path: ['student_card_media_id'],
   });

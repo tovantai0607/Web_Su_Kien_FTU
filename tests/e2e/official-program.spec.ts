@@ -196,8 +196,23 @@ test('registration remains reachable and shows all three steps without permittin
     .fill('Câu chuyện của thí sinh kiểm thử, chỉ chuẩn bị thông tin trên trình duyệt.');
   await page.locator('textarea[name=talents]').fill('Hát và biểu diễn nghệ thuật.');
   await page.getByRole('button', { name: 'Tiếp tục' }).click();
-  await expect(page.getByRole('heading', { name: 'Ảnh hồ sơ' })).toBeVisible();
-  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU')).toBeDisabled();
+  await expect(page.getByRole('heading', { name: 'Ảnh thẻ sinh viên' })).toBeVisible();
+  await expect(page.getByLabel('Ảnh thẻ sinh viên FTU')).toBeEnabled();
+  await expect(page.locator('input[type=file]')).toHaveCount(1);
+  await page
+    .getByLabel('Ảnh thẻ sinh viên FTU')
+    .setInputFiles({
+      name: 'student-card-test.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1sAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+  await expect(page.getByAltText('Ảnh thẻ sinh viên đã chọn trên máy')).toBeVisible();
+  await expect(
+    page.getByText('Đã chọn ảnh trên máy, chưa tải lên server.', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Gửi hồ sơ' })).toBeDisabled();
   expect(writes).toEqual([]);
 });

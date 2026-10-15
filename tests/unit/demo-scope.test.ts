@@ -62,7 +62,7 @@ it('rejects non-admin and anonymous DEMO writes even with the approved offer ID'
 it('rejects LIVE purchases, unrelated modules and attempts to change the DEMO offer scope', async () => {
   for (const r of [
     request('purchases', { offer_id: 'live' }),
-    request('contestants/apply'),
+    request('contestants/apply/extra'),
     request('admin/purchase-offers', { ...offer, mode: 'LIVE' }),
     request('admin/editions', {}),
     request('votes', { round_id: 'live' }),
@@ -102,4 +102,17 @@ it('lets the authorized image route prepare bytes without permitting LIVE record
     request('admin/public-images', {}, 'PUT'),
   ])
     await expect(enforceDemoWrite(r, env)).rejects.toMatchObject({ status: 403 });
+});
+
+it('allows only official student-card registration routes through the DEMO fence for ordinary users', async () => {
+  state.admin = false;
+  for (const path of ['contestants/apply', 'media/upload?purpose=student_card'])
+    await expect(enforceDemoWrite(request(path), env)).resolves.toBeUndefined();
+  for (const path of [
+    'media/upload',
+    'media/upload?purpose=portfolio',
+    'media/upload/extra?purpose=student_card',
+    'contestants/apply/extra',
+  ])
+    await expect(enforceDemoWrite(request(path), env)).rejects.toMatchObject({ status: 403 });
 });

@@ -68,3 +68,13 @@
     padding: 24px 20px;
   }
 }
+
+.student-card-preview {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  max-height: 260px;
+  object-fit: contain;
+  margin: 20px auto;
+  border-radius: 12px;
+}

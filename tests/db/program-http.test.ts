@@ -253,3 +253,50 @@ it('QA-BOUNDARY enforces origin, throttle and strict publication input', async (
     env.RATE_LIMITER = limiter;
   }
 });
+
+it('QA-REGISTRATION allows ordinary student-card uploads only in the server window with DEMO configured', async () => {
+  const oldScope = env.DEMO_TEST_OFFER_SLUG;
+  env.DEMO_TEST_OFFER_SLUG = 'test-giao-dich-demo';
+  try {
+    const image = await sharp({
+      create: { width: 40, height: 24, channels: 3, background: '#a02020' },
+    })
+      .png()
+      .toBuffer();
+    const upload = (auth?: string, purpose = 'student_card') =>
+      app.request(
+        `http://localhost/api/media/upload?edition=${edition}&purpose=${purpose}`,
+        {
+          method: 'POST',
+          headers: {
+            Origin: env.ALLOWED_ORIGIN,
+            'Content-Type': 'image/png',
+            ...(auth ? { Authorization: auth } : {}),
+          },
+          body: new Uint8Array(image).buffer,
+        },
+        env,
+      );
+    expect((await upload()).status).toBe(401);
+    expect((await upload(token(owner))).status).toBe(409);
+    expect(objects.size).toBe(0);
+    await db.query(
+      "update public.contest_editions set registration_open_at=now()-interval '1 hour',registration_close_at=now()+interval '1 hour' where id=$1",
+      [edition],
+    );
+    expect((await upload(token(owner), 'portfolio')).status).toBe(403);
+    const response = await upload(token(owner));
+    expect(response.status).toBe(200);
+    const { id } = (await data(response)) as { id: string };
+    const saved = await db.query<{ user_id: string; purpose: string; state: string }>(
+      'select user_id,purpose,state from public.media_assets where id=$1',
+      [id],
+    );
+    expect(saved.rows[0]).toEqual({ user_id: owner, purpose: 'student_card', state: 'ready' });
+    expect(objects.size).toBe(1);
+    expect((await sharp(Buffer.from([...objects.values()][0])).metadata()).format).toBe('webp');
+    expect((await db.query('select * from public.contestant_private')).rows).toHaveLength(0);
+  } finally {
+    env.DEMO_TEST_OFFER_SLUG = oldScope;
+  }
+});

@@ -335,9 +335,9 @@ function Legal({ privacy }: { privacy: boolean }) {
             </p>
             <h2>Hồ sơ & vòng thi</h2>
             <p>
-              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu, ba ảnh hồ sơ và ảnh thẻ sinh viên
-              FTU. Kết quả được BTC xét duyệt và công bố theo từng vòng. Số thí sinh qua vòng được
-              cấu hình theo mùa.
+              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu và một ảnh thẻ sinh viên FTU. Kết
+              quả được BTC xét duyệt và công bố theo từng vòng. Số thí sinh qua vòng được cấu hình
+              theo mùa.
             </p>
             <h2>Bình chọn chung kết</h2>
             <p>

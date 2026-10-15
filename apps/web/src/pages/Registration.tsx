@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Check, ImagePlus, ShieldCheck, Flower2, IdCard } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, Flower2, IdCard } from 'lucide-react';
 import {
   applicationSchema,
   registrationState,
@@ -27,6 +27,17 @@ export default function Registration() {
     [success, setSuccess] = useState<{ code: string } | null>(null),
     [files, setFiles] = useState<string[]>([]),
     [uploading, setUploading] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<File | null>(null);
+  const [cardPreview, setCardPreview] = useState('');
+  useEffect(() => {
+    if (!selectedCard) {
+      setCardPreview('');
+      return;
+    }
+    const url = URL.createObjectURL(selectedCard);
+    setCardPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedCard]);
   const idempotency = useRef(crypto.randomUUID());
   const top = useRef<HTMLDivElement>(null);
   const form = useForm<ApplicationInput>({
@@ -45,53 +56,57 @@ export default function Registration() {
       turnstile_token: '',
     },
   });
+  const uploadOwner = useRef(user?.id);
+  const uploadGeneration = useRef(0);
+  useEffect(() => {
+    uploadGeneration.current += 1;
+    if (uploadOwner.current && uploadOwner.current !== user?.id) {
+      setSelectedCard(null);
+      setFiles([]);
+      form.setValue('student_card_media_id', '');
+    }
+    uploadOwner.current = user?.id;
+    setUploading(false);
+  }, [user?.id, form]);
   const errors = form.formState.errors;
   const onToken = useCallback((token: string) => form.setValue('turnstile_token', token), [form]);
-  const upload = async (index: number, file?: File) => {
+  const upload = async (file?: File) => {
     if (!file) return;
-    if (!preview && (!user || state !== 'OPEN')) {
-      setError('Đăng nhập và chờ đến thời gian nhận hồ sơ để tải ảnh.');
-      return;
-    }
+    setError('');
     if (file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png'].includes(file.type)) {
       setError('Chọn ảnh JPEG/PNG, tối đa 5 MB.');
       return;
     }
+    setSelectedCard(file);
+    setFiles((f) => {
+      const next = [...f];
+      next[3] = file.name;
+      return next;
+    });
+    form.setValue('student_card_media_id', '');
+    // Choosing locally is available before opening; no bytes leave this tab yet.
+    if (!preview && (!user || state !== 'OPEN')) return;
+    const generation = ++uploadGeneration.current;
     setUploading(true);
-    setError('');
     try {
-      let id: string;
-      if (preview) id = crypto.randomUUID();
-      else {
-        id = (
-          await api<{ id: string }>(
-            '/media/upload?edition=' +
-              edition.data?.id +
-              '&purpose=' +
-              (index === 3 ? 'student_card' : 'portfolio'),
-            {
-              method: 'POST',
-              body: file,
-              headers: { 'Content-Type': file.type },
-            },
-          )
-        ).id;
-      }
-      if (index === 3) form.setValue('student_card_media_id', id, { shouldValidate: true });
-      else {
-        const ids = [...form.getValues('media_ids')];
-        ids[index] = id;
-        form.setValue('media_ids', ids, { shouldValidate: true });
-      }
-      setFiles((f) => {
-        const next = [...f];
-        next[index] = file.name;
-        return next;
-      });
+      const id = preview
+        ? crypto.randomUUID()
+        : (
+            await api<{ id: string }>(
+              '/media/upload?edition=' + edition.data?.id + '&purpose=student_card',
+              {
+                method: 'POST',
+                body: file,
+                headers: { 'Content-Type': file.type },
+              },
+            )
+          ).id;
+      if (generation === uploadGeneration.current)
+        form.setValue('student_card_media_id', id, { shouldValidate: true });
     } catch (e) {
-      setError((e as Error).message);
+      if (generation === uploadGeneration.current) setError((e as Error).message);
     } finally {
-      setUploading(false);
+      if (generation === uploadGeneration.current) setUploading(false);
     }
   };
   const submit = form.handleSubmit(
@@ -113,6 +128,8 @@ export default function Registration() {
           headers: { 'Idempotency-Key': idempotency.current },
           body: JSON.stringify(data),
         });
+        setSelectedCard(null);
+        setFiles([]);
         setSuccess(result);
       } catch (e) {
         setError((e as Error).message);
@@ -291,29 +308,8 @@ export default function Registration() {
               )}
               {step === 2 && (
                 <>
-                  <h2>Ảnh hồ sơ</h2>
-                  <p>Ba ảnh hồ sơ và một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB mỗi ảnh.</p>
-                  <div className="upload-grid">
-                    {['Chân dung', 'Bán thân', 'Toàn thân'].map((label, i) => (
-                      <label className={'upload-box' + (files[i] ? ' has-file' : '')} key={label}>
-                        <ImagePlus size={28} strokeWidth={1} />
-                        <strong>{label}</strong>
-                        <span>{files[i] ?? 'Chọn ảnh'}</span>
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          aria-label={'Ảnh ' + label.toLowerCase()}
-                          disabled={uploading || (!preview && (!user || state !== 'OPEN'))}
-                          onChange={(e) => void upload(i, e.target.files?.[0])}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  {errors.media_ids && (
-                    <p role="alert" className="field-error">
-                      {errors.media_ids.message}
-                    </p>
-                  )}
+                  <h2>Ảnh thẻ sinh viên</h2>
+                  <p>Chỉ cần một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB, 12 megapixel.</p>
                   <label
                     className={'upload-box student-card-upload' + (files[3] ? ' has-file' : '')}
                   >
@@ -326,10 +322,47 @@ export default function Registration() {
                       aria-label="Ảnh thẻ sinh viên FTU"
                       aria-describedby="student-card-hint student-card-error"
                       aria-invalid={!!errors.student_card_media_id}
-                      disabled={uploading || (!preview && (!user || state !== 'OPEN'))}
-                      onChange={(e) => void upload(3, e.target.files?.[0])}
+                      disabled={uploading}
+                      onChange={(e) => {
+                        void upload(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
                     />
                   </label>
+                  {cardPreview && (
+                    <img
+                      className="student-card-preview"
+                      src={cardPreview}
+                      alt="Ảnh thẻ sinh viên đã chọn trên máy"
+                    />
+                  )}
+                  <p role="status" className="fine-print">
+                    {uploading
+                      ? 'Đang tải ảnh lên…'
+                      : form.watch('student_card_media_id')
+                        ? 'Ảnh thẻ đã sẵn sàng.'
+                        : selectedCard
+                          ? 'Đã chọn ảnh trên máy, chưa tải lên server.'
+                          : 'Bạn có thể chọn và xem trước ảnh ngay trên máy.'}
+                    {!preview &&
+                      state !== 'OPEN' &&
+                      ' Chỉ tải lên server trong thời gian nhận hồ sơ 07–21/03/2027.'}
+                    {!preview && !user && ' Đăng nhập để gửi ảnh khi mở đơn.'}
+                  </p>
+                  {!preview &&
+                    user &&
+                    state === 'OPEN' &&
+                    selectedCard &&
+                    !form.watch('student_card_media_id') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={uploading}
+                        onClick={() => void upload(selectedCard)}
+                      >
+                        Tải ảnh đã chọn
+                      </Button>
+                    )}
                   <p id="student-card-hint" className="fine-print">
                     Ảnh thẻ chỉ dùng để xác minh sinh viên FTU, được giữ riêng tư và không xuất hiện
                     trên trang thí sinh. Có thể che thông tin không cần thiết; giữ rõ họ tên, tên

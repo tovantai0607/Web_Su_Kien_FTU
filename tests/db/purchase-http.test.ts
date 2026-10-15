@@ -146,7 +146,8 @@ it('serves both official nights publicly, restricts DEMO to admins, and fences w
     );
     expect(voting.demo_leaderboard).toEqual({ rows: [], session_id: null });
     expect((await call('/purchases', { ...selection(), offer_id: fixture(99) })).status).toBe(403);
-    expect((await call('/contestants/apply', {})).status).toBe(403);
+    // Official registration reaches its own strict validation; DEMO purchase guards stay intact.
+    expect((await call('/contestants/apply', {})).status).toBe(400);
     expect((await call('/purchases', selection())).status).toBe(403);
     expect((await call('/votes', { round_id: fixture(20) })).status).toBe(403);
     expect(

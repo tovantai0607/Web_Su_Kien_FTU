@@ -153,7 +153,7 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       faculty: 'Test',
       bio: 'Test bio',
       talents: '',
-      media_ids: media,
+      media_ids: [],
       student_card_media_id: studentCard,
       consent: true,
     };
@@ -194,6 +194,21 @@ describe('Postgres migrations & invariants (PGlite single-session)', () => {
       'select public.apply_contestant($1,$2,$3,$4)',
       [user, data, key, 'hash'],
     );
+    expect(
+      (
+        await db.query('select * from public.contestant_media where contestant_id=$1', [
+          r.rows[0].apply_contestant.id,
+        ])
+      ).rows,
+    ).toHaveLength(0);
+    expect(
+      (
+        await db.query<{ state: string }>(
+          'select state from public.media_assets where id=any($1::uuid[])',
+          [media],
+        )
+      ).rows.every((row) => row.state === 'ready'),
+    ).toBe(true);
     const again = await db.query('select public.apply_contestant($1,$2,$3,$4)', [
       user,
       data,

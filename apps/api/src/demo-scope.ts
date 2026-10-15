@@ -44,11 +44,20 @@ export async function demoOffer(env: Env) {
 // An additional environment fence, never a replacement for Auth, roles or ownership.
 export async function enforceDemoWrite(request: Request, env: Env, principal?: Principal) {
   if (!env.DEMO_TEST_OFFER_SLUG || ['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
+  const url = new URL(request.url);
+  const path = url.pathname;
+  // Official registration routes independently enforce verified identity, edition,
+  // ownership and the server registration window. DEMO ticket writes stay fenced.
+  if (
+    request.method === 'POST' &&
+    (path === '/api/contestants/apply' ||
+      (path === '/api/media/upload' && url.searchParams.get('purpose') === 'student_card'))
+  )
+    return;
   await requireDemoAdmin(request, env, principal);
-  const path = new URL(request.url).pathname;
   // Preparing an image object does not create or publish a LIVE program record.
   // The route still requires authenticated CONTENT_EDITOR/SUPER_ADMIN access.
-  // Keep every publication, registration and other LIVE mutation fenced below.
+  // Keep publication and other LIVE mutations fenced below.
   if (request.method === 'POST' && path === '/api/admin/public-images') return;
   const offer = await demoOffer(env);
   let allowed = false;
