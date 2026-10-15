@@ -50,7 +50,15 @@ environment before any subsequent deployment. Preserve secrets and data.
 
 ## Git build settings
 
-Root `/`; build `npm run build`; deploy command
+Connected Cloudflare Workers Builds to `tovantai0607/Web_Su_Kien_FTU`,
+production branch `main`, on 15/10/2026. Every push/merge to `main` triggers a
+build and deploy. Failed builds do not replace the currently deployed version.
+
+Root `/`; build `npm run typecheck && npm run build`; deploy command
 `npx wrangler deploy --config apps/api/wrangler.jsonc --env online-test`.
 Disable automatic branch Preview builds for this environment.
 Runtime secrets and build variables are separate settings.
+Build variables: `VITE_PREVIEW_MODE=false`, Supabase URL and publishable key,
+Turnstile site key, and `NODE_VERSION=22.20.0`. Backend secrets stay on the Worker.
+Cloudflare build token `ftucharm-main-build` was created with the user's approval.
+No database migrations are included in the build/deploy commands.
