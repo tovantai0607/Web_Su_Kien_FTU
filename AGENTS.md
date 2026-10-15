@@ -1,5 +1,9 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Yêu cầu gộp main và bàn giao ảnh/Sheet ngày15/10/2026
+
+Người dùng đã yêu cầu gộp nhánh bàn giao vào main, thay giới hạn chỉ push nhánh ở phần lịch sử bên dưới. Được phép push main và kích hoạt Cloudflare Builds trong lượt này. Đọc `docs/NEXT-STEPS-SHEET-IMAGES.md` để tiếp quản phần còn lại:4 migration pending, codec WASM/Storage, xác minh Worker và OAuth/trigger Google; các bước remote này vẫn do admin sở hữu dịch vụ thực hiện. Không suy ra merge/deploy Worker là Sheet tự đồng bộ hoặc upload ảnh đã đạt. Ảnh private, Sheet lưu UUID/mã minh chứng và xem qua web có quyền, không public ảnh để nhúng vào ô.
+
 ## Bàn giao admin khác ngày15/10/2026
 
 Người dùng rút việc tự kích hoạt vì tài khoản dịch vụ đang mở không thuộc họ: chỉ push code lên nhánh, phần online do admin khác tiếp quản. Đọc `docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md`. Chưa migration/deploy/fixture/vote/trigger trong lượt này; Supabase14 migration,4 pending. CLI login đã hủy/hết hạn. Đã lưu backup phạm vi nghiệp vụ/hàm mã hóa DPAPI local và đối chiếu10 bảng không đổi; không đưa backup/credentials vào Git. Kiểm tra local thứ tự áp4 pending sau registry cho cùng hàm/quyền với canonical. Không merge main vì nối auto-deploy; xác nhận kích hoạt trước đó không còn là chỉ dẫn tiếp tục tự deploy của lượt này.

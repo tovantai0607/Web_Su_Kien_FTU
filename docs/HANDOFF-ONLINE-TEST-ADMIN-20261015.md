@@ -1,5 +1,7 @@
 # Bàn giao admin: kích hoạt mua vé, Google Sheet và vote DEMO
 
+**Yêu cầu mới nhất15/10/2026:** người dùng đã yêu cầu gộp nhánh bàn giao vào main và ghi rõ việc còn lại cho ảnh/Sheet. Hướng dẫn tiếp quản sau gộp nằm ở [NEXT-STEPS-SHEET-IMAGES.md](NEXT-STEPS-SHEET-IMAGES.md). Quyết định chỉ push nhánh/không merge trong mục lịch sử ngay dưới đã được thay; các bước migration/Function/OAuth/trigger vẫn do admin sở hữu dịch vụ thực hiện.
+
 ## Điểm tiếp quản
 
 Ngày15/10/2026, người dùng yêu cầu dừng kích hoạt vì tài khoản dịch vụ đang mở không thuộc họ; chỉ đẩy code lên Git, phần online do admin khác thực hiện. Yêu cầu này thay việc tự triển khai ở lượt trước. **Không gộp main trong lượt bàn giao**: main nối Cloudflare Builds và sẽ tự deploy.

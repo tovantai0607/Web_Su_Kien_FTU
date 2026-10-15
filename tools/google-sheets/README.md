@@ -1,5 +1,9 @@
 # Đồng bộ bảng Data với Supabase
 
+## Tiếp quản sau yêu cầu gộp main15/10/2026
+
+Người dùng đã cho phép gộp main/kích hoạt Cloudflare Builds; xem [việc còn lại cho ảnh và Sheet](../../docs/NEXT-STEPS-SHEET-IMAGES.md). Admin vẫn phải áp migration, deploy codec ảnh, xác minh Worker, kết nối OAuth và chạy installer/trigger. Merge source không tự bật đồng bộ. Minh chứng trên Sheet là mã/UUID, ảnh xem qua website có quyền; không công khai bucket hoặc token để nhúng ảnh.
+
 ## Bàn giao admin15/10/2026
 
 Người dùng yêu cầu chỉ push source, phần online do admin khác thực hiện bằng tài khoản của họ. Bắt đầu từ [bàn giao kích hoạt](../../docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md):4 migration pending, codec hosted/Worker chưa deploy, OAuth/trigger chưa bật. Callback đã cấu hình nhưng không đồng nghĩa Sheet tự đồng bộ. Giữ bảng/thư mục private và không dùng phiên đăng nhập của tài khoản khác.
