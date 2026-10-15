@@ -297,6 +297,7 @@ export type VoteSession = {
   close_at: string | null;
 };
 export type VotingData = {
+  participation?: { participants: number; votes: number } | null;
   round: Round;
   contestants: Contestant[];
   categories: VoteCategory[];
@@ -343,3 +344,4 @@ export function demoVoting(): VotingData {
 }
 export * from './purchases';
 export * from './program';
+export * from './sheet-sync';

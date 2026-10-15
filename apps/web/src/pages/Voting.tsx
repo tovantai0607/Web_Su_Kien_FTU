@@ -162,6 +162,12 @@ export default function Voting() {
             Mỗi vé Hoàn tất được bỏ một phiếu cho mỗi hạng mục đúng vòng, không cần check-in hoặc
             chờ email.
           </p>
+          {voting.data?.participation && (
+            <p aria-live="polite">
+              {voting.data.participation.participants} tài khoản đã bình chọn ·{' '}
+              {voting.data.participation.votes} phiếu đã ghi nhận
+            </p>
+          )}
         </div>
         <div className="vote-clock">
           <Clock3 size={25} />

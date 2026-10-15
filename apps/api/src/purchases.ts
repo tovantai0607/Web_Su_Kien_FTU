@@ -6,6 +6,7 @@ import {
   demoPurchaseCatalog,
   offerConfigSchema,
   purchaseSelectionSchema,
+  sheetPurchaseEditSchema,
 } from '@ftu/shared';
 import {
   authorize,
@@ -40,6 +41,9 @@ function failure(error: { message: string } | null) {
     REOPEN_APPROVAL_REQUIRED: [403, 'Cần SUPER_ADMIN và lý do để mở lại.'],
     VOTE_REASON_REQUIRED: [400, 'SUPER_ADMIN cần ghi lý do để đóng sớm phiên đang mở.'],
     VOTE_ALREADY_CLOSED: [409, 'Phiên đã đóng không được mở lại.'],
+    SHEET_REVISION_CONFLICT: [409, 'Đơn đã được người khác sửa. Tải lại dữ liệu trước khi gửi.'],
+    SHEET_BELOW_VOTED_TICKETS: [409, 'Không giảm số vé xuống dưới số vé đã dùng để vote.'],
+    INVALID_SHEET_EDIT: [409, 'Chỉ sửa đơn đã Hoàn tất với đúng thông tin được phép.'],
     LEGACY_VOTE_RECONCILIATION_REQUIRED: [
       409,
       'Cần đối chiếu hạng mục của phiếu cũ trước khi chốt.',
@@ -66,6 +70,33 @@ const id = (value: string) => {
     throw new HTTPException(400, { message: 'Mã không hợp lệ.' });
   return value;
 };
+async function transformPurchaseProof(request: Request, env: Env) {
+  if (!env.IMAGES || !env.MEDIA)
+    throw new HTTPException(503, { message: 'Lưu ảnh minh chứng chưa được cấu hình.' });
+  const mime = request.headers.get('Content-Type');
+  if (mime !== 'image/jpeg' && mime !== 'image/png')
+    throw new HTTPException(400, { message: 'Chọn ảnh JPG hoặc PNG, tối đa 5 MB.' });
+  const raw = await request.arrayBuffer();
+  if (!raw.byteLength || raw.byteLength > 5242880 || imageSignature(new Uint8Array(raw)) !== mime)
+    throw new HTTPException(400, { message: 'Ảnh không hợp lệ hoặc quá 5 MB.' });
+  let info: Awaited<ReturnType<ImagesBinding['info']>>;
+  try {
+    info = await env.IMAGES.info(new Blob([raw]).stream());
+  } catch {
+    throw new HTTPException(400, { message: 'Ảnh không đọc được. Chọn JPG/PNG khác.' });
+  }
+  if (!('width' in info) || !('height' in info) || info.width * info.height > 12000000)
+    throw new HTTPException(400, { message: 'Chọn ảnh tối đa 12 megapixel.' });
+  const transformed = await (
+    await env.IMAGES.input(new Blob([raw]).stream())
+      .transform({ width: 1600, fit: 'scale-down' })
+      .output({ format: 'image/webp', quality: 85, anim: false })
+  ).response();
+  const clean = stripWebPMetadata(await transformed.arrayBuffer());
+  if (clean.byteLength > 5242880)
+    throw new HTTPException(400, { message: 'Ảnh quá lớn sau xử lý.' });
+  return clean;
+}
 export const purchases = new Hono<AppEnv>();
 purchases.get('/purchase-catalog', async (c) => {
   if (c.env.DEMO_MODE === 'true') return c.json({ data: demoPurchaseCatalog() });
@@ -150,43 +181,14 @@ purchases.post('/purchases/:id/evidence', async (c) => {
     db = service(c.env);
   const owned = await db.rpc('read_purchase', { p_user: principal.id, p_request: requestId });
   failure(owned.error);
-  const prior = await db
-    .from('purchase_evidence')
-    .select('id')
-    .eq('request_id', requestId)
-    .eq('user_id', principal.id)
-    .maybeSingle();
-  failure(prior.error);
-  if (prior.data) return c.json({ data: prior.data });
+  // read_purchase resolves the current proof; compatible with the existing schema before rollout.
+  if (owned.data.evidence_id) return c.json({ data: { id: owned.data.evidence_id } });
   if (owned.data.status !== 'HELD')
     throw new HTTPException(409, { message: 'Đơn đã hết hạn hoặc Hoàn tất.' });
-  if (!c.env.IMAGES || !c.env.MEDIA)
-    throw new HTTPException(503, { message: 'Lưu ảnh minh chứng chưa được cấu hình.' });
-  const mime = c.req.header('Content-Type');
-  if (mime !== 'image/jpeg' && mime !== 'image/png')
-    throw new HTTPException(400, { message: 'Chọn ảnh JPG hoặc PNG, tối đa 5 MB.' });
-  const raw = await c.req.arrayBuffer();
-  if (!raw.byteLength || raw.byteLength > 5242880 || imageSignature(new Uint8Array(raw)) !== mime)
-    throw new HTTPException(400, { message: 'Ảnh không hợp lệ hoặc quá 5 MB.' });
-  let info: Awaited<ReturnType<ImagesBinding['info']>>;
-  try {
-    info = await c.env.IMAGES.info(new Blob([raw]).stream());
-  } catch {
-    throw new HTTPException(400, { message: 'Ảnh không đọc được. Chọn JPG/PNG khác.' });
-  }
-  if (!('width' in info) || !('height' in info) || info.width * info.height > 12000000)
-    throw new HTTPException(400, { message: 'Chọn ảnh tối đa 12 megapixel.' });
-  const transformed = await (
-    await c.env.IMAGES.input(new Blob([raw]).stream())
-      .transform({ width: 1600, fit: 'scale-down' })
-      .output({ format: 'image/webp', quality: 85, anim: false })
-  ).response();
-  const clean = stripWebPMetadata(await transformed.arrayBuffer());
-  if (clean.byteLength > 5242880)
-    throw new HTTPException(400, { message: 'Ảnh quá lớn sau xử lý.' });
+  const clean = await transformPurchaseProof(c.req.raw, c.env);
   const evidenceId = crypto.randomUUID();
   const object = `private/purchases/${principal.id}/${requestId}/${evidenceId}.webp`;
-  await c.env.MEDIA.put(object, clean, { httpMetadata: { contentType: 'image/webp' } });
+  await c.env.MEDIA!.put(object, clean, { httpMetadata: { contentType: 'image/webp' } });
   const attached = await db.rpc('attach_purchase_evidence', {
     p_user: principal.id,
     p_request: requestId,
@@ -197,7 +199,7 @@ purchases.post('/purchases/:id/evidence', async (c) => {
   // A simultaneous retry may have won; remove only this request's unused object.
   // On an uncertain network failure the DB may already have committed. Keep the private object
   // until reconciliation confirms it is unreferenced; never delete a possibly attached proof.
-  if (!attached.error && attached.data?.id !== evidenceId) await c.env.MEDIA.delete(object);
+  if (!attached.error && attached.data?.id !== evidenceId) await c.env.MEDIA!.delete(object);
   failure(attached.error);
   return c.json({ data: attached.data });
 });
@@ -251,6 +253,97 @@ purchases.get('/admin/purchases', async (c) => {
     .range(page * 50, page * 50 + 49);
   failure(error);
   return c.json({ data: { rows: data, count } });
+});
+purchases.get('/admin/sheets/purchases', async (c) => {
+  await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
+  const page = Number(c.req.query('page') ?? '0');
+  if (!Number.isSafeInteger(page) || page < 0 || page > 100000)
+    throw new HTTPException(400, { message: 'Trang không hợp lệ.' });
+  const { data, error, count } = await service(c.env)
+    .from('purchase_requests')
+    .select(
+      'id,code,buyer,lines,quantity,total_vnd,evidence_id,offer_id,round_id,revision,completed_at',
+      { count: 'exact' },
+    )
+    .eq('status', 'COMPLETED')
+    .order('completed_at')
+    .order('id')
+    .range(page * 100, page * 100 + 99);
+  failure(error);
+  return c.json({ data: { rows: data, count, server_time: new Date().toISOString() } });
+});
+purchases.post('/admin/sheets/purchases/:id', async (c) => {
+  const principal = c.get('principal');
+  await authorize(principal, c.env, ['TICKET_STAFF']);
+  const input = await json(c.req.raw, sheetPurchaseEditSchema);
+  const { data, error } = await service(c.env).rpc('edit_sheet_purchase', {
+    p_actor: principal.id,
+    p_aal: principal.aal,
+    p_request: id(c.req.param('id')),
+    p_data: input,
+  });
+  failure(error);
+  return c.json({ data });
+});
+purchases.post('/admin/sheets/purchases/:id/evidence', async (c) => {
+  const principal = c.get('principal'),
+    db = service(c.env),
+    requestId = id(c.req.param('id'));
+  await authorize(principal, c.env, ['TICKET_STAFF']);
+  const evidenceId = id(c.req.header('Idempotency-Key') ?? '');
+  const purchase = await db
+    .from('purchase_requests')
+    .select('id,user_id,status')
+    .eq('id', requestId)
+    .maybeSingle();
+  failure(purchase.error);
+  if (!purchase.data || purchase.data.status !== 'COMPLETED')
+    throw new HTTPException(404, { message: 'Không tìm thấy đơn đã Hoàn tất.' });
+  const clean = await transformPurchaseProof(c.req.raw, c.env);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', clean))]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  const existing = await db
+    .from('purchase_evidence')
+    .select('id,request_id,content_sha256')
+    .eq('id', evidenceId)
+    .maybeSingle();
+  failure(existing.error);
+  if (existing.data) {
+    if (existing.data.request_id !== requestId || existing.data.content_sha256 !== sha)
+      throw new HTTPException(409, { message: 'Yêu cầu gửi lại có ảnh khác.' });
+    return c.json({ data: { id: evidenceId } });
+  }
+  const object = `private/purchases/${purchase.data.user_id}/${requestId}/${evidenceId}.webp`;
+  // Never overwrite a possibly committed image on retry or a concurrent upload.
+  const stored = await c.env.MEDIA!.put(object, clean, {
+    onlyIf: { etagDoesNotMatch: '*' },
+    httpMetadata: { contentType: 'image/webp' },
+  });
+  if (!stored) {
+    const prior = await c.env.MEDIA!.get(object);
+    if (!prior)
+      throw new HTTPException(503, { message: 'Chưa xác nhận được ảnh đã lưu. Vui lòng thử lại.' });
+    const priorSha = [
+      ...new Uint8Array(
+        await crypto.subtle.digest('SHA-256', await new Response(prior.body).arrayBuffer()),
+      ),
+    ]
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+    if (priorSha !== sha) throw new HTTPException(409, { message: 'Yêu cầu gửi lại có ảnh khác.' });
+  }
+  const { data, error } = await db.rpc('register_sheet_purchase_evidence', {
+    p_actor: principal.id,
+    p_aal: principal.aal,
+    p_request: requestId,
+    p_id: evidenceId,
+    p_object: object,
+    p_bytes: clean.byteLength,
+    p_sha256: sha,
+  });
+  failure(error);
+  return c.json({ data });
 });
 purchases.get('/admin/purchase-offers', async (c) => {
   await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);

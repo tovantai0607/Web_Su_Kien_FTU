@@ -137,4 +137,67 @@ it('completes the real HTTP->SQL flow with a private, transformed proof and idem
   expect((await responseData<{ rows: Purchase[] }>(adminList)).rows).toHaveLength(1);
   expect((await request('/admin/purchases', undefined, owner)).status).toBe(403);
   expect((await request('/purchase-catalog')).status).toBe(200);
+  const exportList = await request('/admin/sheets/purchases', undefined, admin, {
+    Authorization: token(admin, 'aal2'),
+  });
+  expect(exportList.status).toBe(200);
+  expect(
+    (await responseData<{ rows: (Purchase & { revision: number })[] }>(exportList)).rows[0]
+      .revision,
+  ).toBe(0);
+  const edit = {
+    operation_id: crypto.randomUUID(),
+    expected_revision: 0,
+    code: purchase.code,
+    buyer: { ...purchase.buyer, email: 'new-contact@example.test' },
+    lines: purchase.lines.map((line) => ({
+      product_id: line.product_id,
+      bundle_size: line.bundle_size,
+      quantity: line.quantity,
+    })),
+    evidence_id: proof.id,
+  };
+  expect((await request(`/admin/sheets/purchases/${purchase.id}`, edit, other)).status).toBe(403);
+  const saved = await request(`/admin/sheets/purchases/${purchase.id}`, edit, admin, {
+    Authorization: token(admin, 'aal2'),
+  });
+  expect(saved.status).toBe(200);
+  expect((await responseData<Purchase>(saved)).buyer.email).toBe('new-contact@example.test');
+  expect(
+    (
+      await request(
+        `/admin/sheets/purchases/${purchase.id}`,
+        { ...edit, operation_id: crypto.randomUUID() },
+        admin,
+        { Authorization: token(admin, 'aal2') },
+      )
+    ).status,
+  ).toBe(409);
+  const replacementId = crypto.randomUUID();
+  const replaceProof = () =>
+    request(`/admin/sheets/purchases/${purchase.id}/evidence`, png, admin, {
+      Authorization: token(admin, 'aal2'),
+      'Content-Type': 'image/png',
+      'Idempotency-Key': replacementId,
+    });
+  const stagedProof = await replaceProof();
+  expect(stagedProof.status, await stagedProof.clone().text()).toBe(200);
+  expect((await replaceProof()).status).toBe(200);
+  const replaceEdit = {
+    ...edit,
+    operation_id: crypto.randomUUID(),
+    expected_revision: 1,
+    evidence_id: replacementId,
+  };
+  expect(
+    (
+      await request(`/admin/sheets/purchases/${purchase.id}`, replaceEdit, admin, {
+        Authorization: token(admin, 'aal2'),
+      })
+    ).status,
+  ).toBe(200);
+  expect((await request('/purchase-evidence/' + proof.id)).status).toBe(200);
+  expect((await request('/purchase-evidence/' + replacementId)).status).toBe(200);
+  const currentProof = await request('/purchases/' + purchase.id);
+  expect((await responseData<Purchase>(currentProof)).evidence_id).toBe(replacementId);
 });

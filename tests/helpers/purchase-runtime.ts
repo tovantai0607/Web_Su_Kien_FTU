@@ -37,6 +37,17 @@ const calls: Record<string, string[]> = {
   save_purchase_offer: ['p_actor', 'p_aal', 'p_data'],
   purchase_statistics: ['p_actor', 'p_aal'],
   manage_purchase_voting: ['p_actor', 'p_aal', 'p_session', 'p_action', 'p_reason'],
+  edit_sheet_purchase: ['p_actor', 'p_aal', 'p_request', 'p_data'],
+  register_sheet_purchase_evidence: [
+    'p_actor',
+    'p_aal',
+    'p_request',
+    'p_id',
+    'p_object',
+    'p_bytes',
+    'p_sha256',
+  ],
+  read_vote_participation: ['p_round'],
 };
 export function databaseAdapter(query: Query) {
   return {
@@ -93,7 +104,10 @@ class TableQuery {
       throw new Error('Unexpected table: ' + table);
   }
   select(fields: string, options?: { count?: string }) {
-    if (!/^[a-z_,*]+$/.test(fields) && fields !== '*,products:purchase_products(*)')
+    if (
+      !fields.split(',').every((field) => field === '*' || /^[a-z_][a-z0-9_]*$/.test(field)) &&
+      fields !== '*,products:purchase_products(*)'
+    )
       throw new Error('Unexpected select');
     this.columns =
       fields === '*,products:purchase_products(*)'
@@ -155,7 +169,7 @@ class TableQuery {
   }
 }
 function identifier(s: string) {
-  if (!/^[a-z_]+$/.test(s)) throw new Error('Invalid identifier');
+  if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error('Invalid identifier');
   return s;
 }
 export async function testAuthenticate(request: Request) {
