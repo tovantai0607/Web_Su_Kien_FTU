@@ -5,6 +5,8 @@ description: Áp dụng nghiệp vụ bán vé FTUCharm từ skill/bosung.docx k
 
 # Bán vé FTUCharm theo bổ sung
 
+Xác nhận mới nhất14/10/2026: người dùng yêu cầu triển khai toàn bộ kế hoạch bản chính thức2027 local nối Supabase. Tổng700 vé/vòng gồm100 sớm/600 thường, BTC phân bổ loại/giá/QR; dư vé sớm chuyển thường cùng loại, giữ30phút vẫn chiếm quota. Ảnh bán kết10–11/4, bán kết25/4, chung kết23/5 và BTC công bố vinh danh dự kiến23h cùng ngày. Vote bán kết10phút trong25/4 do BTC đặt giờ; chung kết chờ lịch. Xem `docs/official-program-2027.md` và xác nhận đầu reference; các ghi chú DEMO dưới đây là lịch sử. Không tạo fixture/đơn thử LIVE, gửi email hoặc deploy Internet trong lượt này.
+
 Skill này dành cho repository FTUCharm. Đọc [yêu cầu và bảng đối chiếu](references/requirements.md) trước khi sửa phần liên quan. Đối chiếu với [file bổ sung](../../../skill/bosung.docx), cả ba ảnh, yêu cầu mới nhất của người dùng và AGENTS.md ở gốc.
 
 Xác nhận mới nhất ngày14/10/2026 sau gộp Git `8115e0f`: SUPER_ADMIN có MFA tùy chọn; chỉ SUPER_ADMIN đóng sớm vote với lý do, phiên đã đóng không mở lại. Người dùng chọn Git mới cho cả hai quy tắc; không áp đề xuất mở lại cũ. Riêng đợt `test-giao-dich-demo` được phép ghi fixture Supabase theo xác nhận **Test DEMO, ghi vào Supabase**; không chuyển quyền này sang LIVE/load online. Hiện có 11 migration local/remote, frontend5173 nối backend8787; số chín và giới hạn fixture local phía dưới là lịch sử, dùng [báo cáo hiện tại](../../../docs/git-sync-admin-customers-20261014.md) để đối chiếu.

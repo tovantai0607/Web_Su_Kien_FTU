@@ -1,5 +1,9 @@
 # Nghiệp vụ hiện hành theo file bổ sung
 
+## Bản chính thức2027 — xác nhận mới nhất14/10/2026
+
+Người dùng phê duyệt triển khai local nối Supabase: đăng ký7/3–hết21/3; vé sớm bán kết29–30/3, vé thường đến hết24/4, ảnh bán kết10–11/4, bán kết25/4. Chung kết sớm26/4 09–11h, thường đến hết22/5; chung kết23/5, dự kiến vinh danh23h do BTC bấm công bố. Tổng700 vé/vòng gồm100 sớm và600 thường, BTC phân bổ từng loại. Dư vé sớm chuyển thường cùng loại; giữ30phút chiếm quota và giữ giá cũ. Bán đủ100 sớm thì chuyển thường sớm, tổng bán và giữ không vượt700. Giá/QR/ảnh/địa điểm/giờ chưa có để chờ BTC, không dùng số giả. Vote bán kết10phút trong25/4 chờ BTC đặt giờ; chung kết chưa đặt lịch. Giữ các yêu cầu Hoàn tất→quyền vote, không check-in/webhook/email vé tự động. Runbook: `docs/official-program-2027.md`; các xác nhận DEMO và mốc trái lịch này bên dưới là lịch sử.
+
 ## Xác nhận mới nhất sau gộp Git
 
 Người dùng chốt dùng Git mới `8115e0f`: SUPER_ADMIN có MFA tùy chọn; chỉ SUPER_ADMIN đóng sớm vote với lý do, phiên đã đóng không mở lại. Các mô tả MFA bắt buộc cho SUPER_ADMIN hoặc mở lại phiên phía dưới/tài liệu cũ đã được thay thế. Trang khách: `http://127.0.0.1:5173/admin/ve`. Đối chiếu mới có 11 migration local/remote; số chín bên dưới là lịch sử. Xem [báo cáo gộp và kiểm tra](../docs/git-sync-admin-customers-20261014.md).

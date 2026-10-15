@@ -12,6 +12,7 @@
   },
   "vars": {
     "DEMO_MODE": "false",
+    "PUBLIC_EDITION_SLUG": "ftucharm-2027",
     "ALLOWED_ORIGIN": "https://configure-your-domain.example",
     "SUPABASE_URL": "https://ifgtyslifgegwcguysbb.supabase.co",
     "SUPABASE_JWKS_URL": "https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json",
@@ -24,6 +25,31 @@
   // Run with --env demo-test --local. Images and MEDIA stay on this computer;
   // Supabase writes are real and restricted to the user-approved DEMO workflow.
   "env": {
+    "official-local": {
+      "name": "ftucharm-official-local",
+      "main": "src/index.ts",
+      "assets": {
+        "directory": "../../dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"],
+      },
+      "vars": {
+        "DEMO_MODE": "false",
+        "PUBLIC_EDITION_SLUG": "ftucharm-2027",
+        "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
+        "SUPABASE_URL": "https://ifgtyslifgegwcguysbb.supabase.co",
+        "SUPABASE_JWKS_URL": "https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json",
+      },
+      "images": { "binding": "IMAGES", "remote": false },
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "ftu-official-media-local", "remote": false },
+      ],
+      "ratelimits": [
+        { "name": "RATE_LIMITER", "namespace_id": "1003", "simple": { "limit": 20, "period": 60 } },
+      ],
+      "triggers": { "crons": [] },
+    },
     "demo-test": {
       "name": "ftucharm-demo-test-local",
       "main": "src/demo-test.ts",

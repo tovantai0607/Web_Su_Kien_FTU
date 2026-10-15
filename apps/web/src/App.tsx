@@ -98,6 +98,9 @@ export default function App() {
           <NavLink to="/gioi-thieu">Về FTUCHARM</NavLink>
           <NavLink to="/timeline">Hành trình</NavLink>
           <NavLink to="/thi-sinh">Thí sinh</NavLink>
+          <NavLink className="registration-nav-link" to="/dang-ky">
+            Đăng ký thí sinh
+          </NavLink>
           <NavLink to="/ve">Vé</NavLink>
           <NavLink to="/binh-chon">Bình chọn</NavLink>
         </nav>
@@ -212,7 +215,9 @@ export default function App() {
           <div>
             <Link to="/the-le">Thể lệ</Link>
             <Link to="/quyen-rieng-tu">Quyền riêng tư</Link>
-            {access?.is_admin && <Link to="/admin/cau-hinh">Quản trị</Link>}
+            {access?.is_admin && (
+              <Link to={access.default_admin_path ?? '/admin/cau-hinh'}>Quản trị</Link>
+            )}
           </div>
         </div>
       </footer>

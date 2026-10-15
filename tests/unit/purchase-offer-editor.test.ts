@@ -77,7 +77,7 @@ it('lets BTC edit price, quota and combos while retaining IDs and Vietnam time',
     opens_at: '2027-04-25T17:00:00Z',
   });
 });
-it('blocks invalid closing time and incomplete LIVE publication without saving', async () => {
+it('blocks invalid time but permits official information before QR readiness', async () => {
   const { saved, group } = setup();
   fireEvent.change(group().getByLabelText('Đóng bán (giờ Việt Nam)'), {
     target: { value: '2027-04-26T00:00' },
@@ -91,9 +91,8 @@ it('blocks invalid closing time and incomplete LIVE publication without saving',
   fireEvent.change(screen.getByLabelText('Chế độ đợt bán'), { target: { value: 'LIVE' } });
   fireEvent.click(screen.getByLabelText('Công bố đợt bán (mùa và vòng cũng phải được công bố)'));
   fireEvent.click(screen.getByRole('button', { name: 'Lưu cấu hình vé' }));
-  expect(await screen.findByText('Thêm ảnh QR nhận tiền trước khi công bố LIVE.')).toBeTruthy();
-  expect(screen.getByText('Nhập hướng dẫn chuyển khoản trước khi công bố LIVE.')).toBeTruthy();
-  expect(saved).not.toHaveBeenCalled();
+  await waitFor(() => expect(saved).toHaveBeenCalledTimes(1));
+  expect(saved.mock.calls[0][0]).toMatchObject({ mode: 'LIVE', published: true, qr_path: null });
 });
 it('adds missing draft tiers without duplicating or changing an existing price', () => {
   const { group } = setup();

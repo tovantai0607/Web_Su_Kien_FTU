@@ -90,12 +90,25 @@ export default function PurchaseTickets() {
                 <Ticket size={32} />
                 <Badge>{event.mode === 'DEMO' ? 'DEMO' : 'FTUCharm 2027'}</Badge>
                 <h2>{event.title}</h2>
-                <p>{event.starts_at ? dates(event.starts_at) : 'Ngày tổ chức do BTC công bố'}</p>
+                <p>
+                  {event.starts_at
+                    ? dates(event.starts_at)
+                    : event.event_date
+                      ? new Date(event.event_date + 'T00:00:00+07:00').toLocaleDateString('vi-VN', {
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                        }) + ' · Giờ tổ chức chờ công bố'
+                      : 'Ngày tổ chức do BTC công bố'}
+                </p>
+                {event.total_quota != null && (
+                  <p>
+                    Tổng {event.total_quota} vé · Tối đa {event.early_quota} vé sớm
+                  </p>
+                )}
                 <p>{event.venue || 'Địa điểm do BTC công bố'}</p>
                 <p>
                   {event.products.length
                     ? 'Loại vé, giá và combo được công bố trong chi tiết đợt vé.'
-                    : 'BTC đang chuẩn bị loại vé và quota.'}
+                    : 'Giá vé, combo và phân bổ từng loại chờ BTC công bố.'}
                 </p>
                 <Button asChild>
                   <Link to={'/ve/' + event.slug}>Xem vé & combo</Link>
@@ -114,7 +127,22 @@ export default function PurchaseTickets() {
           <Link to="/ve">Xem các đợt đã công bố</Link>
         </EmptyState>
       )}
-      {offer && <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />}
+      {offer && (
+        <>
+          {offer.total_quota != null && (
+            <p className="purchase-notice">
+              Tổng {offer.total_quota} vé; tối đa {offer.early_quota} vé sớm. Vé sớm còn dư chuyển
+              sang vé thường cùng loại. Hết vé sẽ đóng bán sớm.
+            </p>
+          )}
+          {!offer.checkout_enabled && (
+            <p role="status">
+              Chưa nhận đơn. Giá, phân bổ loại vé và QR chuyển khoản đang chờ BTC cấu hình.
+            </p>
+          )}
+          <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />
+        </>
+      )}
       {user && !preview && (
         <section className="purchase-history">
           <h2>Đơn đã Hoàn tất của bạn</h2>

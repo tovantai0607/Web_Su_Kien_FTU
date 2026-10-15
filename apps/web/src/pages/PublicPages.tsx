@@ -2,13 +2,18 @@ import { lazy, Suspense, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Flower2, CalendarDays, ArrowUpRight } from 'lucide-react';
 import { Badge, Button, EmptyState, SearchBar, Pagination, Skeleton } from '@ftu/ui';
-import type { TimelineEvent, Contestant } from '@ftu/shared';
+import type { TimelineEvent, Contestant, Round } from '@ftu/shared';
+import { preview } from '../lib/api';
+import { useProgram, useServerTime } from '../lib/program';
 import { PageTitle, useContent, DataState, ContestantCard } from '../components/Content';
 import SponsorWall from '../components/SponsorWall';
 import Tribute from '../components/Tribute';
 const PhotoCarousel = lazy(() => import('../components/interface/PhotoCarousel'));
 function Timeline() {
   const q = useContent<TimelineEvent[]>('/timeline');
+  const program = useProgram();
+  const serverNow = useServerTime(program.data?.server_time);
+  const now = preview ? Date.now() : serverNow;
   return (
     <div className="page-shell">
       <PageTitle title="Hành trình" />
@@ -22,9 +27,9 @@ function Timeline() {
               <div>
                 <Badge>
                   {e.starts_at
-                    ? Date.now() < Date.parse(e.starts_at)
+                    ? now === null || now < Date.parse(e.starts_at)
                       ? 'Sắp diễn ra'
-                      : e.ends_at && Date.now() > Date.parse(e.ends_at)
+                      : e.ends_at && now >= Date.parse(e.ends_at)
                         ? 'Đã kết thúc'
                         : 'Đang diễn ra'
                     : 'Lịch sắp công bố'}
@@ -48,13 +53,16 @@ function Timeline() {
   );
 }
 function Contestants() {
-  const q = useContent<Contestant[]>('/contestants');
   const [search, setSearch] = useState(''),
     [stage, setStage] = useState('all'),
     [page, setPage] = useState(1);
+  const rounds = useContent<Round[]>('/rounds');
+  const q = useContent<Contestant[]>(
+    !preview && stage !== 'all' ? `/rounds/${stage}/contestants` : '/contestants',
+  );
   const filtered = (q.data ?? []).filter(
     (c) =>
-      (stage === 'all' || c.stage === stage) &&
+      (!preview || stage === 'all' || c.stage === stage) &&
       `${c.display_name} ${c.number}`
         .toLocaleLowerCase('vi')
         .includes(search.toLocaleLowerCase('vi')),
@@ -82,7 +90,15 @@ function Contestants() {
             }}
           >
             <option value="all">Tất cả vòng thi</option>
-            {[...new Set(q.data?.map((c) => c.stage))].map((s) => (
+            {!preview &&
+              rounds.data
+                ?.filter((r) => ['semifinal', 'final'].includes(r.kind))
+                .map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.title}
+                  </option>
+                ))}
+            {(preview ? [...new Set(q.data?.map((c) => c.stage))] : []).map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -193,6 +209,32 @@ function Sponsors() {
   );
 }
 function Gallery() {
+  const q = useContent<Contestant[]>('/contestants');
+  const photos = (q.data ?? [])
+    .filter((c) => c.photo_url)
+    .map((c) => ({
+      src: c.photo_url!,
+      alt: c.display_name,
+      caption: c.display_name,
+      width: 420,
+      height: 560,
+    }));
+  if (!preview)
+    return (
+      <div className="page-shell">
+        <PageTitle title="Thư viện FTUCharm 2027" />
+        <DataState query={q} />
+        {photos.length ? (
+          <Suspense fallback={<Skeleton />}>
+            <PhotoCarousel label="Ảnh thí sinh chính thức" photos={photos} />
+          </Suspense>
+        ) : q.isSuccess ? (
+          <EmptyState title="Ảnh chính thức chờ công bố">
+            BTC sẽ cập nhật ảnh từng vòng khi đã sẵn sàng.
+          </EmptyState>
+        ) : null}
+      </div>
+    );
   return (
     <div className="page-shell">
       <PageTitle title="Thư viện" description="Ảnh chính thức sẽ được công bố tại đây." />
@@ -299,9 +341,10 @@ function Legal({ privacy }: { privacy: boolean }) {
             </p>
             <h2>Bình chọn chung kết</h2>
             <p>
-              Mỗi vé đã check-in được bỏ một phiếu nam và một phiếu nữ trong mỗi vòng bình chọn.
-              Lượt mở 10 phút theo thời gian server, chỉ dành cho thí sinh đủ điều kiện. Không thể
-              đổi lựa chọn sau khi xác nhận. Số phiếu được lưu bằng transaction tại database.
+              Mỗi vé từ đơn đã Hoàn tất được bình chọn một lượt mỗi hạng mục đúng vòng, không cần
+              check-in hoặc chờ email vé. Lượt mở 10 phút theo thời gian server, chỉ dành cho thí
+              sinh đủ điều kiện. Không thể đổi lựa chọn sau khi xác nhận. Số phiếu được lưu bằng
+              transaction tại database.
             </p>
           </>
         )}

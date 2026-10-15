@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite --config apps/web/vite.config.ts --host 127.0.0.1",
     "dev:api": "wrangler dev --config apps/api/wrangler.jsonc",
+    "dev:official": "wrangler dev --config apps/api/wrangler.jsonc --env official-local --local --ip 127.0.0.1 --port 8787 --persist-to .wrangler/state/official-local --show-interactive-dev-session false",
     "dev:demo-db": "wrangler dev --config apps/api/wrangler.jsonc --env demo-test --local --ip 127.0.0.1 --port 8787 --persist-to .wrangler/state/demo-test --show-interactive-dev-session false",
     "build": "vite build --config apps/web/vite.config.ts",
     "build:preview": "node scripts/build-preview.mjs",

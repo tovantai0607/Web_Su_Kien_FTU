@@ -1,5 +1,13 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Khôi phục form đăng ký và cân đối đăng nhập
+
+Yêu cầu tiếp theo14/10/2026: mục Dự thi và form đăng ký ba bước phải luôn truy cập được, kể cả khách chưa đăng nhập hoặc ngoài lịch nhận hồ sơ. Cho xem/chuẩn bị thông tin trên trang, không lưu nháp PII vào browser storage. Chỉ tải ảnh/gửi hồ sơ khi đăng nhập và trong07–21/03/2027; giữ kiểm tra lịch server/database. Không ẩn cả form hoặc đổi link Dự thi sang timeline khi chưa mở đơn. Mobile có mục Đăng ký thí sinh trong menu. Khung auth dùng padding cố định theo px, không dùng padding phần trăm của page-shell khiến form hẹp trên màn hình lớn.
+
+## Bản chính thức 2027 được phê duyệt ngày 14/10/2026
+
+Kế hoạch chuyển bản chính thức đã được người dùng yêu cầu triển khai toàn bộ: local frontend5173/API8787, Supabase project hiện có, Images/R2 local riêng. Dùng `dev:official`, `DEMO_MODE=false`, `PUBLIC_EDITION_SLUG=ftucharm-2027`; không dùng entry DEMO cho website chính thức. Lịch 11 mốc, đăng ký 7/3–hết21/3, vé bán kết sớm29–30/3/thường hết24/4, bán kết25/4; vé chung kết sớm26/4 09–11h/thường hết22/5, chung kết23/5. Tổng700 vé/vòng gồm100 sớm/600 thường, BTC chia theo loại; dư vé sớm chuyển thường cùng loại, giữ30phút giữ nguyên giá. Ảnh bán kết10–11/4, nhà vô địch dự kiến23h23/5 do BTC bấm công bố. Vote bán kết10phút trong25/4 do BTC đặt giờ; chung kết chưa đặt lịch. Giá/QR/ảnh/quota từng loại chờ BTC, không điền số giả. Migration13 đã đồng bộ; không gửi email, tạo fixture/đơn thử trên LIVE, deploy hoặc xóa dữ liệu. Đọc `docs/official-program-2027.md` cho runbook/rollback và giới hạn; các xác nhận DEMO dưới đây là lịch sử. Word11/11 local/DEMO giữ nguyên.
+
 ## Xác nhận triển khai ngày 14/10/2026
 
 Xác nhận mới nhất sau gộp Git `8115e0f`: SUPER_ADMIN không bắt buộc MFA; chỉ SUPER_ADMIN đóng sớm vote với lý do, phiên đã đóng không mở lại. Dùng quy tắc Git mới theo trả lời người dùng, thay quy tắc cũ trái các điểm này. Trang khách `/admin/ve` chạy ở frontend5173 nối backend8787, dữ liệu Supabase và ảnh R2 local. Đã đối chiếu 11 migration local/remote; không chạy migration trong lượt gộp. Đọc `docs/git-sync-admin-customers-20261014.md` cho bằng chứng và giới hạn mới nhất.

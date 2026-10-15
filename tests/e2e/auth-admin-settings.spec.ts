@@ -146,6 +146,12 @@ async function setup(page: Page, access = { is_admin: true, aal: 'aal2' }) {
           'base64',
         ),
       });
+    if (path === '/api/admin/purchase-statistics')
+      return route.fulfill({
+        json: {
+          data: { completed_orders: 0, ticket_quantity: 0, requested_amount_vnd: 0, groups: [] },
+        },
+      });
     if (path === '/api/admin/settings') {
       settingsRequests++;
       return route.fulfill({ json: { data: config } });
@@ -186,7 +192,7 @@ async function login(page: Page) {
   await page.getByRole('button', { name: 'Đăng nhập bằng Google' }).click();
   await expect(page).toHaveURL(/\/tai-khoan\/ho-so$/);
 }
-test('Google PKCE callback exchanges once and an admin configures Vietnam times and phase prices', async ({
+test('Google PKCE callback exchanges once and an admin configures Vietnam vote times and opens the current ticket editor', async ({
   page,
 }, testInfo) => {
   const state = await setup(page);
@@ -206,23 +212,8 @@ test('Google PKCE callback exchanges once and an admin configures Vietnam times 
     close_at: '2026-11-14T13:00:00.000Z',
   });
   await page.getByRole('button', { name: 'Đợt bán vé', exact: true }).click();
-  await page.getByLabel('Giá Hạng 1 (VND)').fill('120000');
-  await page.getByLabel('Giá Hạng 2 (VND)').fill('160000');
-  await expect(page.getByText('Có thay đổi chưa lưu.')).toBeVisible();
-  await page.getByRole('button', { name: 'Lưu đợt bán và giá vé' }).click();
-  await expect.poll(() => state.saved.length).toBe(2);
-  expect(state.saved[1]).toMatchObject({
-    revision: 0,
-    phases: [
-      {
-        kind: 'REGULAR',
-        prices: [
-          { category_id: id(50), price_vnd: 120000 },
-          { category_id: id(51), price_vnd: 160000 },
-        ],
-      },
-    ],
-  });
+  await expect(page.getByRole('heading', { name: 'Cấu hình loại vé và combo' })).toBeVisible();
+  expect(state.saved).toHaveLength(1);
   for (const width of testInfo.project.name === 'mobile' ? [320, 390] : [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -312,6 +303,81 @@ test('admin opens customer records with six columns, proof, CSV and database lin
   ).toEqual([]);
 });
 
+test('staff previews a round photo, saves a draft and publishes only on explicit confirmation', async ({
+  page,
+}) => {
+  await setup(page);
+  const person = {
+    id: id(70),
+    edition_id: id(10),
+    display_name: 'Thí sinh kiểm thử',
+    slug: 'test-person',
+    number: 1,
+    published: true,
+  };
+  const publications: Record<string, unknown>[] = [];
+  const saves: Record<string, unknown>[] = [];
+  const photo = `/api/public-images/${id(99)}.webp`;
+  await page.route('**/api/admin/publications', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      saves.push(body);
+      publications.splice(0, publications.length, body);
+      return route.fulfill({ json: { data: body } });
+    }
+    return route.fulfill({
+      json: {
+        data: {
+          editions: [{ id: id(10), title: 'FTUCharm 2027' }],
+          rounds: [{ id: id(20), edition_id: id(10), title: 'Bán kết' }],
+          contestants: [person],
+          publications,
+        },
+      },
+    });
+  });
+  await page.route('**/api/admin/public-images', (route) =>
+    route.fulfill({ json: { data: { photo_url: photo } } }),
+  );
+  await page.route('**' + photo, (route) =>
+    route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    }),
+  );
+  await login(page);
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/admin?muc=publications');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await page.getByRole('button', { name: 'Thêm ảnh theo vòng' }).click();
+  await page.getByLabel('Thí sinh', { exact: true }).selectOption(person.id);
+  await expect(page.getByRole('button', { name: 'Công bố', exact: true })).toBeDisabled();
+  await page.getByLabel('Tải ảnh JPG/PNG').setInputFiles({
+    name: 'photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9WQAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  });
+  await expect(page.getByRole('img', { name: 'Ảnh xem trước trước khi công bố' })).toBeVisible();
+  expect(saves).toEqual([]);
+  await page.getByRole('button', { name: 'Lưu bản nháp' }).click();
+  await expect(page.getByText('Đã lưu bản nháp.', { exact: true })).toBeVisible();
+  expect(saves[0]).toMatchObject({
+    contestant_id: person.id,
+    round_id: id(20),
+    photo_url: photo,
+    published: false,
+  });
+  await page.getByRole('button', { name: 'Công bố', exact: true }).click();
+  await expect(page.getByText('Đã công bố.', { exact: true })).toBeVisible();
+  expect(saves[1]).toMatchObject({ published: true });
+});
 test('ordinary users cannot request customer records through the direct admin URL', async ({
   page,
 }) => {

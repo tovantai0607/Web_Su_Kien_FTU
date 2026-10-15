@@ -33,6 +33,7 @@ import PrivateMedia from '../components/PrivateMedia';
 import AdminOverview from '../components/AdminOverview';
 import PurchaseAdmin from '../components/PurchaseAdmin';
 import PurchaseCustomers from './PurchaseCustomers';
+import PublicationAdmin from '../components/PublicationAdmin';
 type Row = Record<string, unknown>;
 const tabs = [
   ['overview', 'Tổng quan', LayoutDashboard],
@@ -44,6 +45,7 @@ const tabs = [
   ['sponsors', 'Nhà tài trợ', ShieldCheck],
   ['tickets', 'Vé cũ (lịch sử)', Ticket],
   ['purchase-data', 'Bán vé theo bổ sung', Ticket],
+  ['publications', 'Ảnh và vinh danh', Users],
   ['emails', 'Email', Mail],
   ['audit', 'Lịch sử', Settings],
   ['roles', 'Phân quyền', ShieldCheck],
@@ -126,7 +128,8 @@ export default function Admin() {
       !!access?.is_admin &&
       pathname !== '/admin/cau-hinh' &&
       pathname !== '/admin/ve' &&
-      tab !== 'purchase-data',
+      tab !== 'purchase-data' &&
+      tab !== 'publications',
     retry: false,
   });
   if (loading || accessLoading)
@@ -261,9 +264,10 @@ export default function Admin() {
         <p role="status" className={message ? 'notice admin-notification' : 'sr-only'}>
           {message}
         </p>
-        {tab !== 'purchase-data' && <DataState query={q} />}
+        {tab !== 'purchase-data' && tab !== 'publications' && <DataState query={q} />}
         {tab === 'overview' && q.isSuccess && <AdminOverview summary={summary} />}
         {tab === 'purchase-data' && <PurchaseAdmin />}
+        {tab === 'publications' && <PublicationAdmin />}
         {defaults[tab] && tab !== 'contestant-profiles' && (
           <Button onClick={() => edit()}>Thêm mới</Button>
         )}

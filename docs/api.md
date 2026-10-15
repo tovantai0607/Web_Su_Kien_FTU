@@ -1,5 +1,13 @@
 # API contracts
 
+## Bản chính thức 2027
+
+`GET /api/program` trả `{edition,server_time,timeline,offers,registration_state}`; chọn mùa bằng `PUBLIC_EDITION_SLUG`. API công khai chính thức lọc mùa DEMO. `GET /api/rounds/:id/contestants` trả thí sinh/ảnh đã công bố, đúng vòng và còn eligible. `GET /api/awards` trả các hạng mục vinh danh BTC đã công bố, không tự lấy từ vote.
+
+`GET/POST /api/admin/publications` và `POST /api/admin/public-images` dành cho CONTENT_EDITOR/SUPER_ADMIN; staff khác SUPER_ADMIN vẫn cần MFA. Publication có `{id,edition_id,contestant_id,round_id,award_name,photo_url,published}`; `round_id=null` là vinh danh. Tải ảnh JPG/PNG tối đa 5MB/12MP, sanitize WebP; ảnh nháp cần Bearer, ảnh công bố ở `/api/public-images/:uuid.webp` kiểm tra trạng thái công bố và eligibility mỗi lần đọc.
+
+Offer bổ sung `total_quota,early_quota,early_open_at,early_close_at,normal_close_at,event_date,phase`; product trả `base_quota` tách quota BTC phân bổ khỏi quota hiệu lực sau rollover. Công bố thông tin không mở checkout khi thiếu giá/quota/QR; RPC giữ vé khóa offer rồi sản phẩm để kiểm tra tổng700 và sớm100. Lịch và runbook hiện hành: [official-program-2027.md](official-program-2027.md). API ghế cũ bên dưới giữ làm lịch sử, không là luồng vé chính thức.
+
 Contract hiện hành, quyền và DTO của luồng bổ sung ở [nghiệm thu](supplement-acceptance.md). Luồng mua dùng purchase-catalog/purchases/private evidence và shared tickets/votes; năm2027, quota30 phút, không cap10, không check-in/provider/email vé tự động. Xem [runbook](supplement-runbook.md) và Word11/11 cho bàn giao local/DEMO.
 
 Phần dưới là API chọn ghế và contract lịch sử giữ tương thích, không là nghiệm thu mới.

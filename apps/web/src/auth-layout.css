@@ -1,0 +1,70 @@
+/* Auth pages use a fixed inset: page-shell's percentage padding shrank the form
+   as the browser grew wider. Keep a readable column at every viewport size. */
+#main-navigation .registration-nav-link {
+  display: none;
+}
+@media (max-width: 900px) {
+  #main-navigation .registration-nav-link {
+    display: flex;
+  }
+}
+.page-shell.auth-shell {
+  width: min(100%, 520px);
+  max-width: 520px;
+  margin-inline: auto;
+  padding: 48px 24px 64px;
+  min-height: 0;
+}
+.auth-shell .auth-card {
+  width: 100%;
+  min-width: 0;
+  padding: 32px;
+}
+.auth-shell .auth-identity {
+  margin-bottom: 20px;
+}
+.auth-shell > h1 {
+  margin-bottom: 24px;
+  line-height: 1.2;
+}
+.auth-shell .auth-google .button {
+  gap: 12px;
+  white-space: normal;
+  min-height: 50px;
+}
+.auth-shell .auth-google svg {
+  flex: 0 0 20px;
+}
+.auth-shell .auth-google p {
+  margin: 20px 0;
+  line-height: 1.6;
+}
+.auth-shell .auth-status:empty {
+  display: none;
+}
+.auth-shell .auth-links {
+  display: flex;
+  gap: 8px 20px;
+  margin-top: 16px;
+}
+.registration-notice {
+  margin-bottom: 24px;
+}
+.registration-notice h2,
+.registration-signin h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.registration-signin {
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 480px) {
+  .page-shell.auth-shell {
+    padding: 32px 16px 48px;
+  }
+  .auth-shell .auth-card {
+    padding: 24px 20px;
+  }
+}

@@ -24,6 +24,7 @@ export default function Voting() {
     [success, setSuccess] = useState(false);
   const round =
     rounds.data?.find((r) => r.id === params.get('vong')) ??
+    rounds.data?.find((r) => r.kind === 'semifinal') ??
     rounds.data?.find((r) => r.kind === 'final');
   const voting = useQuery({
     queryKey: ['voting', round?.id],

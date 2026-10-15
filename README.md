@@ -1,5 +1,7 @@
 # FTUCharm • Duyên dáng Ngoại thương
 
+**Bản chính thức 2027 local:** dùng `npm run dev:official` và `npm run dev -- --strictPort`; frontend tắt preview, chỉ hiển thị mùa `ftucharm-2027`. Đã công bố 11 mốc lịch và hai đợt vé 700 vé/vòng, trong đó tối đa 100 vé sớm; giá/QR/quota từng loại/ảnh/giờ vote chờ BTC. Xem [hướng dẫn chính thức](docs/official-program-2027.md). Các báo cáo DEMO và lịch cũ phía dưới là lịch sử; ngày cập nhật ảnh bán kết hiện hành là 10–11/04, chung kết 23/05/2027.
+
 Luồng vé hiện hành đã triển khai theo bổ sung: loại/combo → bảy thông tin → QR → ảnh → Hoàn tất, có quyền vote ngay theo số vé/hạng mục đúng vòng. Mùa2027; giữ quota30 phút; không cap10/đơn hoặc hạn tổng/tài khoản; không chọn ghế/check-in/provider/mail vé tự động. BTC cấu hình giá/quota/QR, bên khác đối chiếu và gửi mail thủ công.
 
 Đọc [nghiệm thu local và API](docs/supplement-acceptance.md), [runbook](docs/supplement-runbook.md), `.agents/skills/ftu-ticket-sales/SKILL.md` và `tiến độn.docx`. Đã đồng bộ đủ chín migration lên Supabase theo yêu cầu ngày14/10/2026; [báo cáo đồng bộ](docs/supabase-sync-20261014.md) ghi tài khoản/cấu hình còn thiếu. DEMO/private storage/Auth test adapter phải được phân biệt với tích hợp thật. Các API/code chọn ghế/payment cũ giữ để bảo toàn lịch sử.

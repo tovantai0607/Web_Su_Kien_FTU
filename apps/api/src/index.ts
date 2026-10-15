@@ -40,6 +40,7 @@ import {
 } from './security';
 import { sendOutbox } from './outbox';
 import { purchases } from './purchases';
+import { program, officialEdition, publishedRoundPhotos } from './program';
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 export const app = new Hono<AppEnv>();
 const publicFields =
@@ -72,6 +73,7 @@ app.use('/api/*', (c, next) =>
   bodyLimit({
     maxSize:
       c.req.path === '/api/media/upload' ||
+      c.req.path === '/api/admin/public-images' ||
       /^\/api\/purchases\/[a-f0-9-]+\/evidence$/.test(c.req.path)
         ? 5 * 1024 * 1024
         : 64 * 1024,
@@ -187,6 +189,10 @@ const queryEdition = (c: Context<AppEnv>) => {
 };
 async function publicEdition(c: Context<AppEnv>) {
   const requested = queryEdition(c);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const edition = await officialEdition(c.env);
+    return edition && (!requested || requested === edition.id) ? (edition.id as string) : null;
+  }
   let query = readClient(c.env).from('contest_editions').select('id').eq('published', true);
   if (requested) query = query.eq('id', requested);
   const { data, error } = await query
@@ -204,6 +210,10 @@ const rowId = (c: Context<AppEnv>) => {
 };
 app.get('/api/editions', async (c) => {
   if (demo(c)) return ok(c, [demoEdition]);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const edition = await officialEdition(c.env);
+    return ok(c, edition ? [edition] : []);
+  }
   const { data, error } = await readClient(c.env)
     .from('contest_editions')
     .select('*')
@@ -214,6 +224,7 @@ app.get('/api/editions', async (c) => {
 });
 app.get('/api/editions/current', async (c) => {
   if (demo(c)) return ok(c, demoEdition);
+  if (c.env.PUBLIC_EDITION_SLUG) return ok(c, await officialEdition(c.env));
   const { data, error } = await readClient(c.env)
     .from('contest_editions')
     .select('*')
@@ -253,6 +264,16 @@ app.get('/api/contestants', async (c) => {
   q = q.eq('edition_id', edition);
   const { data, error } = await q;
   dbError(error);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const photos = await publishedRoundPhotos(c.env, edition);
+    return ok(
+      c,
+      data?.map((person) => ({
+        ...person,
+        photo_url: photos.get(person.id) ?? person.photo_url,
+      })) ?? [],
+    );
+  }
   return ok(c, data);
 });
 app.get('/api/contestants/:slug', async (c) => {
@@ -268,6 +289,10 @@ app.get('/api/contestants/:slug', async (c) => {
     .limit(1)
     .maybeSingle();
   dbError(error);
+  if (data && c.env.PUBLIC_EDITION_SLUG && edition) {
+    const photos = await publishedRoundPhotos(c.env, edition);
+    data.photo_url = photos.get(data.id) ?? data.photo_url;
+  }
   return ok(c, data);
 });
 app.get('/api/voting/:id', async (c) => {
@@ -283,6 +308,8 @@ app.get('/api/voting/:id', async (c) => {
     .maybeSingle();
   dbError(error);
   if (!round) return c.json({ error: 'Chưa có lượt bình chọn công khai.' }, 404);
+  if (c.env.PUBLIC_EDITION_SLUG && round.edition_id !== (await publicEdition(c)))
+    return c.json({ error: 'Chưa có lượt bình chọn công khai.' }, 404);
   const { data: entries, error: err } = await db
     .from('round_entries')
     .select('contestant_id')
@@ -295,6 +322,12 @@ app.get('/api/voting/:id', async (c) => {
     .in('id', entries?.map((e) => e.contestant_id) ?? [])
     .eq('published', true);
   dbError(cerr);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const photos = await publishedRoundPhotos(c.env, round.edition_id, id);
+    contestants?.forEach((person) => {
+      person.photo_url = photos.get(person.id) ?? person.photo_url;
+    });
+  }
   const [categories, sessions] = await Promise.all([
     db
       .from('vote_categories')
@@ -361,8 +394,10 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 app.get('/api/events', async (c) => {
-  const edition = queryEdition(c);
+  const edition = c.env.PUBLIC_EDITION_SLUG ? await publicEdition(c) : queryEdition(c);
   if (demo(c)) return ok(c, demoSalesCatalog());
+  if (c.env.PUBLIC_EDITION_SLUG && !edition)
+    return ok(c, { server_time: new Date().toISOString(), events: [] });
   const { data, error } = await service(c.env).rpc('sales_catalog', { p_edition: edition ?? null });
   dbError(error);
   return ok(c, data);
@@ -371,7 +406,7 @@ app.get('/api/events/:identifier', async (c) => {
   const identifier = c.req.param('identifier');
   if (!uuid.safeParse(identifier).success && !/^[a-z0-9-]{1,100}$/.test(identifier))
     throw new HTTPException(400, { message: 'Mã sự kiện không hợp lệ.' });
-  const edition = queryEdition(c);
+  const edition = c.env.PUBLIC_EDITION_SLUG ? await publicEdition(c) : queryEdition(c);
   if (demo(c)) {
     const data = demoSalesCatalog(identifier);
     if (!data.events.length) throw new HTTPException(404, { message: 'Không tìm thấy sự kiện.' });
@@ -423,6 +458,8 @@ app.post('/api/me/holds/:id/release', async (c) => {
 });
 app.post('/api/contestants/apply', async (c) => {
   const input = await parse(c, applicationSchema);
+  if (c.env.PUBLIC_EDITION_SLUG && input.edition_id !== (await publicEdition(c)))
+    throw new HTTPException(409, { message: 'Mùa thi chưa nhận đăng ký.' });
   const p = c.get('principal');
   if (input.email.toLowerCase() !== p.email.toLowerCase())
     throw new HTTPException(400, { message: 'Email hồ sơ phải là email tài khoản đã xác minh.' });
@@ -442,6 +479,18 @@ app.post('/api/contestants/apply', async (c) => {
 });
 app.post('/api/votes', async (c) => {
   const input = await parse(c, voteSchema);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const edition = await publicEdition(c);
+    const round = await readClient(c.env)
+      .from('contest_rounds')
+      .select('id')
+      .eq('id', input.round_id)
+      .eq('edition_id', edition)
+      .eq('published', true)
+      .maybeSingle();
+    dbError(round.error);
+    if (!round.data) throw new HTTPException(409, { message: 'Vòng thi chưa mở bình chọn.' });
+  }
   if (!!input.category_id !== !!input.session_id)
     throw new HTTPException(400, { message: 'Thiếu hạng mục hoặc lượt bình chọn.' });
   await verifyTurnstile(input.turnstile_token, c.env, 'vote', c.req.header('CF-Connecting-IP'));
@@ -516,6 +565,8 @@ app.post('/api/media/upload', async (c) => {
   const edition = c.req.query('edition');
   if (!uuid.safeParse(edition).success)
     throw new HTTPException(400, { message: 'Mùa thi không hợp lệ.' });
+  if (c.env.PUBLIC_EDITION_SLUG && edition !== (await publicEdition(c)))
+    throw new HTTPException(409, { message: 'Mùa thi chưa nhận ảnh hồ sơ.' });
   const db = service(c.env);
   const { data: season, error: seasonError } = await db
     .from('contest_editions')
@@ -606,6 +657,7 @@ app.use('/api/admin/*', async (c, next) => {
   ]);
   await next();
 });
+app.route('/api', program);
 app.get('/api/admin/overview', async (c) => {
   const db = service(c.env);
   await authorize(c.get('principal'), c.env, [
@@ -821,7 +873,20 @@ app.get('/api/me/access', async (c) => {
     p_roles: ['SUPER_ADMIN'],
   });
   dbError(error);
-  return ok(c, { is_admin: data === true, aal: principal.aal });
+  let editor = false;
+  if (!data && principal.aal === 'aal2') {
+    const result = await service(c.env).rpc('has_role', {
+      p_user: principal.id,
+      p_roles: ['CONTENT_EDITOR'],
+    });
+    dbError(result.error);
+    editor = result.data === true;
+  }
+  return ok(c, {
+    is_admin: data === true || editor,
+    aal: principal.aal,
+    ...(editor ? { default_admin_path: '/admin?muc=publications' } : {}),
+  });
 });
 app.get('/api/admin/settings', async (c) => {
   const p = c.get('principal');

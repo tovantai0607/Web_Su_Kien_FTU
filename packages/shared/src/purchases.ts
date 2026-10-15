@@ -71,6 +71,11 @@ export const offerConfigSchema = z
       .regex(/^\/images\/[a-zA-Z0-9_/-]+\.(png|webp|jpg)$/)
       .nullable(),
     products: z.array(productConfigSchema).max(100),
+    total_quota: z.number().int().positive().nullable().optional(),
+    early_quota: z.number().int().nonnegative().nullable().optional(),
+    early_open_at: z.string().datetime({ offset: true }).nullable().optional(),
+    early_close_at: z.string().datetime({ offset: true }).nullable().optional(),
+    normal_close_at: z.string().datetime({ offset: true }).nullable().optional(),
   })
   .strict()
   .refine((v) => new Set(v.products.map((p) => p.id)).size === v.products.length, 'Loại vé trùng.');
@@ -81,11 +86,14 @@ export type Product = z.infer<typeof productConfigSchema> & {
   available: number;
   sold: number;
   held: number;
+  base_quota?: number;
   state: 'UPCOMING' | 'OPEN' | 'SOLD_OUT' | 'CLOSED';
 };
 export type Offer = Omit<z.infer<typeof offerConfigSchema>, 'products'> & {
   products: Product[];
   checkout_enabled: boolean;
+  event_date?: string | null;
+  phase?: 'UPCOMING' | 'EARLY' | 'NORMAL' | 'CLOSED';
 };
 export type PurchaseCatalog = { server_time: string; offers: Offer[] };
 export type PurchaseLine = {

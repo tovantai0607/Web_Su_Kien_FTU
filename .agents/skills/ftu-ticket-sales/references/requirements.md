@@ -1,5 +1,7 @@
 # Đối chiếu yêu cầu bổ sung FTUCharm
 
+**Xác nhận mới nhất 14/10/2026:** kế hoạch bản chính thức đã được phê duyệt và triển khai local nối Supabase. Tổng 700 vé/vòng gồm 100 sớm + 600 thường; BTC chia quota từng loại và cung cấp giá/QR. Bán kết sớm 29–30/03, thường đến hết 24/04; chung kết sớm 26/04 09:00–11:00, thường đến hết 22/05. Đủ 100 vé sớm đã Hoàn tất thì chuyển thường sớm; vé sớm còn dư chuyển thường cùng loại, giữ còn hạn tiếp tục chiếm quota. Ảnh bán kết 10–11/04 thay mốc 10–11/05 lịch sử; chung kết 23/05, công bố nhà vô địch dự kiến 23:00 cùng ngày do BTC bấm. Giờ vote bán kết chờ BTC, cửa sổ 10 phút trong 25/04; chung kết chưa đặt giờ vote. Xem `docs/official-program-2027.md`; không coi lịch sử bên dưới là cấu hình hiện hành.
+
 Xác nhận mới nhất sau gộp Git `8115e0f`: SUPER_ADMIN có MFA tùy chọn; chỉ SUPER_ADMIN đóng sớm vote với lý do, phiên đã đóng không mở lại. Riêng đợt `test-giao-dich-demo` đã được duyệt ghi dữ liệu thử lên Supabase; các hạn chế fixture local cũ không áp dụng cho đợt này. Không mở rộng sang LIVE hoặc tải online. Xem [báo cáo hiện tại](../../../../docs/git-sync-admin-customers-20261014.md) về 11 migration, tài khoản và link khách mua vé.
 
 Nguồn: [bosung.docx](../../../../skill/bosung.docx), ba ảnh trong file và các xác nhận ngày 14/10/2026. Quy tắc mới nhất về Hoàn tất/vote, email thủ công và bỏ check-in thay thế yêu cầu cũ. Không chỉnh file nguồn để làm nó khớp với phương án kỹ thuật.

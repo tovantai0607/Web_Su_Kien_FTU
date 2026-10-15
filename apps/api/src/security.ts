@@ -7,6 +7,7 @@ export type Env = {
   SUPABASE_JWKS_URL: string;
   ALLOWED_ORIGIN: string;
   DEMO_MODE?: string;
+  PUBLIC_EDITION_SLUG?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_HOSTNAME?: string;
   RESEND_API_KEY?: string;

@@ -102,6 +102,11 @@ export default function PurchaseAdmin() {
                     payment_instructions,
                     qr_path,
                     products,
+                    total_quota,
+                    early_quota,
+                    early_open_at,
+                    early_close_at,
+                    normal_close_at,
                   } = o;
                   setConfig(
                     JSON.stringify(
@@ -117,12 +122,18 @@ export default function PurchaseAdmin() {
                         published,
                         payment_instructions,
                         qr_path,
+                        total_quota,
+                        early_quota,
+                        early_open_at,
+                        early_close_at,
+                        normal_close_at,
                         products: products.map(
                           ({
                             id,
                             name,
                             tier,
                             quota,
+                            base_quota,
                             price_vnd,
                             combo2_vnd,
                             combo3_vnd,
@@ -133,7 +144,7 @@ export default function PurchaseAdmin() {
                             id,
                             name,
                             tier,
-                            quota,
+                            quota: base_quota ?? quota,
                             price_vnd,
                             combo2_vnd,
                             combo3_vnd,

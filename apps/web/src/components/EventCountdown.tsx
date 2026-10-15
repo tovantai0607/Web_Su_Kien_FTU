@@ -12,7 +12,13 @@ export function countdownParts(target: number, now: number) {
   ];
 }
 
-export default function EventCountdown({ events }: { events: TimelineEvent[] }) {
+export default function EventCountdown({
+  events,
+  serverNow,
+}: {
+  events: TimelineEvent[];
+  serverNow?: number | null;
+}) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -20,8 +26,9 @@ export default function EventCountdown({ events }: { events: TimelineEvent[] }) 
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+  const clock = serverNow === undefined ? now : serverNow;
   const upcoming = events
-    .filter((e) => e.starts_at && Date.parse(e.starts_at) > now)
+    .filter((e) => e.starts_at && clock !== null && Date.parse(e.starts_at) > clock)
     .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!))[0];
   return (
     <section className="event-countdown" aria-label="Mốc sự kiện tiếp theo">
@@ -34,7 +41,7 @@ export default function EventCountdown({ events }: { events: TimelineEvent[] }) 
       </div>
       {upcoming ? (
         <div className="countdown-digits" role="timer" aria-live="off">
-          {countdownParts(Date.parse(upcoming.starts_at!), now).map((value, i) => (
+          {countdownParts(Date.parse(upcoming.starts_at!), clock ?? now).map((value, i) => (
             <div key={i}>
               <strong>{String(value).padStart(2, '0')}</strong>
               <span>{['Ngày', 'Giờ', 'Phút', 'Giây'][i]}</span>

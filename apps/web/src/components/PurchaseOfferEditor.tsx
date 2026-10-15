@@ -46,11 +46,11 @@ export default function PurchaseOfferEditor({
           name,
           tier,
           quota: 0,
-          price_vnd: 100000,
+          price_vnd: 0,
           combo2_vnd: null,
           combo3_vnd: null,
-          opens_at: '',
-          closes_at: '',
+          opens_at: config.early_open_at ?? '',
+          closes_at: (tier === 'EARLY' ? config.early_close_at : config.normal_close_at) ?? '',
           enabled: false,
         });
       }
@@ -65,11 +65,6 @@ export default function PurchaseOfferEditor({
         const path = issue.path.join('.');
         nextErrors[path] ??= issue.message;
       }
-    }
-    if (config.mode === 'LIVE' && config.published) {
-      if (!config.qr_path) nextErrors.qr_path = 'Thêm ảnh QR nhận tiền trước khi công bố LIVE.';
-      if (!config.payment_instructions.trim())
-        nextErrors.payment_instructions = 'Nhập hướng dẫn chuyển khoản trước khi công bố LIVE.';
     }
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -154,6 +149,33 @@ export default function PurchaseOfferEditor({
           />
           Công bố đợt bán (mùa và vòng cũng phải được công bố)
         </label>
+        {config.total_quota != null && (
+          <fieldset>
+            <legend>Hạn mức và lịch đã chốt</legend>
+            <p>
+              Tổng {config.total_quota} vé, tối đa {config.early_quota} vé sớm. Vé sớm còn dư chuyển
+              sang vé thường cùng loại.
+            </p>
+            <p>
+              Vé sớm: {vietnamTime(config.early_open_at ?? null).replace('T', ' ')} –{' '}
+              {vietnamTime(config.early_close_at ?? null).replace('T', ' ')}. Đóng vé thường:{' '}
+              {vietnamTime(config.normal_close_at ?? null).replace('T', ' ')} (giờ Việt Nam).
+            </p>
+            <p>
+              Quota đang phân bổ: vé sớm{' '}
+              {config.products.filter((p) => p.tier === 'EARLY').reduce((s, p) => s + p.quota, 0)} /{' '}
+              {config.early_quota}; vé thường{' '}
+              {config.products.filter((p) => p.tier === 'NORMAL').reduce((s, p) => s + p.quota, 0)}{' '}
+              / {config.total_quota - (config.early_quota ?? 0)}.
+            </p>
+          </fieldset>
+        )}
+        {!config.qr_path && (
+          <p className="notice">
+            Có thể công bố thông tin chương trình. Chưa nhận đơn đến khi có giá, phân bổ quota và QR
+            thật.
+          </p>
+        )}
         <details>
           <summary>Mùa và vòng thi</summary>
           <p>Giữ nguyên mùa/vòng của đợt đang sử dụng. Không lấy vòng thuộc mùa khác.</p>

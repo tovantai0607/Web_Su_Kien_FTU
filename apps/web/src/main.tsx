@@ -11,6 +11,7 @@ import './luminous.css';
 import './refined.css';
 import './charm2027.css';
 import './stage3d.css';
+import './auth-layout.css';
 const client = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1, refetchOnWindowFocus: false } },
 });

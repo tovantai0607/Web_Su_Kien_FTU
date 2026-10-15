@@ -16,6 +16,7 @@ import {
   type Env,
   type Principal,
 } from './security';
+import { officialEdition } from './program';
 
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 function failure(error: { message: string } | null) {
@@ -24,6 +25,9 @@ function failure(error: { message: string } | null) {
     PURCHASE_NOT_FOUND: [404, 'Không tìm thấy đơn của bạn.'],
     PURCHASE_EXPIRED: [409, 'Đã hết 30 phút giữ vé. Vui lòng đặt vé lại.'],
     QUOTA_UNAVAILABLE: [409, 'Số vé còn lại đã thay đổi. Vui lòng chọn lại số lượng.'],
+    SALE_NOT_CONFIGURED: [409, 'BTC đang chuẩn bị giá và phân bổ vé.'],
+    PROGRAM_QUOTA_EXCEEDED: [400, 'Quota vượt giới hạn vé sớm hoặc tổng vé của vòng.'],
+    PROGRAM_CAPACITY_FIXED: [400, 'Giữ nguyên hạn mức vé đã chốt của vòng.'],
     QUOTA_BELOW_ALLOCATED: [409, 'Quota không được thấp hơn số vé đã giữ hoặc Hoàn tất.'],
     IDEMPOTENCY_CONFLICT: [409, 'Yêu cầu gửi lại có nội dung khác.'],
     SALE_CLOSED: [409, 'Loại vé chưa mở bán hoặc đã đóng bán.'],
@@ -70,6 +74,13 @@ purchases.get('/purchase-catalog', async (c) => {
     throw new HTTPException(400, { message: 'Đợt vé không hợp lệ.' });
   const { data, error } = await service(c.env).rpc('purchase_catalog', { p_slug: slug });
   failure(error);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const edition = await officialEdition(c.env);
+    data.offers = data.offers.filter(
+      (o: { mode: string; edition_id: string }) =>
+        o.mode === 'LIVE' && o.edition_id === edition?.id,
+    );
+  }
   return c.json({ data });
 });
 purchases.post('/purchases', async (c) => {
@@ -77,10 +88,15 @@ purchases.post('/purchases', async (c) => {
   const key = id(c.req.header('Idempotency-Key') ?? '');
   const paymentConfig = await service(c.env)
     .from('purchase_offers')
-    .select('mode,qr_path,published')
+    .select('mode,qr_path,published,edition_id')
     .eq('id', input.offer_id)
     .maybeSingle();
   failure(paymentConfig.error);
+  if (c.env.PUBLIC_EDITION_SLUG) {
+    const edition = await officialEdition(c.env);
+    if (paymentConfig.data?.mode !== 'LIVE' || paymentConfig.data.edition_id !== edition?.id)
+      throw new HTTPException(409, { message: 'Đợt vé chưa mở bán.' });
+  }
   if (paymentConfig.data?.published && paymentConfig.data.mode === 'LIVE') {
     const qr = paymentConfig.data.qr_path;
     if (!qr || !c.env.ASSETS)
@@ -308,12 +324,14 @@ purchases.get('/vote-results/:id', async (c) => {
   if (!round.data) return c.json({ data: [] });
   const edition = await db
     .from('contest_editions')
-    .select('id')
+    .select('id,slug')
     .eq('id', round.data.edition_id)
     .eq('published', true)
     .maybeSingle();
   failure(edition.error);
   if (!edition.data) return c.json({ data: [] });
+  if (c.env.PUBLIC_EDITION_SLUG && edition.data.slug !== c.env.PUBLIC_EDITION_SLUG)
+    return c.json({ data: [] });
   const { data, error } = await db
     .from('vote_result_snapshots')
     .select('category_id,results')

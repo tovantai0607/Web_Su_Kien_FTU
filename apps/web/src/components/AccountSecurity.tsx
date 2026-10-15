@@ -261,7 +261,7 @@ export default function AccountSecurity() {
         {error && <ErrorState message={error} />}
         <p role="status">{message}</p>
         {access?.is_admin && (
-          <Link to="/admin/cau-hinh" className="text-link">
+          <Link to={access.default_admin_path ?? '/admin/cau-hinh'} className="text-link">
             Mở quản trị
           </Link>
         )}

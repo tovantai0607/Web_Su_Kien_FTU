@@ -78,7 +78,7 @@ export const roundSchema = z
     title: z.string().trim().min(2).max(120),
     kind: z.enum(['preliminary', 'semifinal', 'final']),
     position: z.number().int().min(0).max(100),
-    cutoff: z.number().int().min(1).max(1000),
+    cutoff: z.number().int().min(1).max(1000).nullable(),
     published: z.boolean(),
     vote_open_at: z.string().datetime().nullable(),
     vote_close_at: z.string().datetime().nullable(),
@@ -179,7 +179,7 @@ export type Round = {
   title: string;
   kind: string;
   position: number;
-  cutoff: number;
+  cutoff: number | null;
   published: boolean;
   vote_open_at: string | null;
   vote_close_at: string | null;
@@ -342,3 +342,4 @@ export function demoVoting(): VotingData {
   };
 }
 export * from './purchases';
+export * from './program';

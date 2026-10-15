@@ -12,11 +12,17 @@ import Tribute from '../components/Tribute';
 import SponsorWall from '../components/SponsorWall';
 import PartnerStrip from '../components/PartnerStrip';
 import { StageAtmosphere } from '../components/interface/StageAtmosphere';
+import { useProgram, useServerTime } from '../lib/program';
+import { preview } from '../lib/api';
+import Awards from '../components/Awards';
 export default function Home() {
-  const timeline = useContent<TimelineEvent[]>('/timeline');
+  const timeline = useProgram();
+  const now = useServerTime(timeline.data?.server_time);
   const contestants = useContent<Contestant[]>('/contestants');
   const [step, setStep] = useState(1);
-  const events = [...(timeline.data ?? [])].sort((a, b) => a.position - b.position);
+  const events: TimelineEvent[] = [...(timeline.data?.timeline ?? [])].sort(
+    (a, b) => a.position - b.position,
+  );
   const current = events[step];
   return (
     <>
@@ -43,7 +49,10 @@ export default function Home() {
               <div className="hero-buttons">
                 <Button asChild>
                   <Link to="/dang-ky">
-                    Đăng ký tỏa sáng <ArrowUpRight size={18} />
+                    {preview || timeline.data?.registration_state === 'OPEN'
+                      ? 'Đăng ký tỏa sáng'
+                      : 'Xem form đăng ký'}{' '}
+                    <ArrowUpRight size={18} />
                   </Link>
                 </Button>
                 <Button variant="outline" asChild>
@@ -66,7 +75,8 @@ export default function Home() {
         </section>
       </div>
       <PartnerStrip />
-      <EventCountdown events={events} />
+      <EventCountdown events={events} serverNow={preview ? undefined : now} />
+      {!preview && <Awards />}
       <section className="section journey" id="hanh-trinh">
         <SectionHeading title="Hành trình">
           <Link className="text-link" to="/timeline">
@@ -89,7 +99,9 @@ export default function Home() {
                   <strong>{event.title}</strong>
                   <small>
                     {event.starts_at
-                      ? new Date(event.starts_at).toLocaleDateString('vi-VN')
+                      ? new Date(event.starts_at).toLocaleDateString('vi-VN', {
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                        })
                       : 'Lịch sắp công bố'}
                   </small>
                 </button>

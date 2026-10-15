@@ -8,6 +8,7 @@ import {
   demoSalesCatalog,
   demoPurchaseCatalog,
   type Edition,
+  registrationState,
 } from '@ftu/shared';
 import { createAuthStorage } from './auth-policy';
 export const preview = import.meta.env.VITE_PREVIEW_MODE === 'true';
@@ -34,6 +35,15 @@ export const supabase =
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (preview && (!options.method || options.method === 'GET')) {
     const route = path.split('?')[0];
+    if (route === '/program')
+      return {
+        edition: demoEdition,
+        server_time: new Date().toISOString(),
+        timeline: demoTimeline,
+        offers: demoPurchaseCatalog().offers,
+        registration_state: registrationState(demoEdition, Date.now()),
+      } as T;
+    if (route === '/awards') return [] as T;
     if (route === '/purchase-catalog') return demoPurchaseCatalog() as T;
     if (route.startsWith('/vote-results/')) return [] as T;
     if (route === '/events') return demoSalesCatalog() as T;

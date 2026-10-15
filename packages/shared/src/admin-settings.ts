@@ -62,7 +62,11 @@ export const saleSettingsSchema = z
   });
 export type VotingSettingsInput = z.infer<typeof votingSettingsSchema>;
 export type SaleSettingsInput = z.infer<typeof saleSettingsSchema>;
-export type AccountAccess = { is_admin: boolean; aal: 'aal1' | 'aal2' };
+export type AccountAccess = {
+  is_admin: boolean;
+  aal: 'aal1' | 'aal2';
+  default_admin_path?: '/admin/cau-hinh' | '/admin?muc=publications';
+};
 export type AdminSettings = {
   server_time: string;
   editions: { id: string; title: string; year: number }[];

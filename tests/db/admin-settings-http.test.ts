@@ -118,6 +118,13 @@ it('returns only the authenticated account capability and rejects private settin
   expect((await request('/admin/settings', 'invalid')).status).toBe(401);
   expect((await request('/admin/settings')).status).toBe(200);
 });
+it('gives content editors a publication entry point while keeping SUPER_ADMIN settings private', async () => {
+  await db.query("insert into public.user_roles values($1,'CONTENT_EDITOR')", [id(2)]);
+  expect(
+    ((await (await request('/me/access', 'test-user')).json()) as { data: AccountAccess }).data,
+  ).toMatchObject({ is_admin: true, default_admin_path: '/admin?muc=publications' });
+  expect((await request('/admin/settings', 'test-user')).status).toBe(403);
+});
 it('validates phase configuration and stores both category prices through the protected API', async () => {
   const body = {
     revision: 0,
