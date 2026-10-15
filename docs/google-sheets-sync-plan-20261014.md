@@ -2,6 +2,8 @@
 
 Đã kiểm tra Git, dựng bảng Data và triển khai source đồng bộ để kiểm thử local. Đồng bộ Google–Supabase chưa được kích hoạt: website chưa deploy HTTPS, Apps Script chưa deploy/xác thực và migration mới chưa áp lên database thật.
 
+Cập nhật15/10/2026: đã bổ sung cột M **Số lượng combo** cho cả hai tab; tổng19 cột, metadata ẩn chuyển sang P:S. Đối chiếu dữ liệu/kiểm tra mới tại [báo cáo số lượng combo](google-sheets-data-audit-20261015.md); các ghi nhận18 cột bên dưới là lịch sử trước bổ sung.
+
 Git khi bắt đầu: `main` và `origin/main` cùng `6914289de0c4fe42022b9bb0d51ca5dc8a585790`, ahead/behind0/0; không có bản mới hơn để tải. Giữ một thư mục `D:\WED_sk_FTU`, bảo toàn tài liệu đang có, xây dựng trên nhánh `codex/google-sheets-sync-20261014`. Người dùng sau đó yêu cầu đẩy nhánh và gộp `main`; kết quả commit/merge đối chiếu trong lịch sử Git. Bàn giao Git không kích hoạt migration, deploy hoặc trigger online.
 
 ## Yêu cầu người dùng đã xác nhận

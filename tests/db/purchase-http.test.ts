@@ -13,6 +13,7 @@ import {
   owner,
   other,
   admin,
+  fixture,
   type Query,
 } from '../helpers/purchase-runtime';
 import { app } from '../../apps/api/src/index';
@@ -25,7 +26,22 @@ vi.mock('../../apps/api/src/security', async (original) => {
     authenticate: testAuthenticate,
     authorize: (...args: Parameters<typeof source.authorize>) => testAuthorize(query, ...args),
     service: () => databaseAdapter(query),
-    readClient: () => databaseAdapter(query),
+    readClient: () => {
+      const publicClient = databaseAdapter(query);
+      return {
+        ...publicClient,
+        rpc: (name: string, args: Record<string, unknown>) =>
+          name === 'read_vote_participation'
+            ? Promise.resolve({
+                data: null,
+                error: {
+                  code: '42501',
+                  message: 'permission denied for function read_vote_participation',
+                },
+              })
+            : publicClient.rpc(name, args),
+      };
+    },
   };
 });
 const { env, objects } = localEnvironment();
@@ -73,6 +89,18 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await db.close();
+});
+it('serves public vote participation through the privileged server client without granting the public client execute', async () => {
+  const privileges = await db.query<{ allowed: boolean }>(
+    "select has_function_privilege('anon','public.read_vote_participation(uuid)','EXECUTE') allowed",
+  );
+  expect(privileges.rows[0].allowed).toBe(false);
+  const response = await request('/voting/' + fixture(20));
+  expect(response.status).toBe(200);
+  const data = await responseData<{ participation: { participants: number; votes: number } }>(
+    response,
+  );
+  expect(data.participation).toEqual({ participants: 0, votes: 0 });
 });
 it('guards authentication, Origin, input, idempotency and body limits before DB writes', async () => {
   expect(
