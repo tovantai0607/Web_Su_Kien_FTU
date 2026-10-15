@@ -56,14 +56,19 @@ const states = {
 };
 export default function PurchaseTickets() {
   const { eventSlug } = useParams(),
-    { user } = useAuth();
+    { user, access, loading, accessLoading } = useAuth();
+  const demoAllowed = !!user && !!access?.is_admin && !accessLoading;
   const catalog = useQuery({
-    queryKey: ['purchase-catalog', eventSlug],
+    queryKey: ['purchase-catalog', eventSlug, user?.id, demoAllowed],
     queryFn: () =>
       api<PurchaseCatalog>('/purchase-catalog' + (eventSlug ? '?slug=' + eventSlug : '')),
     refetchInterval: 15000,
+    enabled: !eventSlug || (!loading && !accessLoading),
+    retry: false,
   });
-  const offer = catalog.data?.offers.find((e) => e.slug === eventSlug);
+  const offers =
+    catalog.data?.offers.filter((o) => o.mode === 'LIVE' || demoAllowed || preview) ?? [];
+  const offer = offers.find((e) => e.slug === eventSlug);
   return (
     <div className="page-shell purchase-page">
       <PageTitle
@@ -80,13 +85,13 @@ export default function PurchaseTickets() {
       <DataState query={catalog} />
       {catalog.isSuccess &&
         !eventSlug &&
-        (!catalog.data.offers.length ? (
+        (!offers.length ? (
           <EmptyState title="BTC chưa công bố đợt vé">
             Theo dõi thông báo để biết lịch mở bán.
           </EmptyState>
         ) : (
           <div className="purchase-events">
-            {catalog.data.offers.map((event) => (
+            {offers.map((event) => (
               <Card key={event.id}>
                 <Ticket size={32} />
                 <Badge>{event.mode === 'DEMO' ? 'DEMO' : 'FTUCharm 2027'}</Badge>
@@ -106,6 +111,7 @@ export default function PurchaseTickets() {
                   </p>
                 )}
                 <p>{event.venue || 'Địa điểm do BTC công bố'}</p>
+                <SaleSchedule offer={event} />
                 <p>
                   {event.products.length
                     ? 'Loại vé, giá và combo được công bố trong chi tiết đợt vé.'
@@ -130,6 +136,7 @@ export default function PurchaseTickets() {
       )}
       {offer && (
         <>
+          <SaleSchedule offer={offer} />
           {offer.total_quota != null && (
             <p className="purchase-notice">
               Tổng {offer.total_quota} vé; tối đa {offer.early_quota} vé sớm. Vé sớm còn dư chuyển
@@ -141,7 +148,20 @@ export default function PurchaseTickets() {
               Chưa nhận đơn. Giá, phân bổ loại vé và QR chuyển khoản đang chờ BTC cấu hình.
             </p>
           )}
-          <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />
+          {offer.products.length ? (
+            <Checkout key={offer.id + ':' + (user?.id ?? 'guest')} offer={offer} />
+          ) : (
+            <section aria-label="Hạng vé dự kiến" className="purchase-products">
+              {['The Intro', 'The Bridge', 'The Chorus'].map((name) => (
+                <Card key={name}>
+                  <Ticket aria-hidden="true" size={28} />
+                  <h2>{name}</h2>
+                  <Badge>Chờ cập nhật giá</Badge>
+                  <p>Vé đơn, Combo 2 và Combo 3 sẽ được BTC cấu hình trước khi nhận đơn.</p>
+                </Card>
+              ))}
+            </section>
+          )}
         </>
       )}
       {user && !preview && (
@@ -150,6 +170,20 @@ export default function PurchaseTickets() {
           <PurchaseRecords />
         </section>
       )}
+    </div>
+  );
+}
+function SaleSchedule({ offer }: { offer: Offer }) {
+  if (!offer.early_open_at || !offer.early_close_at || !offer.normal_close_at) return null;
+  return (
+    <div className="purchase-sale-schedule" aria-label="Lịch mở bán">
+      <p>
+        <strong>Vé sớm:</strong> {dates(offer.early_open_at)} – {dates(offer.early_close_at)}
+      </p>
+      <p>
+        <strong>Vé thường:</strong> {dates(offer.early_close_at)} – {dates(offer.normal_close_at)}
+      </p>
+      <small>Giờ Việt Nam. Có thể chuyển đợt hoặc đóng sớm khi hết vé.</small>
     </div>
   );
 }
@@ -763,7 +797,16 @@ function Checkout({ offer }: { offer: Offer }) {
                 hạng mục của vòng này. Vé được BTC gửi email thủ công.
               </p>
               <Button asChild>
-                <Link to={'/binh-chon?vong=' + purchase.round_id}>Đến bình chọn</Link>
+                <Link
+                  to={
+                    '/binh-chon?' +
+                    (offer.mode === 'DEMO' && !preview ? 'demo=1&' : '') +
+                    'vong=' +
+                    purchase.round_id
+                  }
+                >
+                  Đến bình chọn
+                </Link>
               </Button>
             </Card>
           )}

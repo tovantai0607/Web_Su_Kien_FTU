@@ -5,6 +5,8 @@ description: Áp dụng nghiệp vụ bán vé FTUCharm từ skill/bosung.docx k
 
 # Bán vé FTUCharm theo bổ sung
 
+Xác nhận15/10/2026 về quyền DEMO: chỉ tài khoản đã đăng nhập có quyền vào quản trị được mua/vote DEMO; ẩn nút phải đi cùng kiểm tra Auth/role trên API và link trực tiếp. Trang công khai mặc định hiển thị hai đêm LIVE2027 theo lịch chính thức cho mọi tài khoản; admin vào DEMO bằng link riêng trong quản trị. Giá/QR LIVE chưa cung cấp giữ chờ cấu hình, không dùng dữ liệu DEMO thay thế. Giữ lịch sử/Sheet và phạm vi ghi chỉ DEMO của online-test; xem `docs/admin-demo-official-catalog-20261015.md`.
+
 Xác nhận15/10/2026 về giao diện đợt bán: vé sớm/vé thường nằm trong cùng một hạng, khách chỉ thấy một bộ chọn vé/combo theo đợt đang áp dụng. Admin chỉnh giá đơn/combo cho từng đợt, số vé sớm và lịch mở sớm/kết thúc sớm–bắt đầu thường/đóng thường; không khóa các giá trị này vào100 vé hoặc lịch mặc định. Tổng700 vé/vòng LIVE2027 giữ nguyên. Server kiểm tra quota gồm vé đã bán/giữ, giữ snapshot giá của đơn cũ và30 phút; chuyển đợt theo server. Xem `docs/unified-ticket-sale-phases-20261015.md`; migration mới chỉ kiểm thử local, không suy ra online đã cập nhật.
 
 Đính chính15/10/2026: kho mã hiển thị ba tab riêng `Vé bán kết` (700BK), `Vé chung kết` (700CK), `Vé DEMO` (50DM ban đầu); mỗi nhóm combo của cùng đơn/loại hiển thị một dòng (ví dụ cb2_4_DM00012-DM00015,4 vé/2 combo); vé đơn và kho chưa cấp giữ riêng từng mã. Database giữ mã/UUID từng vé để vote. Không gộp BK/CK vào một tab. Đây là cấu trúc hiện hành thay mô tả hai tab kho mã ở lượt đầu bên dưới.

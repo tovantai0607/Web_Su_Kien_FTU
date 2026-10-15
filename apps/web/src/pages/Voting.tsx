@@ -4,16 +4,24 @@ import { useQuery } from '@tanstack/react-query';
 import { Heart, ShieldCheck, Check, Clock3 } from 'lucide-react';
 import { Button, Card, Badge, EmptyState, Modal, ErrorState } from '@ftu/ui';
 import type { Round, Contestant, Ticket, VotingData } from '@ftu/shared';
-import { PageTitle, useContent, DataState } from '../components/Content';
+import { PageTitle, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Turnstile } from '../components/Turnstile';
 import { AnimatedGroup } from '../components/interface/MotionSystem';
 export default function Voting() {
-  const { user } = useAuth();
+  const { user, access, loading, accessLoading } = useAuth();
   const [params, setParams] = useSearchParams();
+  const demoRequested = params.get('demo') === '1';
+  const demoAllowed = !!user && !!access?.is_admin && !accessLoading;
+  const canRead = !demoRequested || demoAllowed;
   const gender = params.get('hang-muc') === 'male' ? 'male' : 'female';
-  const rounds = useContent<Round[]>('/rounds');
+  const rounds = useQuery({
+    queryKey: ['voting-rounds', demoRequested, user?.id, demoAllowed],
+    queryFn: () => api<Round[]>('/rounds' + (demoRequested ? '?demo=1' : '')),
+    enabled: canRead,
+    retry: false,
+  });
   const [now, setNow] = useState(Date.now()),
     [offset, setOffset] = useState(0),
     [selected, setSelected] = useState<Contestant | null>(null),
@@ -22,12 +30,14 @@ export default function Voting() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [success, setSuccess] = useState(false);
-  const round =
-    rounds.data?.find((r) => r.id === params.get('vong')) ??
-    rounds.data?.find((r) => r.kind === 'semifinal') ??
-    rounds.data?.find((r) => r.kind === 'final');
+  const round = canRead
+    ? params.get('vong')
+      ? rounds.data?.find((r) => r.id === params.get('vong'))
+      : (rounds.data?.find((r) => r.kind === 'semifinal') ??
+        rounds.data?.find((r) => r.kind === 'final'))
+    : undefined;
   const voting = useQuery({
-    queryKey: ['voting', round?.id, user?.id],
+    queryKey: ['voting', round?.id, user?.id, demoAllowed],
     queryFn: () => api<VotingData>('/voting/' + round!.id),
     enabled: !!round,
     refetchInterval: 15000,
@@ -112,6 +122,19 @@ export default function Voting() {
       setToken('');
     }
   }
+  if (demoRequested && !demoAllowed)
+    return (
+      <div className="page-shell">
+        <PageTitle title="Bình chọn DEMO" />
+        <EmptyState
+          title={
+            loading || accessLoading ? 'Đang kiểm tra quyền' : 'DEMO chỉ dành cho tài khoản admin'
+          }
+        >
+          <Link to="/binh-chon">Xem bình chọn chính thức</Link>
+        </EmptyState>
+      </div>
+    );
   return (
     <div className="page-shell">
       <PageTitle title="Bình chọn" />
@@ -189,7 +212,7 @@ export default function Voting() {
       </div>
       <DataState query={rounds} />
       {round && <DataState query={voting} />}
-      {voting.data?.demo_leaderboard && (
+      {demoAllowed && demoRequested && voting.data?.demo_leaderboard && (
         <section aria-label="Bảng xếp hạng DEMO" className="vote-leaderboard">
           <Card>
             <h2>Bảng xếp hạng DEMO</h2>

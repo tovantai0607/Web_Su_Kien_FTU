@@ -1,5 +1,9 @@
 # Nghiệp vụ hiện hành theo file bổ sung
 
+## Phân tách DEMO và hai đêm chính thức — xác nhận15/10/2026
+
+Mua/vote DEMO chỉ dành cho tài khoản đăng nhập có quyền quản trị, kiểm tra ở cả giao diện và API. Khách, tài khoản thường và trang công khai mặc định của admin đều xem hai đêm bán kết25/04/2027, chung kết23/05/2027 theo lịch bán chính thức; admin mở thử DEMO từ trang quản trị. Hạng vé chưa có giá hiển thị chờ cập nhật, QR/giá thật BTC bổ sung sau; không nhận đơn khi cấu hình chưa đủ. Không xóa lịch sử DEMO hoặc thay đổi cơ chế Sheet. Chi tiết/bằng chứng: `docs/admin-demo-official-catalog-20261015.md`.
+
 ## Hai đợt chung một hạng vé — xác nhận15/10/2026
 
 Khách thấy một hạng The Intro/The Bridge/The Chorus, không tách thêm thẻ vé sớm/vé thường. Giá và số lượng áp dụng theo đợt server đang mở. Admin cấu hình giá đơn/Combo2/Combo3 riêng từng đợt, tổng số vé sớm và phân bổ từng hạng, giờ mở sớm/kết thúc sớm–bắt đầu thường/đóng thường bằng form giờ Việt Nam. Mốc100 vé sớm và lịch bên dưới là mặc định ban đầu, được admin điều chỉnh; tổng700 LIVE/vòng không đổi. Không giảm hạn mức xuống dưới số đã bán/đang giữ; đơn cũ giữ nguyên giá/thời hạn. Vé thường mở khi hết thời gian sớm hoặc bán hết vé sớm theo quy tắc cũ. Xem docs/unified-ticket-sale-phases-20261015.md; trạng thái triển khai online phải được kiểm tra riêng.

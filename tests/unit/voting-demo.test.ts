@@ -15,8 +15,16 @@ const state = vi.hoisted(() => ({
   }[],
   leaderboard: true,
   session: true,
+  admin: true,
 }));
-vi.mock('../../apps/web/src/lib/auth', () => ({ useAuth: () => ({ user: { id: 'buyer' } }) }));
+vi.mock('../../apps/web/src/lib/auth', () => ({
+  useAuth: () => ({
+    user: { id: 'buyer' },
+    access: { is_admin: state.admin },
+    loading: false,
+    accessLoading: false,
+  }),
+}));
 vi.mock('../../apps/web/src/components/interface/MotionSystem', () => ({
   AnimatedGroup: ({ children, className }: { children: React.ReactNode; className?: string }) =>
     createElement('div', { className }, children),
@@ -40,7 +48,7 @@ vi.mock('../../apps/web/src/lib/api', () => ({
       name: gender === 'female' ? 'Nữ được yêu thích nhất' : 'Nam được yêu thích nhất',
       gender,
     }));
-    if (path === '/rounds') return [round];
+    if (path === '/rounds' || path === '/rounds?demo=1') return [round];
     if (path === '/me/tickets')
       return [{ id: 'ticket', round_id: 'round', display_code: 'DM00001', status: 'issued' }];
     if (path === '/me/votes') return [...state.votes];
@@ -94,6 +102,7 @@ afterEach(() => {
   state.votes = [];
   state.leaderboard = true;
   state.session = true;
+  state.admin = true;
 });
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -101,7 +110,11 @@ function mount() {
     createElement(
       QueryClientProvider,
       { client },
-      createElement(MemoryRouter, { initialEntries: ['/binh-chon'] }, createElement(Voting)),
+      createElement(
+        MemoryRouter,
+        { initialEntries: ['/binh-chon?demo=1&vong=round'] },
+        createElement(Voting),
+      ),
     ),
   );
   return client;
@@ -124,6 +137,15 @@ it('updates the DEMO ranking immediately after voting and preserves one right pe
   expect(await screen.findByLabelText('Vé đủ điều kiện của vòng này')).toBeTruthy();
   expect(within(board).getByText('0 phiếu')).toBeTruthy();
   expect(state.votes).toHaveLength(1);
+  client.clear();
+});
+it('does not expose the DEMO voting screen to an ordinary account opening its URL', async () => {
+  state.admin = false;
+  const client = mount();
+  await screen.findByText('DEMO chỉ dành cho tài khoản admin');
+  expect(screen.queryByRole('region', { name: 'Bảng xếp hạng DEMO' })).toBeNull();
+  expect(screen.queryByLabelText('Vé đủ điều kiện của vòng này')).toBeNull();
+  expect(state.votes).toHaveLength(0);
   client.clear();
 });
 it('does not display a provisional ranking when the backend does not allow it', async () => {

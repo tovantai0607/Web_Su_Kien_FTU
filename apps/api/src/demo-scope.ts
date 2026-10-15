@@ -1,5 +1,34 @@
 import { HTTPException } from 'hono/http-exception';
-import { service, type Env } from './security';
+import { authenticate, authorize, service, type Env, type Principal } from './security';
+
+export async function requireDemoAdmin(request: Request, env: Env, principal?: Principal) {
+  const verified = principal ?? (await authenticate(request, env));
+  // Same admin entry policy as /me/access; an email or user_metadata flag is not a role.
+  await authorize(verified, env, ['SUPER_ADMIN', 'CONTENT_EDITOR']);
+  return verified;
+}
+
+export async function canUseDemo(request: Request, env: Env, principal?: Principal) {
+  try {
+    await requireDemoAdmin(request, env, principal);
+    return true;
+  } catch (error) {
+    if (error instanceof HTTPException && [401, 403].includes(error.status)) return false;
+    throw error;
+  }
+}
+
+export async function visiblePurchaseRows<T extends { round_id: string }>(
+  rows: T[],
+  request: Request,
+  env: Env,
+  principal: Principal,
+) {
+  if (!rows.length || !env.DEMO_TEST_OFFER_SLUG || (await canUseDemo(request, env, principal)))
+    return rows;
+  const offer = await demoOffer(env);
+  return rows.filter((row) => row.round_id !== offer.round_id);
+}
 
 export async function demoOffer(env: Env) {
   const { data, error } = await service(env)
@@ -13,8 +42,9 @@ export async function demoOffer(env: Env) {
 }
 
 // An additional environment fence, never a replacement for Auth, roles or ownership.
-export async function enforceDemoWrite(request: Request, env: Env) {
+export async function enforceDemoWrite(request: Request, env: Env, principal?: Principal) {
   if (!env.DEMO_TEST_OFFER_SLUG || ['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
+  await requireDemoAdmin(request, env, principal);
   const path = new URL(request.url).pathname;
   const offer = await demoOffer(env);
   let allowed = false;

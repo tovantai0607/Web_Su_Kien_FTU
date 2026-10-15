@@ -1,5 +1,7 @@
 # FTUCharm • Duyên dáng Ngoại thương
 
+**Phân quyền DEMO và danh mục chính thức15/10/2026:** thay đổi local để khách/tài khoản thường xem hai đêm LIVE2027, giá/QR chờ BTC; mua/vote DEMO chỉ cho admin và được kiểm tra cả API. Xem [hành vi và kiểm chứng](docs/admin-demo-official-catalog-20261015.md); trạng thái source local không đồng nghĩa đã deploy.
+
 **Cập nhật main và bàn giao online-test (15/10/2026):** người dùng đã yêu cầu gộp nhánh bàn giao vào main, kích hoạt Cloudflare Builds. Admin tiếp tục theo [việc cần làm để ảnh và Sheet tự cập nhật](docs/NEXT-STEPS-SHEET-IMAGES.md) và [bàn giao đầy đủ](docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md). Supabase khi kiểm tra có14 migration,4 pending; codec ảnh và OAuth/trigger Google chưa kích hoạt. Merge Git không thay thế các bước này. Các hướng dẫn/trạng thái cũ phía dưới phải đối chiếu tài liệu hiện hành.
 
 **Bản chính thức 2027 local:** dùng `npm run dev:official` và `npm run dev -- --strictPort`; frontend tắt preview, chỉ hiển thị mùa `ftucharm-2027`. Đã công bố 11 mốc lịch và hai đợt vé 700 vé/vòng, trong đó tối đa 100 vé sớm; giá/QR/quota từng loại/ảnh/giờ vote chờ BTC. Xem [hướng dẫn chính thức](docs/official-program-2027.md). Các báo cáo DEMO và lịch cũ phía dưới là lịch sử; ngày cập nhật ảnh bán kết hiện hành là 10–11/04, chung kết 23/05/2027.
