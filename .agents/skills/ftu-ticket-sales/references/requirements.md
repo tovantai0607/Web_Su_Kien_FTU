@@ -1,5 +1,7 @@
 # Đối chiếu yêu cầu bổ sung FTUCharm
 
+**Xác nhận15/10/2026 về hai đợt bán:** một hạng vé có chung bộ chọn mua, giá và hạn mức theo đợt do server quyết định; không hiển thị hai thẻ EARLY/NORMAL trùng tên. Admin được chỉnh giá vé/combo, số vé sớm và thời gian hai đợt. Con số100 sớm/600 thường và các ngày bán bên dưới là mặc định ban đầu, không còn bị khóa; tổng700 LIVE/vòng vẫn giữ nguyên. Giữ đơn/vé/phiếu, giá đã chốt, quota30phút và kiểm tra số đang giữ/đã bán. Contract và bằng chứng mới: `docs/unified-ticket-sale-phases-20261015.md` ở root.
+
 **Đính chính15/10/2026:** ba tab kho mã riêng: `Vé bán kết` chứa700BK, `Vé chung kết` chứa700CK, `Vé DEMO` chứa50DM ban đầu. Mỗi lựa chọn combo cùng đơn/loại hiển thị một dòng với mã cb<kích thước>_<tổng vé>_<dải mã>; cột Số vé và Số lượng combo tách rõ. Giữ toàn bộ mã/UUID thành viên trong database; không đổi quyền vote. Thay cấu trúc hai tab kho mã của lượt đầu; không đổi mã, số lượng hoặc dữ liệu khách/vote.
 
 **Xác nhận15/10/2026:** mỗi vé có mã quản lý riêng, prefixBK/CK +5 chữ số (700/vòng), DM +5 chữ số (50 chuẩn bị ban đầu). Combo3 nhóm3 vé để BTC bố trí gần nhau. Đã có1450slot/database và3tab kho mã riêng,11 vé DEMO cũ được liên kết; giữ nguyên UUID/mã lịch sử/phiếu. Không coi mã trống là vé/vote hoặc bản chụp Sheet là sync tự động. Xem `docs/ticket-code-register-20261015.md` tại root cho bằng chứng/giới hạn và migration14.

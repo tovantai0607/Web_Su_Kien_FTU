@@ -1,5 +1,7 @@
 # Việc cần làm tiếp: ảnh online và Google Sheet tự cập nhật
 
+**Cập nhật sau kích hoạt Sheet15/10/2026:** OAuth owner và ba trigger đã hoạt động, sáu đơn/15 vé đã tự đồng bộ; sửa/khôi phục một ô DEMO đã ghi ngược Supabase. Hai migration Sheets/quota đã áp, remote16; còn deadline/BXH vote pending. Xem [bằng chứng kích hoạt](sheet-activation-20261015.md). Các trạng thái trước gộp và bước D bên dưới được giữ làm lịch sử/runbook; không chạy lại installer/migration đã áp. Bộ xử lý upload mới vẫn chưa triển khai và chưa có nghiệm thu mua mới online.
+
 Cập nhật15/10/2026 theo yêu cầu gộp nhánh `codex/ticket-code-sheets-sync-20261015` vào `main`. Push main kích hoạt Cloudflare Builds, nhưng không tự chạy migration, deploy Supabase Function, kết nối Google hoặc tạo trigger. Các bước dưới đây do admin sở hữu dịch vụ thực hiện; không dùng tài khoản của người khác.
 
 ## Hiện trạng đã kiểm tra trước gộp

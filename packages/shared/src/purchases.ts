@@ -78,7 +78,27 @@ export const offerConfigSchema = z
     normal_close_at: z.string().datetime({ offset: true }).nullable().optional(),
   })
   .strict()
-  .refine((v) => new Set(v.products.map((p) => p.id)).size === v.products.length, 'Loại vé trùng.');
+  .superRefine((v, ctx) => {
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [path], message });
+    if (
+      new Set(v.products.map((p) => p.id)).size !== v.products.length ||
+      new Set(v.products.map((p) => JSON.stringify([p.name, p.tier]))).size !== v.products.length
+    )
+      issue('products', 'Mỗi hạng chỉ có một cấu hình cho từng đợt vé sớm/vé thường.');
+    if (v.total_quota == null) return;
+    if (v.early_quota == null || v.early_quota > v.total_quota)
+      issue('early_quota', 'Số vé sớm phải từ 0 đến tổng số vé.');
+    if (!v.early_open_at) issue('early_open_at', 'Nhập giờ mở vé sớm.');
+    if (!v.early_close_at || Date.parse(v.early_close_at) <= Date.parse(v.early_open_at ?? ''))
+      issue('early_close_at', 'Kết thúc vé sớm phải sau giờ mở.');
+    if (!v.normal_close_at || Date.parse(v.normal_close_at) <= Date.parse(v.early_close_at ?? ''))
+      issue('normal_close_at', 'Đóng vé thường phải sau khi kết thúc vé sớm.');
+    const early = v.products.filter((p) => p.tier === 'EARLY').reduce((n, p) => n + p.quota, 0);
+    const normal = v.products.filter((p) => p.tier === 'NORMAL').reduce((n, p) => n + p.quota, 0);
+    if (v.early_quota != null && (early > v.early_quota || normal > v.total_quota - v.early_quota))
+      issue('products', 'Phân bổ từng hạng vượt số vé sớm hoặc số vé thường còn lại.');
+  });
 
 export type Buyer = z.infer<typeof buyerSchema>;
 export type PurchaseSelection = z.infer<typeof purchaseSelectionSchema>;

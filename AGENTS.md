@@ -1,5 +1,15 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Hai đợt bán chung hạng vé ngày15/10/2026
+
+Yêu cầu tiếp theo15/10/2026 cho phép push nhánh mới và gộp main để Cloudflare Builds cập nhật website. Migration cấu hình bán vé vẫn cần admin Supabase áp sau backup/review; push/merge không tự chạy migration. Kiểm tra deployment đúng commit trước khi báo website đã cập nhật.
+
+Người dùng yêu cầu gộp vé sớm/vé thường theo cùng hạng trên giao diện và cho admin tự chỉnh số vé sớm, giá đơn/combo và giờ mở/đóng hai đợt. Đã triển khai/kiểm thử local theo `docs/unified-ticket-sale-phases-20261015.md`; tổng700 LIVE giữ nguyên,100 sớm/lịch cũ là mặc định được sửa. Migration mới `20261015102130_configurable_sale_phases.sql` chưa áp remote, chưa push/deploy lượt này. Giữ giá/hạn giữ đơn cũ, quota kể cả đang giữ, quyền/Auth, lịch sử ID sản phẩm và vote. Không suy ra bản online đã có form mới từ việc Sheet đã đồng bộ.
+
+## Kết nối Sheet online ngày15/10/2026
+
+Yêu cầu mới “kết nối hoàn thành liên kết ngay” đã được thực hiện cho Sheet: OAuth owner thành công, source Apps Script khớp Git, installer tạo hai trigger mỗi phút và một onEdit. Đã kiểm tra các lượt chạy tự động, sáu đơn COMPLETED/15 vé và sửa/khôi phục một ô DEMO qua API (revision 0→2). Đã áp hai migration Sheets/quota, remote16; hai migration vote vẫn pending. Đọc `docs/sheet-activation-20261015.md` cho bằng chứng, backup DPAPI và giới hạn. Các ghi chú “chưa OAuth/trigger” bên dưới là lịch sử. Chưa deploy codec Function, chưa nghiệm thu đơn mới/upload online; không suy ra Sheet hoạt động là ảnh mới/vote/LIVE đã đạt. Chỉ sửa dữ liệu DEMO, không đổi owner/PII LIVE hoặc đưa token/secret vào Git.
+
 ## Yêu cầu gộp main và bàn giao ảnh/Sheet ngày15/10/2026
 
 Người dùng đã yêu cầu gộp nhánh bàn giao vào main, thay giới hạn chỉ push nhánh ở phần lịch sử bên dưới. Được phép push main và kích hoạt Cloudflare Builds trong lượt này. Đọc `docs/NEXT-STEPS-SHEET-IMAGES.md` để tiếp quản phần còn lại:4 migration pending, codec WASM/Storage, xác minh Worker và OAuth/trigger Google; các bước remote này vẫn do admin sở hữu dịch vụ thực hiện. Không suy ra merge/deploy Worker là Sheet tự đồng bộ hoặc upload ảnh đã đạt. Ảnh private, Sheet lưu UUID/mã minh chứng và xem qua web có quyền, không public ảnh để nhúng vào ô.

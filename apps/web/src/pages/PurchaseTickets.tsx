@@ -14,6 +14,7 @@ import {
 import { PageTitle, DataState } from '../components/Content';
 import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { currentTicketProducts } from '../lib/ticket-phases';
 import PurchaseRecords, { EvidenceImage } from '../components/PurchaseRecords';
 import './purchases.css';
 
@@ -50,7 +51,7 @@ const labels: Record<keyof Buyer, string> = {
 const states = {
   OPEN: 'Đang mở bán',
   UPCOMING: 'Sắp mở bán',
-  SOLD_OUT: 'Hết quota',
+  SOLD_OUT: 'Hết vé',
   CLOSED: 'Đã đóng bán',
 };
 export default function PurchaseTickets() {
@@ -229,9 +230,15 @@ function Checkout({ offer }: { offer: Offer }) {
     setFileUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-  const lines: PurchaseSelection['lines'] = offer.products.flatMap((product) =>
+  const products = currentTicketProducts(offer);
+  const lines: PurchaseSelection['lines'] = products.flatMap((product) =>
     ([1, 2, 3] as const).flatMap((bundle_size) => {
       if (!preview && product.state !== 'OPEN') return [];
+      if (
+        (bundle_size === 2 && product.combo2_vnd === null) ||
+        (bundle_size === 3 && product.combo3_vnd === null)
+      )
+        return [];
       const quantity = quantities[product.id + ':' + bundle_size] ?? 0;
       return quantity > 0 ? [{ product_id: product.id, bundle_size, quantity }] : [];
     }),
@@ -401,7 +408,7 @@ function Checkout({ offer }: { offer: Offer }) {
                 Chọn vé & combo
               </h2>
               <div className="purchase-products">
-                {offer.products.map((p) => (
+                {products.map((p) => (
                   <Card key={p.id}>
                     <Badge>
                       {p.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'} · {states[p.state]}
@@ -411,8 +418,35 @@ function Checkout({ offer }: { offer: Offer }) {
                       {money(p.price_vnd)} / vé · còn {p.available} vé
                     </p>
                     <p>
-                      {dates(p.opens_at)} – {dates(p.closes_at)}
+                      {dates(
+                        p.tier === 'NORMAL' && offer.early_close_at
+                          ? offer.early_close_at
+                          : p.opens_at,
+                      )}{' '}
+                      – {dates(p.closes_at)}
                     </p>
+                    {offer.products.filter((phase) => phase.name === p.name).length > 1 && (
+                      <details className="purchase-phase-details">
+                        <summary>Xem giá và lịch các đợt</summary>
+                        {offer.products
+                          .filter((phase) => phase.name === p.name)
+                          .map((phase) => (
+                            <p key={phase.id}>
+                              <strong>
+                                {phase.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'}:{' '}
+                                {money(phase.price_vnd)} / vé
+                              </strong>
+                              <br />
+                              {dates(
+                                phase.tier === 'NORMAL' && offer.early_close_at
+                                  ? offer.early_close_at
+                                  : phase.opens_at,
+                              )}{' '}
+                              – {dates(phase.closes_at)}
+                            </p>
+                          ))}
+                      </details>
+                    )}
                     {([1, 2, 3] as const).map((size) => {
                       const price =
                         size === 1 ? p.price_vnd : size === 2 ? p.combo2_vnd : p.combo3_vnd;
@@ -462,8 +496,13 @@ function Checkout({ offer }: { offer: Offer }) {
               </div>
               <p>
                 Combo 2 gồm 2 vé; Combo 3 gồm 3 vé cùng loại. BTC bố trí vị trí gần nhau. Hết vé
-                sớm, chọn vé thường đã được mở bán.
+                sớm, cùng hạng vé sẽ chuyển sang giá vé thường theo lịch BTC cấu hình.
               </p>
+              {!count && Object.values(quantities).some((q) => q > 0) && (
+                <p role="status">
+                  Đợt bán đã thay đổi. Kiểm tra giá hiện tại và chọn lại số lượng vé.
+                </p>
+              )}
               <p className="purchase-summary">
                 <strong>
                   {count} vé · {money(total)}

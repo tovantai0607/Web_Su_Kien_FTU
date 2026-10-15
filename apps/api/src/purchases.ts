@@ -31,6 +31,7 @@ function failure(error: { message: string } | null) {
     SALE_NOT_CONFIGURED: [409, 'BTC đang chuẩn bị giá và phân bổ vé.'],
     PROGRAM_QUOTA_EXCEEDED: [400, 'Quota vượt giới hạn vé sớm hoặc tổng vé của vòng.'],
     PROGRAM_CAPACITY_FIXED: [400, 'Giữ nguyên hạn mức vé đã chốt của vòng.'],
+    INVALID_SALE_PHASES: [400, 'Kiểm tra số vé sớm và thứ tự giờ mở/đóng hai đợt bán.'],
     QUOTA_BELOW_ALLOCATED: [409, 'Quota không được thấp hơn số vé đã giữ hoặc Hoàn tất.'],
     IDEMPOTENCY_CONFLICT: [409, 'Yêu cầu gửi lại có nội dung khác.'],
     SALE_CLOSED: [409, 'Loại vé chưa mở bán hoặc đã đóng bán.'],
