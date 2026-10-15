@@ -123,6 +123,105 @@ it('automatically closes only expired open voting sessions and never finalizes o
       .rows[0].n,
   ).toBe(0);
 });
+
+it('ranks DEMO votes by category, counts retries once and keeps closed-session counts', async () => {
+  const held = await reserve(4, 1),
+    evidence = await proof(held.id);
+  await complete(held.id, evidence.id);
+  const femaleZero = crypto.randomUUID();
+  await db.query(
+    "insert into public.contestants(id,edition_id,user_id,slug,display_name,faculty,bio,gender,published) values($1,$2,$3,'zero-demo','Nữ DEMO chưa có phiếu','DEMO','DEMO','female',true)",
+    [femaleZero, edition, user],
+  );
+  await db.query('insert into public.round_entries values($1,$2,$3,true)', [
+    edition,
+    round,
+    femaleZero,
+  ]);
+  await rpc('prepare_gender_voting', [admin, 'aal2', round]);
+  const session = await rpc('open_gender_voting', [admin, 'aal2', round]);
+  const tickets = (
+    await db.query<{ id: string }>(
+      'select id from public.tickets where purchase_id=$1 order by purchase_ordinal',
+      [held.id],
+    )
+  ).rows;
+  const categories = (
+    await db.query<{ id: string; gender: string }>(
+      'select id,gender from public.vote_categories where round_id=$1',
+      [round],
+    )
+  ).rows;
+  type Board = {
+    session_id: string;
+    rows: { category_id: string; contestant_id: string; votes: number; rank: number }[];
+  };
+  const initial = await rpc<Board>('read_demo_vote_leaderboard', [round]);
+  expect(initial.session_id).toBe(session.id);
+  expect(initial.rows).toHaveLength(3);
+  expect(initial.rows.every((row) => row.votes === 0 && row.rank === 1)).toBe(true);
+  for (const category of categories) {
+    const candidate = category.gender === 'male' ? male : female;
+    for (const ticket of tickets.slice(0, 3)) {
+      for (let retry = 0; retry < 2; retry++)
+        await rpc('cast_category_vote', [
+          user,
+          round,
+          ticket.id,
+          candidate,
+          category.id,
+          session.id,
+        ]);
+    }
+  }
+  const board = await rpc<Board>('read_demo_vote_leaderboard', [round]);
+  expect(
+    board.rows
+      .filter((row) => row.contestant_id !== femaleZero)
+      .every((row) => row.votes === 3 && row.rank === 1),
+  ).toBe(true);
+  expect(board.rows.find((row) => row.contestant_id === femaleZero)).toMatchObject({
+    votes: 0,
+    rank: 2,
+  });
+  expect(JSON.stringify(board)).not.toContain(user);
+  expect(JSON.stringify(board)).not.toContain(tickets[0].id);
+  await db.query(
+    "update public.vote_sessions set close_at=clock_timestamp()+interval '1 second',reopen_reason='DEMO deadline test' where id=$1",
+    [session.id],
+  );
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  await rpc('close_due_vote_sessions', [100]);
+  expect(await rpc<Board>('read_demo_vote_leaderboard', [round])).toEqual(board);
+  await db.exec('savepoint closed_vote');
+  await expect(
+    rpc('cast_category_vote', [
+      user,
+      round,
+      tickets[3].id,
+      female,
+      categories.find((category) => category.gender === 'female')!.id,
+      session.id,
+    ]),
+  ).rejects.toThrow('VOTE_CLOSED');
+  await db.exec('rollback to savepoint closed_vote');
+});
+
+it('never exposes a LIVE or unpublished round through the DEMO leaderboard RPC', async () => {
+  for (const role of ['anon', 'authenticated']) {
+    const access = await db.query<{ allowed: boolean }>(
+      "select has_function_privilege($1,'public.read_demo_vote_leaderboard(uuid)','EXECUTE') allowed",
+      [role],
+    );
+    expect(access.rows[0].allowed).toBe(false);
+  }
+  await db.query('update public.contest_rounds set published=false where id=$1', [round]);
+  expect(await rpc('read_demo_vote_leaderboard', [round])).toBeNull();
+  await db.query('update public.contest_rounds set published=true where id=$1', [round]);
+  await db.query("update public.purchase_offers set mode='LIVE' where id=$1", [offer]);
+  expect(await rpc('read_demo_vote_leaderboard', [round])).toBeNull();
+  expect(await rpc('read_demo_vote_leaderboard', [crypto.randomUUID()])).toBeNull();
+});
 it('closes a scheduled session at its server deadline without an OPEN state transition or result publication', async () => {
   await rpc('prepare_gender_voting', [admin, 'aal2', round]);
   await rpc('save_voting_settings', [

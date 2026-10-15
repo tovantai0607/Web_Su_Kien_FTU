@@ -9,6 +9,18 @@ const env: Env = {
   DEMO_MODE: 'true',
 };
 describe('Worker HTTP protections', () => {
+  it('identifies the isolated DEMO test without calling the database', async () => {
+    const response = await app.request(
+      'http://localhost/api/health',
+      {},
+      {
+        ...env,
+        DEMO_MODE: 'false',
+        DEMO_TEST_OFFER_SLUG: 'test-giao-dich-demo',
+      },
+    );
+    expect(await response.json()).toMatchObject({ status: 'ok', mode: 'demo-test' });
+  });
   it('preview GET works and returns public contestant projection', async () => {
     const r = await app.request('http://localhost/api/contestants', {}, env);
     expect(r.status).toBe(200);

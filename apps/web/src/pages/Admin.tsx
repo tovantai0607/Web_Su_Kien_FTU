@@ -32,6 +32,7 @@ import { useAuth } from '../lib/auth';
 import PrivateMedia from '../components/PrivateMedia';
 import AdminOverview from '../components/AdminOverview';
 import PurchaseAdmin from '../components/PurchaseAdmin';
+import DemoTicketLinks from '../components/DemoTicketLinks';
 import PurchaseCustomers from './PurchaseCustomers';
 import PublicationAdmin from '../components/PublicationAdmin';
 type Row = Record<string, unknown>;
@@ -266,6 +267,7 @@ export default function Admin() {
         </p>
         {tab !== 'purchase-data' && tab !== 'publications' && <DataState query={q} />}
         {tab === 'overview' && q.isSuccess && <AdminOverview summary={summary} />}
+        {tab === 'overview' && <DemoTicketLinks />}
         {tab === 'purchase-data' && <PurchaseAdmin />}
         {tab === 'publications' && <PublicationAdmin />}
         {defaults[tab] && tab !== 'contestant-profiles' && (

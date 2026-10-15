@@ -6,8 +6,35 @@ const FTU_TAB = 'Khách mua vé';
 const FTU_SYNC_TAB = '_Đồng bộ';
 const FTU_OPERATIONS_TAB = '_Lệnh đồng bộ';
 const FTU_SOURCE_TAB = 'Database hiện hành';
+const FTU_CODE_TABS = { BK: 'Vé bán kết', CK: 'Vé chung kết', DM: 'Vé DEMO' };
+const FTU_CODE_HEADERS = [
+  'Mã vé / nhóm',
+  'Mã vé thành viên',
+  'Đêm',
+  'Trạng thái',
+  'Mã đơn',
+  'Họ tên',
+  'Trường',
+  'Khóa/lớp',
+  'MSSV',
+  'Email liên hệ',
+  'Số điện thoại',
+  'Facebook',
+  'Minh chứng',
+  'Loại vé',
+  'Đợt vé',
+  'Số vé',
+  'Combo',
+  'Số lượng combo',
+  'Hoàn tất lúc',
+  'Mã lịch sử',
+  '_ticket_ids',
+  '_request_id',
+  '_round_id',
+  '_sequences',
+];
 const FTU_HEADERS = [
-  'Mã vé',
+  'Mã đơn',
   'Họ tên',
   'Trường',
   'Khóa/lớp',
@@ -226,12 +253,190 @@ function installFtuSync() {
   // Verify connectivity and authorization before creating background jobs.
   ftuApi_('/admin/sheets/purchases?page=0');
   syncFtuPurchases();
-  const functions = ['syncFtuPurchases', 'onFtuPurchaseEdit'];
+  syncFtuTicketCodes();
+  const functions = ['syncFtuPurchases', 'onFtuPurchaseEdit', 'syncFtuTicketCodes'];
   ScriptApp.getProjectTriggers().forEach((trigger) => {
     if (functions.indexOf(trigger.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(trigger);
   });
   ScriptApp.newTrigger('syncFtuPurchases').timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger('syncFtuTicketCodes').timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger('onFtuPurchaseEdit').forSpreadsheet(FTU_SHEET_ID).onEdit().create();
+}
+
+// These three register tabs are server-owned views, one row per combo selection.
+// Individual codes/UUIDs remain in the source and member columns. Edit buyer
+// details/quantities in Khách mua vé, whose existing conflict protections apply.
+function ftuCodeRows_(records) {
+  const groups = new Map();
+  const codes = new Set();
+  const tickets = new Set();
+  records.forEach((record) => {
+    if (
+      !/^(BK|CK|DM)\d{5}$/.test(record.code) ||
+      record.code.slice(0, 2) !== record.prefix ||
+      codes.has(record.code)
+    )
+      throw new Error('Mã vé nguồn không hợp lệ hoặc bị trùng.');
+    codes.add(record.code);
+    if (record.ticket_id) {
+      if (tickets.has(record.ticket_id)) throw new Error('Vé nguồn bị gắn nhiều mã.');
+      tickets.add(record.ticket_id);
+    }
+    const line = record.line || {};
+    const combo = record.ticket_id && [2, 3].indexOf(line.bundle_size) !== -1;
+    if (combo && (!record.request_id || !record.round_id))
+      throw new Error('Thiếu đơn hoặc vòng của combo.');
+    // Merge selections within one order, not different buyers or ticket types.
+    const key = combo
+      ? JSON.stringify([
+          record.request_id,
+          record.round_id,
+          line.product_id || line.name,
+          line.tier,
+          line.bundle_size,
+          record.status,
+        ])
+      : record.code;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  });
+  return Array.from(groups.values()).map((members) => {
+    members.sort((a, b) => a.code.localeCompare(b.code));
+    const record = members[0];
+    const buyer = record.buyer || {};
+    const line = record.line || {};
+    if (
+      members.some(
+        (member) =>
+          JSON.stringify(member.buyer || {}) !== JSON.stringify(buyer) ||
+          member.evidence_id !== record.evidence_id ||
+          member.order_code !== record.order_code,
+      )
+    )
+      throw new Error('Thông tin trong nhóm combo không khớp; cần đối chiếu nguồn.');
+    const combo = record.ticket_id && [2, 3].indexOf(line.bundle_size) !== -1;
+    if (combo && record.status === 'ISSUED' && members.length % line.bundle_size !== 0)
+      throw new Error('Số vé combo không đủ; không ghi nhóm thiếu.');
+    const memberCodes = members.map((member) => member.code);
+    const group = combo
+      ? 'cb' + line.bundle_size + '_' + members.length + '_' + ftuCodeRanges_(memberCodes)
+      : record.code;
+    return [
+      group,
+      memberCodes.join('\n'),
+      record.prefix === 'BK' ? 'Bán kết' : record.prefix === 'CK' ? 'Chung kết' : 'DEMO',
+      record.status === 'AVAILABLE'
+        ? 'Chưa cấp'
+        : record.status === 'ISSUED'
+          ? 'Đã cấp'
+          : 'Đã ngừng dùng',
+      record.order_code || '',
+      buyer.name || '',
+      buyer.school || '',
+      buyer.cohort_class || '',
+      buyer.student_id || '',
+      buyer.email || '',
+      buyer.phone || '',
+      buyer.facebook || '',
+      record.evidence_id || '',
+      line.name || '',
+      line.tier === 'EARLY' ? 'Vé sớm' : line.tier === 'NORMAL' ? 'Vé thường' : '',
+      record.ticket_id ? members.length : 0,
+      line.bundle_size ? (line.bundle_size === 1 ? 'Đơn' : 'Combo ' + line.bundle_size) : '',
+      combo ? members.length / line.bundle_size : '',
+      record.completed_at ? new Date(record.completed_at) : '',
+      members.map((member) => member.legacy_code || '').join('\n'),
+      members.map((member) => member.ticket_id || '').join('\n'),
+      record.request_id || '',
+      record.round_id,
+      members.map((member) => member.sequence).join('\n'),
+    ].map((value) =>
+      typeof value === 'string' && /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? "'" + value : value,
+    );
+  });
+}
+
+// A range is used only for consecutive codes; gaps remain explicit.
+function ftuCodeRanges_(codes) {
+  const ranges = [];
+  let first = codes[0],
+    last = first;
+  codes.slice(1).forEach((code) => {
+    if (
+      code.slice(0, 2) === last.slice(0, 2) &&
+      Number(code.slice(2)) === Number(last.slice(2)) + 1
+    ) {
+      last = code;
+    } else {
+      ranges.push(first === last ? first : first + '-' + last);
+      first = last = code;
+    }
+  });
+  ranges.push(first === last ? first : first + '-' + last);
+  return ranges.join('+');
+}
+function syncFtuTicketCodes() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return;
+  try {
+    assertPrivateFtuSheet_();
+    const book = SpreadsheetApp.openById(FTU_SHEET_ID);
+    ['LIVE', 'DEMO'].forEach((mode) => {
+      const records = [];
+      for (let page = 0; ; page++) {
+        const data = ftuApi_('/admin/sheets/ticket-codes?mode=' + mode + '&page=' + page);
+        data.rows.forEach((row) => records.push(row));
+        if ((page + 1) * 200 >= data.count) break;
+      }
+      const prefixes = mode === 'LIVE' ? ['BK', 'CK'] : ['DM'];
+      if (records.some((record) => prefixes.indexOf(record.prefix) === -1))
+        throw new Error('Tiền tố mã vé không khớp phạm vi nguồn.');
+      prefixes.forEach((prefix) => {
+        writeFtuTicketCodeTab_(
+          book,
+          prefix,
+          records.filter((record) => record.prefix === prefix),
+        );
+      });
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function writeFtuTicketCodeTab_(book, prefix, records) {
+  const sheet = book.getSheetByName(FTU_CODE_TABS[prefix]);
+  if (!sheet)
+    throw new Error('Thiếu tab ' + FTU_CODE_TABS[prefix] + '; không tự ghi sang tab khác.');
+  const headers = sheet.getRange(1, 1, 1, FTU_CODE_HEADERS.length).getValues()[0];
+  if (headers.some((value, index) => value !== FTU_CODE_HEADERS[index]))
+    throw new Error('Cấu trúc tab mã vé không khớp.');
+  const rows = ftuCodeRows_(records);
+  const previousLength = Math.max(0, sheet.getLastRow() - 1);
+  const current = previousLength ? sheet.getRange(2, 2, previousLength, 1).getValues() : [];
+  const sourceCodes = new Set(records.map((record) => record.code));
+  const existingCodes = new Set();
+  current.forEach((row) => {
+    String(row[0] || '')
+      .split('\n')
+      .filter(Boolean)
+      .forEach((code) => {
+        if (!/^(BK|CK|DM)\d{5}$/.test(code) || existingCodes.has(code) || !sourceCodes.has(code))
+          throw new Error('Mã thành viên thay đổi hoặc nguồn giảm; giữ nguyên bảng để đối chiếu.');
+        existingCodes.add(code);
+      });
+  });
+  // Grouping reduces view rows without removing a single source ticket/code.
+  // Write the complete view plus blank padding in one call, including old tail rows.
+  const length = Math.max(rows.length, previousLength);
+  if (sheet.getMaxRows() < length + 1)
+    sheet.insertRowsAfter(sheet.getMaxRows(), length + 1 - sheet.getMaxRows());
+  if (length) {
+    const output = rows.concat(
+      Array.from({ length: length - rows.length }, () => Array(24).fill('')),
+    );
+    sheet.getRange(2, 1, length, 24).setValues(output);
+  }
 }
 
 function assertPrivateFtuSheet_() {

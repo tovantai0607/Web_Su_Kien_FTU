@@ -91,6 +91,47 @@ afterAll(async () => {
   objects.clear();
   await db.close();
 });
+it('serves the approved DEMO catalog and vote round alongside an official homepage, and fences writes before mutation', async () => {
+  const scoped = {
+    ...env,
+    PUBLIC_EDITION_SLUG: 'ftucharm-2027',
+    DEMO_TEST_OFFER_SLUG: 'ban-ket-local',
+  };
+  const call = (path: string, body?: unknown) =>
+    app.request(
+      'http://localhost/api' + path,
+      {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {
+          Origin: env.ALLOWED_ORIGIN,
+          Authorization: token(owner),
+          'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+      scoped,
+    );
+  await db.exec('begin');
+  try {
+    const catalog = await responseData<{ offers: { mode: string; slug: string }[] }>(
+      await call('/purchase-catalog'),
+    );
+    expect(catalog.offers.map((o) => [o.mode, o.slug])).toEqual([['DEMO', 'ban-ket-local']]);
+    const rounds = await responseData<{ id: string }[]>(await call('/rounds'));
+    expect(rounds.map((r) => r.id)).toEqual([fixture(20)]);
+    expect((await call('/voting/' + fixture(20))).status).toBe(200);
+    const voting = await responseData<{ demo_leaderboard: { rows: unknown[]; session_id: null } }>(
+      await call('/voting/' + fixture(20)),
+    );
+    expect(voting.demo_leaderboard).toEqual({ rows: [], session_id: null });
+    expect((await call('/purchases', { ...selection(), offer_id: fixture(99) })).status).toBe(403);
+    expect((await call('/contestants/apply', {})).status).toBe(403);
+    expect((await call('/purchases', selection())).status).toBe(200);
+  } finally {
+    await db.exec('rollback');
+  }
+});
 it('serves public vote participation through the privileged server client without granting the public client execute', async () => {
   const privileges = await db.query<{ allowed: boolean }>(
     "select has_function_privilege('anon','public.read_vote_participation(uuid)','EXECUTE') allowed",
@@ -102,6 +143,7 @@ it('serves public vote participation through the privileged server client withou
     response,
   );
   expect(data.participation).toEqual({ participants: 0, votes: 0 });
+  expect((data as { demo_leaderboard?: unknown }).demo_leaderboard).toBeNull();
 });
 it('guards authentication, Origin, input, idempotency and body limits before DB writes', async () => {
   expect(
@@ -229,4 +271,30 @@ it('completes the real HTTP->SQL flow with a private, transformed proof and idem
   expect((await request('/purchase-evidence/' + replacementId)).status).toBe(200);
   const currentProof = await request('/purchases/' + purchase.id);
   expect((await responseData<Purchase>(currentProof)).evidence_id).toBe(replacementId);
+});
+
+it('exports the role-protected code register and returns only the caller’s own display codes', async () => {
+  await query('select public.configure_ticket_code_stock($1,$2,$3,$4)', [
+    fixture(40),
+    'DM',
+    50,
+    600,
+  ]);
+  const forbidden = await request('/admin/sheets/ticket-codes?mode=DEMO', undefined, other);
+  expect(forbidden.status).toBe(403);
+  const result = await request('/admin/sheets/ticket-codes?mode=DEMO', undefined, admin, {
+    Authorization: token(admin, 'aal2'),
+  });
+  expect(result.status).toBe(200);
+  const register = await responseData<{ count: number; rows: { code: string }[] }>(result);
+  expect(register.count).toBe(50);
+  expect(register.rows[0].code).toBe('DM00001');
+  const own = await responseData<(Ticket & { display_code: string })[]>(
+    await request('/me/tickets'),
+  );
+  expect(own.length).toBeGreaterThan(0);
+  expect(own.every((t) => /^DM\d{5}$/.test(t.display_code))).toBe(true);
+  expect(new Set(own.map((t) => t.display_code)).size).toBe(own.length);
+  const otherTickets = await responseData<Ticket[]>(await request('/me/tickets', undefined, other));
+  expect(otherTickets).toHaveLength(0);
 });
