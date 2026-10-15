@@ -25,6 +25,9 @@ async function setup(page: Page, time = '2027-02-20T12:00:00+07:00', state = 'UP
       event_date: '2027-04-25',
       total_quota: 700,
       early_quota: 100,
+      early_open_at: '2027-03-29T00:00:00+07:00',
+      early_close_at: '2027-03-31T00:00:00+07:00',
+      normal_close_at: '2027-04-25T00:00:00+07:00',
       products: [],
       checkout_enabled: false,
       phase: 'UPCOMING',
@@ -79,6 +82,11 @@ test('official homepage and ticket metadata work without preview, prices or phot
   await expect(
     page.getByText('Chưa nhận đơn. Giá, phân bổ loại vé và QR chuyển khoản đang chờ BTC cấu hình.'),
   ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Hạng vé dự kiến' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Intro', exact: true })).toBeVisible();
+  await expect(page.getByText('Chờ cập nhật giá', { exact: true })).toHaveCount(3);
+  await expect(page.getByLabel('Lịch mở bán')).toContainText('29 thg 3, 2027');
+  await expect(page.getByRole('button', { name: 'Xác nhận vé & combo' })).toHaveCount(0);
   for (const width of info.project.name === 'mobile' ? [320, 390] : [1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -90,6 +98,58 @@ test('official homepage and ticket metadata work without preview, prices or phot
       .violations,
   ).toEqual([]);
   expect(writes).toEqual([]);
+  await page.screenshot({
+    path: info.outputPath('official-ticket-pending-price.png'),
+    fullPage: true,
+  });
+});
+
+test('guests see both official nights and cannot open DEMO voting', async ({ page }) => {
+  await setup(page);
+  await page.route('**/api/purchase-catalog', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          server_time: new Date().toISOString(),
+          offers: [
+            {
+              id: id(3),
+              slug: 'ban-ket-2027',
+              title: 'Đêm bán kết FTUCharm 2027',
+              mode: 'LIVE',
+              event_date: '2027-04-25',
+              products: [],
+              checkout_enabled: false,
+            },
+            {
+              id: id(8),
+              slug: 'chung-ket-2027',
+              title: 'Đêm chung kết FTUCharm 2027',
+              mode: 'LIVE',
+              event_date: '2027-05-23',
+              products: [],
+              checkout_enabled: false,
+            },
+            {
+              id: id(9),
+              slug: 'test-giao-dich-demo',
+              title: 'Đợt thử DEMO',
+              mode: 'DEMO',
+              products: [],
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await page.goto('/ve');
+  await expect(page.getByRole('heading', { name: 'Đêm bán kết FTUCharm 2027' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Đêm chung kết FTUCharm 2027' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Xem vé & combo' })).toHaveCount(2);
+  await expect(page.getByText('Đợt thử DEMO', { exact: true })).toHaveCount(0);
+  await page.goto('/binh-chon?demo=1&vong=' + id(99));
+  await expect(page.getByText('DEMO chỉ dành cho tài khoản admin')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Bảng xếp hạng DEMO' })).toHaveCount(0);
 });
 test('registration uses server time even if the browser clock claims the registration window is open', async ({
   page,
@@ -189,7 +249,7 @@ test('ticket types stay grouped when the server switches from early to normal sa
               id: id(3),
               slug: 'ban-ket-2027',
               title: 'Đêm bán kết FTUCharm 2027',
-              mode: 'DEMO',
+              mode: 'LIVE',
               total_quota: 700,
               early_quota: 100,
               phase,

@@ -4,13 +4,18 @@ import { Button, Card } from '@ftu/ui';
 import type { Offer } from '@ftu/shared';
 import { api } from '../lib/api';
 import { DataState } from './Content';
+import { useAuth } from '../lib/auth';
 
 export default function DemoTicketLinks() {
+  const { user, access, accessLoading } = useAuth();
+  const allowed = !!user && !!access?.is_admin && !accessLoading;
   const query = useQuery({
-    queryKey: ['admin-purchase-offers'],
+    queryKey: ['admin-purchase-offers', user?.id],
     queryFn: () => api<Offer[]>('/admin/purchase-offers'),
     retry: false,
+    enabled: allowed,
   });
+  if (!allowed) return null;
   const offers = query.data?.filter((offer) => offer.mode === 'DEMO' && offer.published) ?? [];
   return (
     <>
@@ -30,7 +35,9 @@ export default function DemoTicketLinks() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to={'/binh-chon?vong=' + offer.round_id}>Thử vote và xem BXH DEMO</Link>
+                <Link to={'/binh-chon?demo=1&vong=' + offer.round_id}>
+                  Thử vote và xem BXH DEMO
+                </Link>
               </Button>
             </div>
           ))}

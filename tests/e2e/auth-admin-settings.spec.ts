@@ -396,7 +396,7 @@ test('admin opens customer records with six columns, proof, CSV and database lin
   );
   await expect(page.getByRole('link', { name: 'Thử vote và xem BXH DEMO' })).toHaveAttribute(
     'href',
-    '/binh-chon?vong=' + id(20),
+    '/binh-chon?demo=1&vong=' + id(20),
   );
   await expect(page.getByRole('columnheader')).toHaveCount(6);
   await expect(page.getByText('customer@example.test', { exact: false })).toBeVisible();
@@ -515,7 +515,7 @@ test('DEMO ranking refreshes, switches category and fits mobile without exposing
   await setup(page);
   const round = { id: id(20), title: 'Vòng thử DEMO', kind: 'semifinal' };
   let votes = 0;
-  await page.route('**/api/rounds', (route) => route.fulfill({ json: { data: [round] } }));
+  await page.route('**/api/rounds?demo=1', (route) => route.fulfill({ json: { data: [round] } }));
   await page.route('**/api/voting/' + round.id, (route) =>
     route.fulfill({
       json: {
@@ -558,7 +558,10 @@ test('DEMO ranking refreshes, switches category and fits mobile without exposing
       },
     }),
   );
-  await page.goto('/binh-chon?vong=' + round.id);
+  await login(page);
+  await page.getByRole('link', { name: 'Mở quản trị', exact: true }).click();
+  await page.getByRole('link', { name: 'Khách đã mua vé', exact: true }).click();
+  await page.getByRole('link', { name: 'Thử vote và xem BXH DEMO' }).click();
   const board = page.getByRole('region', { name: 'Bảng xếp hạng DEMO' });
   await expect(board.getByText('0 phiếu', { exact: true })).toBeVisible();
   votes = 3;

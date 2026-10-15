@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { Env } from '../../apps/api/src/security';
-const state = vi.hoisted(() => ({ exists: true, present: true }));
+import { HTTPException } from 'hono/http-exception';
+const state = vi.hoisted(() => ({ exists: true, present: true, admin: true, signedIn: true }));
 const offer = {
   id: 'demo-offer',
   mode: 'DEMO',
@@ -8,6 +9,13 @@ const offer = {
   round_id: '11111111-1111-4111-8111-111111111111',
 };
 vi.mock('../../apps/api/src/security', () => ({
+  authenticate: async () => {
+    if (!state.signedIn) throw new HTTPException(401);
+    return { id: 'user', aal: 'aal2' };
+  },
+  authorize: async () => {
+    if (!state.admin) throw new HTTPException(403);
+  },
   service: () => ({
     from: (table: string) => {
       const filters: Record<string, string> = {};
@@ -38,7 +46,19 @@ import { enforceDemoWrite } from '../../apps/api/src/demo-scope';
 const env = { DEMO_TEST_OFFER_SLUG: 'test-giao-dich-demo' } as Env;
 const request = (path: string, body: unknown = {}, method = 'POST') =>
   new Request('https://fixture.test/api/' + path, { method, body: JSON.stringify(body) });
-beforeEach(() => Object.assign(state, { exists: true, present: true }));
+beforeEach(() =>
+  Object.assign(state, { exists: true, present: true, admin: true, signedIn: true }),
+);
+it('rejects non-admin and anonymous DEMO writes even with the approved offer ID', async () => {
+  state.admin = false;
+  await expect(
+    enforceDemoWrite(request('purchases', { offer_id: offer.id }), env),
+  ).rejects.toMatchObject({ status: 403 });
+  state.signedIn = false;
+  await expect(
+    enforceDemoWrite(request('votes', { round_id: offer.round_id }), env),
+  ).rejects.toMatchObject({ status: 401 });
+});
 it('rejects LIVE purchases, unrelated modules and attempts to change the DEMO offer scope', async () => {
   for (const r of [
     request('purchases', { offer_id: 'live' }),
@@ -49,7 +69,7 @@ it('rejects LIVE purchases, unrelated modules and attempts to change the DEMO of
   ])
     await expect(enforceDemoWrite(r, env)).rejects.toMatchObject({ status: 403 });
 });
-it('allows only the existing DEMO purchase and session before application authorization', async () => {
+it('allows an admin only within the existing DEMO purchase and session scope', async () => {
   for (const r of [
     request('purchases', { offer_id: offer.id }),
     request('admin/purchase-offers', offer),

@@ -1,5 +1,9 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## DEMO chỉ dành cho admin ngày15/10/2026
+
+Yêu cầu mới: khách và tài khoản thường xem hai đêm LIVE2027 theo lịch chính thức; chỉ tài khoản có quyền vào quản trị được mua/vote DEMO. Mặc định `/ve` và `/binh-chon` luôn đọc mùa chính thức, cả khi cấu hình online-test có DEMO_TEST_OFFER_SLUG. DEMO dùng slug riêng và `?demo=1`, kiểm tra Auth/role server, không chỉ ẩn nút. Giá/QR LIVE chưa có để chờ BTC cấu hình, không sao chép giá100k/QR DEMO sang LIVE. Bảo toàn đơn/vé/phiếu cũ và đồng bộ Sheet; giữ hàng rào chỉ ghi DEMO của môi trường online-test. Đọc `docs/admin-demo-official-catalog-20261015.md` cho thay đổi và bằng chứng; không suy ra source local đã deploy.
+
 ## Hai đợt bán chung hạng vé ngày15/10/2026
 
 Yêu cầu tiếp theo15/10/2026 cho phép push nhánh mới và gộp main để Cloudflare Builds cập nhật website. Migration cấu hình bán vé vẫn cần admin Supabase áp sau backup/review; push/merge không tự chạy migration. Kiểm tra deployment đúng commit trước khi báo website đã cập nhật.

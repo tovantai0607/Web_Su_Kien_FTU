@@ -28,6 +28,14 @@
 .purchase-checkout {
   margin-top: 32px;
 }
+.purchase-sale-schedule {
+  padding: 16px 0;
+  border-block: 1px solid var(--line, #e2cad1);
+  overflow-wrap: anywhere;
+}
+.purchase-sale-schedule p + p {
+  margin-top: 8px;
+}
 .purchase-steps {
   list-style: none;
   padding: 0;

@@ -35,6 +35,7 @@ it('QA-JOURNEY desktop/mobile checkout, image correction, retry, vote and admin 
   const db = new PGlite();
   query = (sql, params) => db.query(sql, params);
   const { env, objects } = localEnvironment('http://127.0.0.1:5174');
+  env.DEMO_TEST_OFFER_SLUG = 'ban-ket-local';
   let ui: Awaited<ReturnType<typeof viteServer>> | undefined;
   let server: ReturnType<typeof httpServer> | undefined;
   try {
@@ -49,6 +50,11 @@ it('QA-JOURNEY desktop/mobile checkout, image correction, retry, vote and admin 
         ),
       );
     await db.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
+    // The end-to-end DEMO buyer is an admin; ordinary-account denial is covered by HTTP tests.
+    await db.query('insert into public.user_roles(user_id,role) values($1,$2)', [
+      owner,
+      'SUPER_ADMIN',
+    ]);
     await db.query('select public.prepare_gender_voting($1,$2,$3)', [admin, 'aal2', fixture(20)]);
     await db.query('select public.open_gender_voting($1,$2,$3)', [admin, 'aal2', fixture(20)]);
     const http = httpServer(async (req, res) => {
@@ -110,7 +116,7 @@ it('QA-JOURNEY desktop/mobile checkout, image correction, retry, vote and admin 
             if (!file.endsWith('/apps/web/src/lib/api.ts')) return;
             return code.replace(
               /export const supabase =[\s\S]*?\/\/ Preview/,
-              `const qaAdmin=location.search.includes('qa-admin'); export const supabase = { auth: { getSession: async () => ({data: {session: {access_token: qaAdmin ? '${token(admin, 'aal2').replace('Bearer ', '')}' : '${token().replace('Bearer ', '')}', user: {id: qaAdmin ? '${admin}' : '${owner}'}}}}), onAuthStateChange: () => ({data:{subscription:{unsubscribe(){}}}}) } };\n// Preview`,
+              `const qaAdmin=location.search.includes('qa-admin'); export const supabase = { auth: { getSession: async () => ({data: {session: {access_token: qaAdmin ? '${token(admin, 'aal2').replace('Bearer ', '')}' : '${token(owner, 'aal2').replace('Bearer ', '')}', user: {id: qaAdmin ? '${admin}' : '${owner}'}}}}), onAuthStateChange: () => ({data:{subscription:{unsubscribe(){}}}}) } };\n// Preview`,
             );
           },
         },

@@ -19,7 +19,7 @@ import {
 } from './security';
 import { officialEdition } from './program';
 import { proofStorage, remoteProofTransform } from './proof-storage';
-import { demoOffer } from './demo-scope';
+import { demoOffer, requireDemoAdmin, visiblePurchaseRows } from './demo-scope';
 
 type AppEnv = { Bindings: Env; Variables: { principal: Principal } };
 function failure(error: { message: string } | null) {
@@ -116,14 +116,16 @@ purchases.get('/purchase-catalog', async (c) => {
   const slug = c.req.query('slug') ?? null;
   if (slug && !/^[a-z0-9-]{1,100}$/.test(slug))
     throw new HTTPException(400, { message: 'Đợt vé không hợp lệ.' });
+  const demoRequested = !!c.env.DEMO_TEST_OFFER_SLUG && slug === c.env.DEMO_TEST_OFFER_SLUG;
+  if (demoRequested) await requireDemoAdmin(c.req.raw, c.env);
   const { data, error } = await service(c.env).rpc('purchase_catalog', { p_slug: slug });
   failure(error);
-  if (c.env.DEMO_TEST_OFFER_SLUG) {
+  if (demoRequested) {
     data.offers = data.offers.filter(
       (o: { mode: string; slug: string }) =>
         o.mode === 'DEMO' && o.slug === c.env.DEMO_TEST_OFFER_SLUG,
     );
-  } else if (c.env.PUBLIC_EDITION_SLUG) {
+  } else if (c.env.PUBLIC_EDITION_SLUG || c.env.DEMO_TEST_OFFER_SLUG) {
     const edition = await officialEdition(c.env);
     data.offers = data.offers.filter(
       (o: { mode: string; edition_id: string }) =>
@@ -187,6 +189,8 @@ purchases.get('/purchases/:id', async (c) => {
     p_request: id(c.req.param('id')),
   });
   failure(error);
+  if (c.env.DEMO_TEST_OFFER_SLUG && data.payment?.mode === 'DEMO')
+    await requireDemoAdmin(c.req.raw, c.env, c.get('principal'));
   return c.json({ data });
 });
 purchases.post('/purchases/:id/complete', async (c) => {
@@ -231,11 +235,22 @@ purchases.post('/purchases/:id/evidence', async (c) => {
 purchases.get('/purchase-evidence/:id', async (c) => {
   const { data, error } = await service(c.env)
     .from('purchase_evidence')
-    .select('user_id,object_key,mime')
+    .select('user_id,object_key,mime,request_id')
     .eq('id', id(c.req.param('id')))
     .maybeSingle();
   failure(error);
   if (!data) throw new HTTPException(404, { message: 'Không tìm thấy ảnh.' });
+  if (c.env.DEMO_TEST_OFFER_SLUG) {
+    const purchase = await service(c.env)
+      .from('purchase_requests')
+      .select('round_id')
+      .eq('id', data.request_id)
+      .maybeSingle();
+    failure(purchase.error);
+    if (!purchase.data) throw new HTTPException(404, { message: 'Không tìm thấy đơn.' });
+    if (purchase.data.round_id === (await demoOffer(c.env)).round_id)
+      await requireDemoAdmin(c.req.raw, c.env, c.get('principal'));
+  }
   if (data.user_id !== c.get('principal').id)
     await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
   const object = await proofStorage(c.env).get(data.object_key);
@@ -258,7 +273,9 @@ purchases.get('/me/purchases', async (c) => {
     .order('created_at', { ascending: false })
     .limit(100);
   failure(error);
-  return c.json({ data });
+  return c.json({
+    data: await visiblePurchaseRows(data ?? [], c.req.raw, c.env, c.get('principal')),
+  });
 });
 purchases.get('/admin/purchases', async (c) => {
   await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
@@ -461,14 +478,12 @@ purchases.get('/vote-results/:id', async (c) => {
     .maybeSingle();
   failure(edition.error);
   if (!edition.data) return c.json({ data: [] });
-  if (c.env.DEMO_TEST_OFFER_SLUG && session.data.round_id !== (await demoOffer(c.env)).round_id)
-    return c.json({ data: [] });
-  if (
-    !c.env.DEMO_TEST_OFFER_SLUG &&
-    c.env.PUBLIC_EDITION_SLUG &&
-    edition.data.slug !== c.env.PUBLIC_EDITION_SLUG
-  )
-    return c.json({ data: [] });
+  if (c.env.PUBLIC_EDITION_SLUG || c.env.DEMO_TEST_OFFER_SLUG) {
+    const demo =
+      c.env.DEMO_TEST_OFFER_SLUG && session.data.round_id === (await demoOffer(c.env)).round_id;
+    if (demo) await requireDemoAdmin(c.req.raw, c.env);
+    else if (edition.data.id !== (await officialEdition(c.env))?.id) return c.json({ data: [] });
+  }
   const { data, error } = await db
     .from('vote_result_snapshots')
     .select('category_id,results')
