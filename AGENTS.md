@@ -1,5 +1,9 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Đồng bộ Git ngày15/10/2026
+
+Đã gộp main mới `5c39e54` (mobile scroll/QA) với phần Storage/kho mã/Sheet trên nhánh `codex/ticket-code-sheets-sync-20261015`, giữ cả hai phía test adapter. QA sau gộp:264 unit/database/browser đạt,1 native skip;53 E2E preview đạt/3 skip và24 E2E Auth/admin đạt; lint/typecheck/build/dry-run đạt. Lượt này chỉ push nhánh mới theo yêu cầu, không merge main/deploy/migration hoặc bật Google. DEMO hiện15 vé đã cấp sau đơn4 vé thử; xem `docs/git-sync-ticket-sheets-20261015.md` và báo cáo kho mã cho bằng chứng/giới hạn.
+
 ## Kho mã vé đã xác nhận ngày15/10/2026
 
 Đính chính mới nhất: bán kết và chung kết là hai tab riêng. Hiển thị Sheet gộp các vé cùng loại/combo của một đơn thành một dòng: hai Combo2 là4 vé, nhãn cb2_4_<dải mã>; giữ từng UUID/mã vé trong database và cột thành viên. Không gộp khác đơn/loại/vòng. Mã nhóm là nhãn hiển thị, không thay khóa vote. Bảng Data dùng `Vé bán kết` (700BK), `Vé chung kết` (700CK), `Vé DEMO` (50DM ban đầu). Đã tách tab chính thức gộp cũ, đối chiếu đủ1400 dòng×24 cột không đổi và giữ11 vé DEMO đã cấp. Apps Script định tuyến theo tiền tố BK/CK/DM; không tạo lại tab gộp.
