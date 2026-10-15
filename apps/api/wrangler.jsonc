@@ -43,7 +43,11 @@
         "SUPABASE_JWKS_URL": "https://ifgtyslifgegwcguysbb.supabase.co/auth/v1/.well-known/jwks.json",
         "TURNSTILE_HOSTNAME": "ftucharm-test.bancotaima1235.workers.dev",
       },
-      // No R2/Images subscription: upload endpoints fail closed with 503.
+      // R2 handles profile/program images; existing Supabase ticket proofs remain private.
+      "images": { "binding": "IMAGES" },
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "ftucharm-media-private" },
+      ],
       "ratelimits": [
         { "name": "RATE_LIMITER", "namespace_id": "1004", "simple": { "limit": 20, "period": 60 } },
       ],

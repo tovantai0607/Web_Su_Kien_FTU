@@ -1,5 +1,9 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Bổ sung ngày 15/10/2026: giữ bản nháp trong tab
+
+Người dùng đã xác nhận cho phép giữ tạm nội dung form trong sessionStorage của tab để không mất khi xem thể lệ hoặc đăng nhập Google; xóa khi gửi thành công, đăng xuất hoặc đóng tab. Xác nhận này thay giới hạn không lưu nháp PII vào browser storage ở hướng dẫn cũ bên dưới cho riêng bản nháp đăng ký này. Không lưu mật khẩu, token, CAPTCHA, consent, file ảnh hoặc đưa bản nháp lên server. Không dùng localStorage cho nội dung form; tách/clear khi đổi tài khoản.
+
 ## Khôi phục form đăng ký và cân đối đăng nhập
 
 Yêu cầu tiếp theo14/10/2026: mục Dự thi và form đăng ký ba bước phải luôn truy cập được, kể cả khách chưa đăng nhập hoặc ngoài lịch nhận hồ sơ. Cho xem/chuẩn bị thông tin trên trang, không lưu nháp PII vào browser storage. Chỉ tải ảnh/gửi hồ sơ khi đăng nhập và trong07–21/03/2027; giữ kiểm tra lịch server/database. Không ẩn cả form hoặc đổi link Dự thi sang timeline khi chưa mở đơn. Mobile có mục Đăng ký thí sinh trong menu. Khung auth dùng padding cố định theo px, không dùng padding phần trăm của page-shell khiến form hẹp trên màn hình lớn.

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Check, ImagePlus, ShieldCheck, Flower2, IdCard } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, Flower2, IdCard } from 'lucide-react';
 import {
   applicationSchema,
   registrationState,
@@ -15,18 +15,32 @@ import { api, preview } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Turnstile } from '../components/Turnstile';
 import { useProgram, useServerTime } from '../lib/program';
+import { registrationDrafts } from '../lib/registration-draft';
 export default function Registration() {
   const edition = useContent<Edition | null>('/editions/current');
   const program = useProgram();
   const now = useServerTime(program.data?.server_time);
   const state =
     now === null ? 'UNCONFIGURED' : registrationState(program.data?.edition ?? null, now);
-  const { user } = useAuth();
-  const [step, setStep] = useState(0),
+  const { user, loading } = useAuth();
+  const [savedDraft] = useState(() => registrationDrafts.load(user?.id));
+  const draftOwner = useRef(savedDraft?.ownerId ?? user?.id);
+  const [step, setStep] = useState(savedDraft?.step ?? 0),
     [error, setError] = useState(''),
     [success, setSuccess] = useState<{ code: string } | null>(null),
     [files, setFiles] = useState<string[]>([]),
     [uploading, setUploading] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<File | null>(null);
+  const [cardPreview, setCardPreview] = useState('');
+  useEffect(() => {
+    if (!selectedCard) {
+      setCardPreview('');
+      return;
+    }
+    const url = URL.createObjectURL(selectedCard);
+    setCardPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedCard]);
   const idempotency = useRef(crypto.randomUUID());
   const top = useRef<HTMLDivElement>(null);
   const form = useForm<ApplicationInput>({
@@ -40,58 +54,97 @@ export default function Registration() {
       class_name: '',
       bio: '',
       talents: '',
+      ...savedDraft?.values,
       media_ids: [],
       student_card_media_id: '',
       turnstile_token: '',
     },
   });
-  const errors = form.formState.errors;
-  const onToken = useCallback((token: string) => form.setValue('turnstile_token', token), [form]);
-  const upload = async (index: number, file?: File) => {
-    if (!file) return;
-    if (!preview && (!user || state !== 'OPEN')) {
-      setError('Đăng nhập và chờ đến thời gian nhận hồ sơ để tải ảnh.');
+  useEffect(() => {
+    if (loading) return;
+    if (draftOwner.current && user?.id && draftOwner.current !== user.id) {
+      registrationDrafts.clear();
+      draftOwner.current = user.id;
+      form.reset({
+        full_name: '',
+        email: user.email ?? '',
+        phone: '',
+        faculty: '',
+        cohort: '',
+        class_name: '',
+        bio: '',
+        talents: '',
+        media_ids: [],
+        student_card_media_id: '',
+        turnstile_token: '',
+      });
+      setStep(0);
+      setFiles([]);
+      setSelectedCard(null);
       return;
     }
+    if (user?.id) draftOwner.current = user.id;
+    if (success) {
+      registrationDrafts.clear();
+      return;
+    }
+    const save = () =>
+      registrationDrafts.save(form.getValues(), step, user?.id ?? draftOwner.current ?? undefined);
+    save();
+    const subscription = form.watch(save);
+    return () => subscription.unsubscribe();
+  }, [form, step, user?.id, user?.email, loading, success]);
+  const uploadOwner = useRef(user?.id);
+  const uploadGeneration = useRef(0);
+  useEffect(() => {
+    uploadGeneration.current += 1;
+    if (uploadOwner.current && uploadOwner.current !== user?.id) {
+      setSelectedCard(null);
+      setFiles([]);
+      form.setValue('student_card_media_id', '');
+    }
+    uploadOwner.current = user?.id;
+    setUploading(false);
+  }, [user?.id, form]);
+  const errors = form.formState.errors;
+  const onToken = useCallback((token: string) => form.setValue('turnstile_token', token), [form]);
+  const upload = async (file?: File) => {
+    if (!file) return;
+    setError('');
     if (file.size > 5 * 1024 * 1024 || !['image/jpeg', 'image/png'].includes(file.type)) {
       setError('Chọn ảnh JPEG/PNG, tối đa 5 MB.');
       return;
     }
+    setSelectedCard(file);
+    setFiles((f) => {
+      const next = [...f];
+      next[3] = file.name;
+      return next;
+    });
+    form.setValue('student_card_media_id', '');
+    // Choosing locally is available before opening; no bytes leave this tab yet.
+    if (!preview && (!user || state !== 'OPEN')) return;
+    const generation = ++uploadGeneration.current;
     setUploading(true);
-    setError('');
     try {
-      let id: string;
-      if (preview) id = crypto.randomUUID();
-      else {
-        id = (
-          await api<{ id: string }>(
-            '/media/upload?edition=' +
-              edition.data?.id +
-              '&purpose=' +
-              (index === 3 ? 'student_card' : 'portfolio'),
-            {
-              method: 'POST',
-              body: file,
-              headers: { 'Content-Type': file.type },
-            },
-          )
-        ).id;
-      }
-      if (index === 3) form.setValue('student_card_media_id', id, { shouldValidate: true });
-      else {
-        const ids = [...form.getValues('media_ids')];
-        ids[index] = id;
-        form.setValue('media_ids', ids, { shouldValidate: true });
-      }
-      setFiles((f) => {
-        const next = [...f];
-        next[index] = file.name;
-        return next;
-      });
+      const id = preview
+        ? crypto.randomUUID()
+        : (
+            await api<{ id: string }>(
+              '/media/upload?edition=' + edition.data?.id + '&purpose=student_card',
+              {
+                method: 'POST',
+                body: file,
+                headers: { 'Content-Type': file.type },
+              },
+            )
+          ).id;
+      if (generation === uploadGeneration.current)
+        form.setValue('student_card_media_id', id, { shouldValidate: true });
     } catch (e) {
-      setError((e as Error).message);
+      if (generation === uploadGeneration.current) setError((e as Error).message);
     } finally {
-      setUploading(false);
+      if (generation === uploadGeneration.current) setUploading(false);
     }
   };
   const submit = form.handleSubmit(
@@ -113,7 +166,10 @@ export default function Registration() {
           headers: { 'Idempotency-Key': idempotency.current },
           body: JSON.stringify(data),
         });
+        setSelectedCard(null);
+        setFiles([]);
         setSuccess(result);
+        registrationDrafts.clear();
       } catch (e) {
         setError((e as Error).message);
         top.current?.focus();
@@ -157,6 +213,13 @@ export default function Registration() {
     <div className="page-shell">
       <PageTitle title="Đăng ký dự thi" description="Dành cho sinh viên Đại học Ngoại thương." />
       <DataState query={edition} />
+      <p className="registration-draft-note">
+        Nội dung đang điền được giữ tạm trong tab này khi xem thể lệ hoặc đăng nhập. Ảnh cần chọn
+        lại nếu tải lại trang.{' '}
+        <Link className="text-link" to="/the-le">
+          Xem thể lệ
+        </Link>
+      </p>
       <div className="registration-layout">
         <aside>
           <div className="registration-art">
@@ -170,9 +233,6 @@ export default function Registration() {
               <p>Chỉ thông tin được duyệt và cho phép công bố xuất hiện trên website.</p>
             </div>
           </div>
-          <Link className="text-link" to="/the-le">
-            Xem thể lệ
-          </Link>
         </aside>
         <Card className="registration-form">
           {!preview && state !== 'OPEN' && (
@@ -189,10 +249,14 @@ export default function Registration() {
             <div className="registration-signin">
               <h2>Đăng nhập để gửi hồ sơ.</h2>
               <p>
-                Tài khoản cần xác minh email. Thông tin đang nhập chỉ giữ trên trang này, chưa được
-                gửi hoặc lưu.
+                Tài khoản cần xác minh email. Bản nháp chưa được gửi lên hệ thống và sẽ được xóa khi
+                gửi thành công hoặc đăng xuất.
               </p>
-              <Link className="text-link" to="/tai-khoan/dang-nhap">
+              <Link
+                className="text-link"
+                to="/tai-khoan/dang-nhap"
+                onClick={() => registrationDrafts.beginLogin()}
+              >
                 Đăng nhập / tạo tài khoản
               </Link>
             </div>
@@ -291,29 +355,8 @@ export default function Registration() {
               )}
               {step === 2 && (
                 <>
-                  <h2>Ảnh hồ sơ</h2>
-                  <p>Ba ảnh hồ sơ và một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB mỗi ảnh.</p>
-                  <div className="upload-grid">
-                    {['Chân dung', 'Bán thân', 'Toàn thân'].map((label, i) => (
-                      <label className={'upload-box' + (files[i] ? ' has-file' : '')} key={label}>
-                        <ImagePlus size={28} strokeWidth={1} />
-                        <strong>{label}</strong>
-                        <span>{files[i] ?? 'Chọn ảnh'}</span>
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          aria-label={'Ảnh ' + label.toLowerCase()}
-                          disabled={uploading || (!preview && (!user || state !== 'OPEN'))}
-                          onChange={(e) => void upload(i, e.target.files?.[0])}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  {errors.media_ids && (
-                    <p role="alert" className="field-error">
-                      {errors.media_ids.message}
-                    </p>
-                  )}
+                  <h2>Ảnh thẻ sinh viên</h2>
+                  <p>Chỉ cần một ảnh thẻ sinh viên FTU. JPEG/PNG, tối đa 5 MB, 12 megapixel.</p>
                   <label
                     className={'upload-box student-card-upload' + (files[3] ? ' has-file' : '')}
                   >
@@ -326,10 +369,47 @@ export default function Registration() {
                       aria-label="Ảnh thẻ sinh viên FTU"
                       aria-describedby="student-card-hint student-card-error"
                       aria-invalid={!!errors.student_card_media_id}
-                      disabled={uploading || (!preview && (!user || state !== 'OPEN'))}
-                      onChange={(e) => void upload(3, e.target.files?.[0])}
+                      disabled={uploading}
+                      onChange={(e) => {
+                        void upload(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
                     />
                   </label>
+                  {cardPreview && (
+                    <img
+                      className="student-card-preview"
+                      src={cardPreview}
+                      alt="Ảnh thẻ sinh viên đã chọn trên máy"
+                    />
+                  )}
+                  <p role="status" className="fine-print">
+                    {uploading
+                      ? 'Đang tải ảnh lên…'
+                      : form.watch('student_card_media_id')
+                        ? 'Ảnh thẻ đã sẵn sàng.'
+                        : selectedCard
+                          ? 'Đã chọn ảnh trên máy, chưa tải lên server.'
+                          : 'Bạn có thể chọn và xem trước ảnh ngay trên máy.'}
+                    {!preview &&
+                      state !== 'OPEN' &&
+                      ' Chỉ tải lên server trong thời gian nhận hồ sơ 07–21/03/2027.'}
+                    {!preview && !user && ' Đăng nhập để gửi ảnh khi mở đơn.'}
+                  </p>
+                  {!preview &&
+                    user &&
+                    state === 'OPEN' &&
+                    selectedCard &&
+                    !form.watch('student_card_media_id') && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={uploading}
+                        onClick={() => void upload(selectedCard)}
+                      >
+                        Tải ảnh đã chọn
+                      </Button>
+                    )}
                   <p id="student-card-hint" className="fine-print">
                     Ảnh thẻ chỉ dùng để xác minh sinh viên FTU, được giữ riêng tư và không xuất hiện
                     trên trang thí sinh. Có thể che thông tin không cần thiết; giữ rõ họ tên, tên

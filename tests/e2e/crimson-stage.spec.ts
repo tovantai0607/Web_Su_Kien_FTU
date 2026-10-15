@@ -85,15 +85,27 @@ test('partner groups stay readable and decorative layers cannot intercept clicks
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const width of [390, 768, 1440]) {
+  for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     const strip = page.getByRole('region', { name: 'Đơn vị tổ chức và đồng hành' });
     await strip.scrollIntoViewIfNeeded();
-    for (const img of await strip.locator('img').all()) {
-      await expect(img).toHaveJSProperty('complete', true);
-      expect(await img.evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(240);
+    await expect(strip.getByRole('img')).toHaveCount(4);
+    for (const mark of await strip.getByRole('img').all()) {
+      await expect(mark).toBeVisible();
+      const bounds = await mark.boundingBox();
+      expect(bounds!.width).toBeGreaterThan(100);
     }
+    if (width <= 900) {
+      const organizers = await strip.locator('.partner-organizers').boundingBox();
+      const identity = await strip.locator('.partner-identity').boundingBox();
+      const cosmo = await strip.locator('.partner-cosmo').boundingBox();
+      const uni = await strip.locator('.partner-uni').boundingBox();
+      expect(identity!.y).toBeGreaterThanOrEqual(organizers!.y + organizers!.height);
+      expect(Math.abs(cosmo!.y + cosmo!.height / 2 - (uni!.y + uni!.height / 2))).toBeLessThan(1);
+      expect(await strip.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
+    await strip.screenshot({ path: `output/logo-strip/original-${width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

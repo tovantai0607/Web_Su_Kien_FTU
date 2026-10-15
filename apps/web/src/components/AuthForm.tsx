@@ -7,6 +7,7 @@ import { preview, supabase } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { normalizeEmail, passwordError, safeAuthError } from '../lib/auth-policy';
 import { Turnstile } from './Turnstile';
+import { registrationDrafts } from '../lib/registration-draft';
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset' | 'mfa';
 const titles: Record<Mode, string> = {
@@ -133,7 +134,7 @@ export default function AuthForm() {
         setCode('');
         if (result.error)
           throw new Error(safeAuthError(result.error, 'Mã không hợp lệ hoặc đã hết hạn.'));
-        navigate('/tai-khoan/ho-so', { replace: true });
+        navigate(registrationDrafts.consumeLoginReturn() ?? '/tai-khoan/ho-so', { replace: true });
       } else if (resend) {
         const result = await supabase.auth.resend({
           type: 'signup',
@@ -196,7 +197,10 @@ export default function AuthForm() {
         if (enrolled) {
           setFactor(enrolled.id);
           setMode('mfa');
-        } else navigate('/tai-khoan/ho-so', { replace: true });
+        } else
+          navigate(registrationDrafts.consumeLoginReturn() ?? '/tai-khoan/ho-so', {
+            replace: true,
+          });
       }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Không thể kết nối. Vui lòng thử lại.');
@@ -385,6 +389,13 @@ export default function AuthForm() {
       <p className="auth-privacy">
         <ShieldCheck size={16} /> <Link to="/quyen-rieng-tu">Quyền riêng tư</Link>
       </p>
+      {registrationDrafts.hasLoginReturn() && (
+        <p className="auth-draft-return">
+          <Link className="text-link" to="/dang-ky">
+            Quay lại hồ sơ đang điền
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

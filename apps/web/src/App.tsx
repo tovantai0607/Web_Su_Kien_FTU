@@ -1,13 +1,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import BrandMark from './components/BrandMark';
 import { Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight, ArrowUp, Camera, MessageCircle } from 'lucide-react';
+import { Menu, X, ArrowUpRight, ArrowUp, Mail, Phone } from 'lucide-react';
 import { Button, Spinner } from '@ftu/ui';
 import { preview } from './lib/api';
 import Home from './pages/Home';
 import { useAuth } from './lib/auth';
 import { MotionPage } from './components/Motion';
-import { officialFacebook } from './config/site-content';
+import { officialFacebook, officialEmail, officialHotline } from './config/site-content';
 import { InterfaceMotion, useSystemReducedMotion } from './components/interface/MotionSystem';
 import { trackMobileScroll } from './components/interface/mobileScroll';
 const PublicPages = lazy(() => import('./pages/PublicPages'));
@@ -163,6 +163,7 @@ export default function App() {
         <div className="footer-top">
           <Link className="footer-brand" to="/">
             <BrandMark />
+            <span className="footer-edition">2027</span>
           </Link>
           <div>
             <h3>Khám phá</h3>
@@ -176,11 +177,14 @@ export default function App() {
             <Link to="/nha-tai-tro">Nhà tài trợ</Link>
           </div>
           <div>
-            <h3>Kết nối</h3>
+            <h3>Liên hệ BTC</h3>
             <a href={officialFacebook} target="_blank" rel="noreferrer">
               Fanpage chính thức <ArrowUpRight size={16} />
             </a>
-            <Link to="/thu-vien">Những khoảnh khắc</Link>
+            <a className="footer-email" href={`mailto:${officialEmail}`}>
+              {officialEmail}
+            </a>
+            <a href={`tel:${officialHotline}`}>Hotline: {officialHotline}</a>
             <div className="social-links">
               <a
                 href={officialFacebook}
@@ -198,22 +202,17 @@ export default function App() {
                   <path d="M13.6 22v-9h3l.5-3.5h-3.5V7.3c0-1 .3-1.7 1.8-1.7h1.9V2.5a25 25 0 0 0-2.8-.2c-2.8 0-4.7 1.7-4.7 4.8v2.4H6.7V13h3.1v9z" />
                 </svg>
               </a>
-              <a
-                href="https://m.me/ftucharm.duyendangngoaithuong"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Nhắn tin cho FTUCHARM trên Messenger"
-              >
-                <MessageCircle size={21} />
+              <a href={`mailto:${officialEmail}`} aria-label="Email ban tổ chức FTUCHARM">
+                <Mail size={21} aria-hidden="true" />
               </a>
-              <Link to="/thu-vien" aria-label="Thư viện ảnh FTUCHARM">
-                <Camera size={21} />
-              </Link>
+              <a href={`tel:${officialHotline}`} aria-label="Gọi hotline FTUCHARM">
+                <Phone size={21} aria-hidden="true" />
+              </a>
             </div>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} FTUCHARM • Duyên dáng Ngoại thương</span>
+          <span>© 2027 FTUCHARM • Duyên dáng Ngoại thương</span>
           <div>
             <Link to="/the-le">Thể lệ</Link>
             <Link to="/quyen-rieng-tu">Quyền riêng tư</Link>

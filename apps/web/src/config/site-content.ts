@@ -5,3 +5,5 @@ import type { Sponsor } from '@ftu/shared';
  */
 export const sponsorLogos: Sponsor[] = [];
 export const officialFacebook = 'https://www.facebook.com/ftucharm.duyendangngoaithuong';
+export const officialEmail = 'ftucharm.duyendangngoaithuong@gmail.com';
+export const officialHotline = '0932197168';

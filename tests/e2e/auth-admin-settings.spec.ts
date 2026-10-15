@@ -1,5 +1,6 @@
 import { test, expect, type Page } from './isolated-test';
 import AxeBuilder from '@axe-core/playwright';
+import { demoEdition } from '@ftu/shared';
 const id = (n: number) => `99010000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const tomorrow = new Date(Date.now() + 86400000).toISOString(),
   later = new Date(Date.now() + 172800000).toISOString();
@@ -192,6 +193,58 @@ async function login(page: Page) {
   await page.getByRole('button', { name: 'Đăng nhập bằng Google' }).click();
   await expect(page).toHaveURL(/\/tai-khoan\/ho-so$/);
 }
+
+test('registration draft survives a Google PKCE round trip and is cleared on logout', async ({
+  page,
+}) => {
+  const state = await setup(page, { is_admin: false, aal: 'aal1' });
+  const edition = {
+    ...demoEdition,
+    id: id(10),
+    slug: 'ftucharm-2027',
+    registration_open_at: '2027-03-07T00:00:00+07:00',
+    registration_close_at: '2027-03-22T00:00:00+07:00',
+  };
+  await page.route('**/api/program', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          edition,
+          server_time: '2027-02-20T12:00:00+07:00',
+          timeline: [],
+          offers: [],
+          registration_state: 'UPCOMING',
+        },
+      },
+    }),
+  );
+  await page.route('**/api/editions/current', (route) =>
+    route.fulfill({ json: { data: edition } }),
+  );
+  await page.goto('/dang-ky');
+  await page.getByLabel('Họ và tên', { exact: true }).fill('QA nháp Google');
+  await page.getByLabel('Số điện thoại').fill('0000000000');
+  await page.getByRole('link', { name: 'Đăng nhập / tạo tài khoản', exact: true }).click();
+  await expect(
+    page.getByRole('link', { name: 'Quay lại hồ sơ đang điền', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Đăng nhập bằng Google', exact: true }).click();
+  await expect(page).toHaveURL(/\/dang-ky$/);
+  await expect(page.getByLabel('Họ và tên', { exact: true })).toHaveValue('QA nháp Google');
+  await expect(page.getByLabel('Số điện thoại')).toHaveValue('0000000000');
+  await expect(page.getByLabel('Email đã xác minh')).toHaveValue('admin@example.test');
+  expect(state.exchanges).toBe(1);
+  expect(await page.evaluate(() => JSON.stringify({ ...localStorage }))).not.toContain(
+    'QA nháp Google',
+  );
+  await page.locator('.account-link').click();
+  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('ftucharm-registration-draft-v1')))
+    .toBeNull();
+  await page.goto('/dang-ky');
+  await expect(page.getByLabel('Họ và tên', { exact: true })).toHaveValue('');
+});
 test('Google PKCE callback exchanges once and an admin configures Vietnam vote times and opens the current ticket editor', async ({
   page,
 }, testInfo) => {

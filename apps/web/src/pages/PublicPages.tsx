@@ -315,6 +315,12 @@ function Legal({ privacy }: { privacy: boolean }) {
             </p>
             <h2>Quyền của bạn</h2>
             <p>
+              Nội dung form đang điền được giữ tạm trong phiên của tab để bạn có thể xem thể lệ hoặc
+              đăng nhập rồi quay lại. Bản nháp không được gửi lên server; được xóa khi gửi hồ sơ
+              thành công hoặc đăng xuất. Không lưu mật khẩu, token xác minh hay file ảnh trong bản
+              nháp.
+            </p>
+            <p>
               Bạn có thể liên hệ BTC qua fanpage chính thức để yêu cầu xem, chỉnh sửa hoặc xóa hồ sơ
               theo quy trình xác minh danh tính. Dữ liệu không được chia sẻ cho các đơn vị khác khi
               chưa xác định mục đích và căn cứ phù hợp.
@@ -335,9 +341,9 @@ function Legal({ privacy }: { privacy: boolean }) {
             </p>
             <h2>Hồ sơ & vòng thi</h2>
             <p>
-              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu, ba ảnh hồ sơ và ảnh thẻ sinh viên
-              FTU. Kết quả được BTC xét duyệt và công bố theo từng vòng. Số thí sinh qua vòng được
-              cấu hình theo mùa.
+              Hồ sơ gồm thông tin cá nhân, giới thiệu, năng khiếu và một ảnh thẻ sinh viên FTU. Kết
+              quả được BTC xét duyệt và công bố theo từng vòng. Số thí sinh qua vòng được cấu hình
+              theo mùa.
             </p>
             <h2>Bình chọn chung kết</h2>
             <p>

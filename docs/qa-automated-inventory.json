@@ -1,6 +1,6 @@
 {
   "generated": "2026-10-15",
-  "declarations": 256,
+  "declarations": 263,
   "note": "Source declarations, not executed test instances; see run summary.",
   "cases": [
     {
@@ -740,32 +740,37 @@
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 195,
+      "line": 197,
+      "title": "registration draft survives a Google PKCE round trip and is cleared on logout"
+    },
+    {
+      "file": "tests/e2e/auth-admin-settings.spec.ts",
+      "line": 248,
       "title": "Google PKCE callback exchanges once and an admin configures Vietnam vote times and opens the current ticket editor"
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 236,
+      "line": 289,
       "title": "ordinary users cannot fetch private settings while admins can enter without MFA"
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 262,
+      "line": 315,
       "title": "cancelled or expired callbacks show recovery instructions"
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 275,
+      "line": 328,
       "title": "admin opens customer records with six columns, proof, CSV and database link"
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 306,
+      "line": 359,
       "title": "staff previews a round photo, saves a draft and publishes only on explicit confirmation"
     },
     {
       "file": "tests/e2e/auth-admin-settings.spec.ts",
-      "line": 381,
+      "line": 434,
       "title": "ordinary users cannot request customer records through the direct admin URL"
     },
     {
@@ -842,6 +847,16 @@
       "file": "tests/e2e/official-program.spec.ts",
       "line": 165,
       "title": "round lists and the official gallery remain empty until BTC publishes images"
+    },
+    {
+      "file": "tests/e2e/registration-draft.spec.ts",
+      "line": 3,
+      "title": "draft survives rules, login navigation and reload without writing PII to localStorage"
+    },
+    {
+      "file": "tests/e2e/registration-draft.spec.ts",
+      "line": 28,
+      "title": "footer contains official 2027 contact details at mobile and desktop widths"
     },
     {
       "file": "tests/e2e/site.spec.ts",
@@ -1272,6 +1287,26 @@
       "file": "tests/unit/purchase-offer-editor.test.ts",
       "line": 97,
       "title": "adds missing draft tiers without duplicating or changing an existing price"
+    },
+    {
+      "file": "tests/unit/registration-draft.test.ts",
+      "line": 18,
+      "title": "survives a page replacement but excludes CAPTCHA, consent, media and unrelated secrets"
+    },
+    {
+      "file": "tests/unit/registration-draft.test.ts",
+      "line": 49,
+      "title": "does not leak one account draft into another and clears both draft and login return on logout/completion"
+    },
+    {
+      "file": "tests/unit/registration-draft.test.ts",
+      "line": 63,
+      "title": "discards corrupt/versioned data and only accepts the fixed internal return destination"
+    },
+    {
+      "file": "tests/unit/registration-draft.test.ts",
+      "line": 76,
+      "title": "falls back to memory when tab storage is blocked and cannot restore from a different tab store"
     },
     {
       "file": "tests/unit/sheet-sync.test.ts",

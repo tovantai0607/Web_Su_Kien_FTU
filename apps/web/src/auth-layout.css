@@ -50,6 +50,14 @@
 .registration-notice {
   margin-bottom: 24px;
 }
+.registration-draft-note {
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+.registration-draft-note .text-link {
+  display: inline-flex;
+  margin-left: 6px;
+}
 .registration-notice h2,
 .registration-signin h2 {
   font-size: 20px;
@@ -60,6 +68,10 @@
   margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
 }
+.auth-draft-return {
+  margin-top: 20px;
+  text-align: center;
+}
 @media (max-width: 480px) {
   .page-shell.auth-shell {
     padding: 32px 16px 48px;
@@ -67,4 +79,14 @@
   .auth-shell .auth-card {
     padding: 24px 20px;
   }
+}
+
+.student-card-preview {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  max-height: 260px;
+  object-fit: contain;
+  margin: 20px auto;
+  border-radius: 12px;
 }

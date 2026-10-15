@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase, api } from './api';
 import type { AccountAccess } from '@ftu/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { registrationDrafts } from './registration-draft';
 const AuthContext = createContext<{
   user: User | null;
   loading: boolean;
@@ -93,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session) setError('');
       if (event === 'SIGNED_OUT') setRecovery(false);
       if (event === 'SIGNED_OUT') client.clear();
+      if (event === 'SIGNED_OUT') registrationDrafts.clear();
+      if (event === 'SIGNED_IN' && session?.user) registrationDrafts.load(session.user.id);
       setUser(session?.user ?? null);
       setAccessVersion((v) => v + 1);
       setLoading(false);
