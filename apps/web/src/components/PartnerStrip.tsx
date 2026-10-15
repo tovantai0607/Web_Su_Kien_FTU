@@ -12,32 +12,40 @@ export default function PartnerStrip() {
           className="partner-organizers"
           viewBox="0 0 660 190"
           role="img"
-          aria-label="Đại học Ngoại thương, Đoàn Thanh niên, Hội Sinh viên và LiS"
+          aria-label="Đại học Ngoại thương, Đoàn Thanh niên, Hội Sinh viên và FTUYours"
         >
-          <image href="/images/ftu-official.png" x="10" y="25" width="140" height="140" />
-          <svg
-            x="170"
-            y="0"
+          <image
+            href="/images/ftu-official.png"
+            x="10"
+            y="25"
             width="140"
-            height="190"
-            aria-hidden="true"
-            viewBox="260 45 155 190"
-            overflow="hidden"
-          >
-            <image href="/images/partner-strip-original.png" width="3000" height="298" />
-          </svg>
-          <image href="/images/hsv-official.png" x="335" y="25" width="140" height="140" />
-          <svg
-            x="500"
-            y="15"
+            height="140"
+            preserveAspectRatio="xMidYMid meet"
+          />
+          <image
+            href="/images/youth-union-emblem.svg"
+            x="175"
+            y="25"
             width="140"
-            height="160"
-            aria-hidden="true"
-            viewBox="560 60 150 180"
-            overflow="hidden"
-          >
-            <image href="/images/partner-strip-original.png" width="3000" height="298" />
-          </svg>
+            height="140"
+            preserveAspectRatio="xMidYMid meet"
+          />
+          <image
+            href="/images/hsv-official.png"
+            x="340"
+            y="25"
+            width="140"
+            height="140"
+            preserveAspectRatio="xMidYMid meet"
+          />
+          <image
+            href="/images/ftuyours-original.png"
+            x="505"
+            y="25"
+            width="140"
+            height="140"
+            preserveAspectRatio="xMidYMid meet"
+          />
         </svg>
         <svg
           className="partner-identity"

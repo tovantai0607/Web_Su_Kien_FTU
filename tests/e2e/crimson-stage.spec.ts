@@ -91,6 +91,20 @@ test('partner groups stay readable and decorative layers cannot intercept clicks
     const strip = page.getByRole('region', { name: 'Đơn vị tổ chức và đồng hành' });
     await strip.scrollIntoViewIfNeeded();
     await expect(strip.getByRole('img')).toHaveCount(4);
+    const emblems = strip.locator('.partner-organizers > image');
+    await expect(emblems).toHaveCount(4);
+    const boxes = await emblems.evaluateAll((images) =>
+      images.map((image) => {
+        const box = image.getBoundingClientRect();
+        return { width: box.width, height: box.height };
+      }),
+    );
+    for (const box of boxes) {
+      expect(Math.abs(box.width - boxes[0].width)).toBeLessThan(1);
+      expect(Math.abs(box.height - boxes[0].height)).toBeLessThan(1);
+      expect(Math.abs(box.width - box.height)).toBeLessThan(1);
+    }
+
     for (const mark of await strip.getByRole('img').all()) {
       await expect(mark).toBeVisible();
       const bounds = await mark.boundingBox();
