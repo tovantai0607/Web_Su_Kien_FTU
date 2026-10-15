@@ -30,8 +30,26 @@ export default function PurchaseOfferEditor({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const summary = useRef<HTMLDivElement>(null);
   function update(patch: Partial<Configuration>) {
-    onChange(JSON.stringify({ ...config, ...patch }));
+    const next = { ...config, ...patch };
+    if (next.total_quota != null)
+      next.products = next.products.map((p) => ({
+        ...p,
+        opens_at: next.early_open_at ?? '',
+        closes_at: (p.tier === 'EARLY' ? next.early_close_at : next.normal_close_at) ?? '',
+      }));
+    onChange(JSON.stringify(next));
     setErrors({});
+  }
+  function enablePhases() {
+    const early = config.products.filter((p) => p.tier === 'EARLY');
+    const normal = config.products.filter((p) => p.tier === 'NORMAL');
+    update({
+      total_quota: config.products.reduce((sum, p) => sum + p.quota, 0) || 700,
+      early_quota: early.reduce((sum, p) => sum + p.quota, 0),
+      early_open_at: early[0]?.opens_at ?? '',
+      early_close_at: early[0]?.closes_at ?? '',
+      normal_close_at: normal[0]?.closes_at ?? '',
+    });
   }
   function product(index: number, patch: Partial<ProductConfiguration>) {
     update({ products: config.products.map((p, i) => (i === index ? { ...p, ...patch } : p)) });
@@ -75,6 +93,10 @@ export default function PurchaseOfferEditor({
     await onSave();
   }
   const money = (v: number | null) => (v === null || !Number.isFinite(v) ? '' : v);
+  const groups = Array.from(new Set(config.products.map((p) => p.name))).map((name) => ({
+    name,
+    products: config.products.flatMap((p, index) => (p.name === name ? [{ p, index }] : [])),
+  }));
   return (
     <form
       className="purchase-config-form"
@@ -149,28 +171,75 @@ export default function PurchaseOfferEditor({
           />
           Công bố đợt bán (mùa và vòng cũng phải được công bố)
         </label>
-        {config.total_quota != null && (
-          <fieldset>
-            <legend>Hạn mức và lịch đã chốt</legend>
-            <p>
-              Tổng {config.total_quota} vé, tối đa {config.early_quota} vé sớm. Vé sớm còn dư chuyển
-              sang vé thường cùng loại.
-            </p>
-            <p>
-              Vé sớm: {vietnamTime(config.early_open_at ?? null).replace('T', ' ')} –{' '}
-              {vietnamTime(config.early_close_at ?? null).replace('T', ' ')}. Đóng vé thường:{' '}
-              {vietnamTime(config.normal_close_at ?? null).replace('T', ' ')} (giờ Việt Nam).
-            </p>
-            <p>
-              Quota đang phân bổ: vé sớm{' '}
-              {config.products.filter((p) => p.tier === 'EARLY').reduce((s, p) => s + p.quota, 0)} /{' '}
-              {config.early_quota}; vé thường{' '}
-              {config.products.filter((p) => p.tier === 'NORMAL').reduce((s, p) => s + p.quota, 0)}{' '}
-              / {config.total_quota - (config.early_quota ?? 0)}.
-            </p>
-          </fieldset>
-        )}
-        {!config.qr_path && (
+        <fieldset className="purchase-config-section">
+          <legend>Số lượng và lịch từng đợt</legend>
+          {config.total_quota == null ? (
+            <>
+              <p>
+                Đợt này đang dùng lịch riêng ở từng loại vé. Bật lịch chung để vé sớm và vé thường
+                tự chuyển trong cùng một hạng.
+              </p>
+              <Button type="button" variant="outline" onClick={enablePhases}>
+                Thiết lập hai đợt bán chung
+              </Button>
+            </>
+          ) : (
+            <>
+              <p>
+                Tổng {config.total_quota} vé. Admin chỉnh số vé sớm và lịch ở đây, phân bổ số vé và
+                giá từng hạng bên dưới. Vé sớm còn dư chuyển sang vé thường cùng loại.
+              </p>
+              <div className="purchase-config-grid">
+                <Field label="Số vé bán sớm" error={errors.early_quota}>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={config.total_quota}
+                    step={1}
+                    value={config.early_quota ?? ''}
+                    onChange={(e) => update({ early_quota: e.target.valueAsNumber })}
+                  />
+                </Field>
+                <Field label="Mở vé sớm (giờ Việt Nam)" error={errors.early_open_at}>
+                  <Input
+                    type="datetime-local"
+                    value={vietnamTime(config.early_open_at ?? null)}
+                    onChange={(e) => update({ early_open_at: withOffset(e.target.value) })}
+                  />
+                </Field>
+                <Field label="Kết thúc vé sớm / bắt đầu vé thường" error={errors.early_close_at}>
+                  <Input
+                    type="datetime-local"
+                    value={vietnamTime(config.early_close_at ?? null)}
+                    onChange={(e) => update({ early_close_at: withOffset(e.target.value) })}
+                  />
+                </Field>
+                <Field label="Đóng vé thường (giờ Việt Nam)" error={errors.normal_close_at}>
+                  <Input
+                    type="datetime-local"
+                    value={vietnamTime(config.normal_close_at ?? null)}
+                    onChange={(e) => update({ normal_close_at: withOffset(e.target.value) })}
+                  />
+                </Field>
+              </div>
+              <p>
+                Vé thường mở khi đợt sớm kết thúc hoặc vé sớm đã bán hết. Đơn đang giữ vẫn có đủ
+                thời hạn 30 phút và giữ nguyên giá.
+              </p>
+              <p>
+                Quota đang phân bổ: vé sớm{' '}
+                {config.products.filter((p) => p.tier === 'EARLY').reduce((s, p) => s + p.quota, 0)}{' '}
+                / {config.early_quota}; vé thường{' '}
+                {config.products
+                  .filter((p) => p.tier === 'NORMAL')
+                  .reduce((s, p) => s + p.quota, 0)}{' '}
+                / {config.total_quota - (config.early_quota ?? 0)}.
+              </p>
+            </>
+          )}
+        </fieldset>
+        {config.mode === 'LIVE' && !config.qr_path && (
           <p className="notice">
             Có thể công bố thông tin chương trình. Chưa nhận đơn đến khi có giá, phân bổ quota và QR
             thật.
@@ -198,8 +267,8 @@ export default function PurchaseOfferEditor({
       <fieldset disabled={busy} className="purchase-config-section">
         <legend>Hạng vé, giá và số lượng</legend>
         <p>
-          Giá tạm 100.000đ/vé. Quota tính theo số vé, gồm cả vé trong combo. Để trống giá combo để
-          tắt; giá combo là tổng tiền cho 2 hoặc 3 vé.
+          Mỗi hạng vé có hai đợt giá bên cạnh nhau. Số lượng tính theo số vé, gồm cả vé trong combo.
+          Để trống giá combo để tắt; giá combo là tổng tiền cho 2 hoặc 3 vé.
         </p>
         <Button type="button" variant="outline" onClick={addProducts}>
           Thêm các hạng vé còn thiếu
@@ -207,90 +276,104 @@ export default function PurchaseOfferEditor({
         {config.products.length === 0 && (
           <p>Chưa có hạng vé. Thêm hạng rồi điền lịch và quota trước khi bán.</p>
         )}
-        {config.products.map((p, index) => {
-          const path = `products.${index}.`;
-          return (
-            <fieldset key={p.id} className="purchase-config-product">
-              <legend>
-                {p.name} · {p.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'}
-              </legend>
-              <div className="purchase-config-grid">
-                <Field label="Tên hạng vé" error={errors[path + 'name']}>
-                  <Input
-                    value={p.name}
-                    onChange={(e) => product(index, { name: e.target.value })}
-                  />
-                </Field>
-                <Field label="Đợt vé" error={errors[path + 'tier']}>
-                  <select
-                    className="input"
-                    value={p.tier}
-                    onChange={(e) =>
-                      product(index, { tier: e.target.value as ProductConfiguration['tier'] })
-                    }
-                  >
-                    <option value="EARLY">Vé sớm</option>
-                    <option value="NORMAL">Vé thường</option>
-                  </select>
-                </Field>
-                {(['price_vnd', 'combo2_vnd', 'combo3_vnd', 'quota'] as const).map((key) => (
-                  <Field
-                    key={key}
-                    label={
-                      {
-                        price_vnd: 'Giá vé đơn (VND)',
-                        combo2_vnd: 'Giá Combo 2 (VND)',
-                        combo3_vnd: 'Giá Combo 3 (VND)',
-                        quota: 'Quota (số vé)',
-                      }[key]
-                    }
-                    error={errors[path + key]}
-                  >
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      step={1}
-                      min={key === 'quota' ? 0 : 1}
-                      max={2147483647}
-                      value={money(p[key])}
-                      onChange={(e) =>
-                        product(index, {
-                          [key]:
-                            (key === 'combo2_vnd' || key === 'combo3_vnd') && e.target.value === ''
-                              ? null
-                              : e.target.valueAsNumber,
-                        })
-                      }
-                    />
-                  </Field>
-                ))}
-                <Field label="Mở bán (giờ Việt Nam)" error={errors[path + 'opens_at']}>
-                  <Input
-                    type="datetime-local"
-                    value={vietnamTime(p.opens_at)}
-                    onChange={(e) => product(index, { opens_at: withOffset(e.target.value) })}
-                  />
-                </Field>
-                <Field label="Đóng bán (giờ Việt Nam)" error={errors[path + 'closes_at']}>
-                  <Input
-                    type="datetime-local"
-                    value={vietnamTime(p.closes_at)}
-                    onChange={(e) => product(index, { closes_at: withOffset(e.target.value) })}
-                  />
-                </Field>
-              </div>
-              <label className="purchase-config-check">
-                <input
-                  type="checkbox"
-                  checked={p.enabled}
-                  onChange={(e) => product(index, { enabled: e.target.checked })}
-                />
-                Cho phép bán hạng vé này
-              </label>
-              <p>Tắt bán giữ lại lịch sử và đơn đã tạo; không xóa hạng vé.</p>
-            </fieldset>
-          );
-        })}
+        {errors.products && <p role="alert">{errors.products}</p>}
+        {groups.map((group) => (
+          <fieldset key={group.products[0].p.id} className="purchase-config-product">
+            <legend>{group.name}</legend>
+            <Field
+              label="Tên hạng vé"
+              error={group.products
+                .map(({ index }) => errors[`products.${index}.name`])
+                .find(Boolean)}
+            >
+              <Input
+                value={group.name}
+                onChange={(e) =>
+                  update({
+                    products: config.products.map((p) =>
+                      p.name === group.name ? { ...p, name: e.target.value } : p,
+                    ),
+                  })
+                }
+              />
+            </Field>
+            <div className="purchase-config-phases">
+              {group.products.map(({ p, index }) => {
+                const path = `products.${index}.`;
+                return (
+                  <fieldset key={p.id} className="purchase-config-product">
+                    <legend>{p.tier === 'EARLY' ? 'Vé sớm' : 'Vé thường'}</legend>
+                    <div className="purchase-config-grid">
+                      {(['price_vnd', 'combo2_vnd', 'combo3_vnd', 'quota'] as const).map((key) => (
+                        <Field
+                          key={key}
+                          label={
+                            {
+                              price_vnd: 'Giá vé đơn (VND)',
+                              combo2_vnd: 'Giá Combo 2 (VND)',
+                              combo3_vnd: 'Giá Combo 3 (VND)',
+                              quota: 'Số lượng vé',
+                            }[key]
+                          }
+                          error={errors[path + key]}
+                        >
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            step={1}
+                            min={key === 'quota' ? 0 : 1}
+                            max={2147483647}
+                            value={money(p[key])}
+                            onChange={(e) =>
+                              product(index, {
+                                [key]:
+                                  (key === 'combo2_vnd' || key === 'combo3_vnd') &&
+                                  e.target.value === ''
+                                    ? null
+                                    : e.target.valueAsNumber,
+                              })
+                            }
+                          />
+                        </Field>
+                      ))}
+                      {config.total_quota == null && (
+                        <>
+                          <Field label="Mở bán (giờ Việt Nam)" error={errors[path + 'opens_at']}>
+                            <Input
+                              type="datetime-local"
+                              value={vietnamTime(p.opens_at)}
+                              onChange={(e) =>
+                                product(index, { opens_at: withOffset(e.target.value) })
+                              }
+                            />
+                          </Field>
+                          <Field label="Đóng bán (giờ Việt Nam)" error={errors[path + 'closes_at']}>
+                            <Input
+                              type="datetime-local"
+                              value={vietnamTime(p.closes_at)}
+                              onChange={(e) =>
+                                product(index, { closes_at: withOffset(e.target.value) })
+                              }
+                            />
+                          </Field>
+                        </>
+                      )}
+                    </div>
+                    <label className="purchase-config-check">
+                      <input
+                        type="checkbox"
+                        checked={p.enabled}
+                        onChange={(e) => product(index, { enabled: e.target.checked })}
+                      />
+                      Cho phép bán hạng vé này
+                    </label>
+                    <p>Tắt bán giữ lại lịch sử và đơn đã tạo; không xóa hạng vé.</p>
+                  </fieldset>
+                );
+              })}
+            </div>
+          </fieldset>
+        ))}
       </fieldset>
       <Button type="submit" disabled={busy}>
         {busy ? 'Đang lưu…' : 'Lưu cấu hình vé'}

@@ -390,8 +390,126 @@ it('retains rollover quota and permits unchanged config and completion after the
   await rpc('save_purchase_offer', [admin, 'aal1', config]);
   expect((await complete(held)).status).toBe('COMPLETED');
 });
+async function saleConfig(target: string = offer) {
+  return (
+    await db.query<{
+      config: Record<string, unknown> & {
+        products: { id: string; name: string; tier: string; quota: number; price_vnd: number }[];
+      };
+    }>(
+      "select to_jsonb(o)||jsonb_build_object('products',(select coalesce(jsonb_agg(to_jsonb(p)||jsonb_build_object('quota',p.base_quota)),'[]') from public.purchase_products p where p.offer_id=o.id)) config from public.purchase_offers o where id=$1",
+      [target],
+    )
+  ).rows[0].config;
+}
+it('allows admin changes to official early quantity and Vietnam schedule, retaining the 700-ticket capacity', async () => {
+  await db.exec(
+    (await readFile('tools/configure-official-program-2027.sql', 'utf8'))
+      .replace(/^begin;$/m, '')
+      .replace(/^commit;$/m, ''),
+  );
+  const official = (
+    await db.query<{ id: string }>(
+      "select id from public.purchase_offers where slug='chung-ket-2027'",
+    )
+  ).rows[0].id;
+  const config = await saleConfig(official);
+  Object.assign(config, {
+    early_quota: 200,
+    early_open_at: '2027-04-01T09:00:00+07:00',
+    early_close_at: '2027-04-02T10:00:00+07:00',
+    normal_close_at: '2027-04-24T22:00:00+07:00',
+  });
+  await rpc('save_purchase_offer', [admin, 'aal1', config]);
+  // Re-running bootstrap must not erase the admin's phase settings.
+  await db.exec(
+    (await readFile('tools/configure-official-program-2027.sql', 'utf8'))
+      .replace(/^begin;$/m, '')
+      .replace(/^commit;$/m, ''),
+  );
+  expect(await saleConfig(official)).toMatchObject({ early_quota: 200, total_quota: 700 });
+  expect(
+    (
+      await db.query<{ phase: string }>(
+        "select ftu_sales_private.offer_phase($1,'2027-04-02T10:00:00+07:00') phase",
+        [official],
+      )
+    ).rows[0].phase,
+  ).toBe('NORMAL');
+  await expect(
+    rpc('save_purchase_offer', [admin, 'aal1', { ...config, total_quota: 800 }]),
+  ).rejects.toThrow('PROGRAM_CAPACITY_FIXED');
+  await expect(rpc('save_purchase_offer', [user, 'aal2', config])).rejects.toThrow('FORBIDDEN');
+  await db.exec('savepoint phase_rollback');
+  await expect(
+    db.exec(
+      (await readFile('supabase/rollbacks/20261015102130_configurable_sale_phases.sql', 'utf8'))
+        .replace(/^begin;$/m, '')
+        .replace(/^commit;$/m, ''),
+    ),
+  ).rejects.toThrow('ROLLBACK_BLOCKED_CUSTOM_SALE_PHASES');
+  await db.exec('rollback to savepoint phase_rollback;release savepoint phase_rollback');
+  expect((await saleConfig(official)).early_quota).toBe(200);
+});
+it('preserves held prices and completion while applying new prices, quantity and times to new orders', async () => {
+  const held = await reserve(early, 1);
+  const config = await saleConfig();
+  config.early_quota = 150;
+  config.products.find((p) => p.id === early)!.quota = 150;
+  config.products.find((p) => p.id === normal)!.quota = 550;
+  config.products.find((p) => p.id === early)!.price_vnd = 120000;
+  config.early_close_at = new Date(Date.now() + 7200000).toISOString();
+  config.normal_close_at = new Date(Date.now() + 172800000).toISOString();
+  await rpc('save_purchase_offer', [admin, 'aal1', config]);
+  expect((await reserve(early, 2)).total_vnd).toBe(240000);
+  expect((await complete(held)).total_vnd).toBe(100000);
+  expect((await saleConfig()).early_quota).toBe(150);
+});
+it('rejects early limits below active holds and invalid phase times without partially saving', async () => {
+  await reserve(early, 10);
+  const before = await saleConfig();
+  const config = structuredClone(before);
+  config.early_quota = 5;
+  config.products.find((p) => p.id === early)!.quota = 5;
+  config.products.find((p) => p.id === normal)!.quota = 695;
+  await expect(rpc('save_purchase_offer', [admin, 'aal1', config])).rejects.toThrow(
+    'QUOTA_BELOW_ALLOCATED',
+  );
+  expect(await saleConfig()).toEqual(before);
+  await expect(
+    rpc('save_purchase_offer', [
+      admin,
+      'aal1',
+      { ...before, early_close_at: before.early_open_at },
+    ]),
+  ).rejects.toThrow('INVALID_SALE_PHASES');
+  expect(await saleConfig()).toEqual(before);
+});
+it('recalculates rollover using the new phase allocation without undercutting existing normal holds', async () => {
+  await db.query(
+    "update public.purchase_offers set early_open_at=clock_timestamp()-interval '1 day',early_close_at=clock_timestamp()-interval '1 hour' where id=$1",
+    [offer],
+  );
+  const held = await reserve(normal, 700);
+  const config = await saleConfig();
+  config.early_quota = 150;
+  config.products.find((p) => p.id === early)!.quota = 150;
+  config.products.find((p) => p.id === normal)!.quota = 550;
+  await rpc('save_purchase_offer', [admin, 'aal1', config]);
+  expect(
+    (await rpc<PurchaseCatalog>('purchase_catalog', ['official-test'])).offers[0].products.find(
+      (p) => p.id === normal,
+    ),
+  ).toMatchObject({ quota: 700, base_quota: 550, held: 700 });
+  expect((await complete(held)).quantity).toBe(700);
+});
 it('rolls schema behavior back without deleting publication records or existing purchases', async () => {
   const held = await reserve(early, 1);
+  await db.exec(
+    (await readFile('supabase/rollbacks/20261015102130_configurable_sale_phases.sql', 'utf8'))
+      .replace(/^begin;$/m, '')
+      .replace(/^commit;$/m, ''),
+  );
   await db.exec(
     (await readFile('supabase/rollbacks/20261014150806_official_program_2027.sql', 'utf8'))
       .replace(/^begin;$/m, '')

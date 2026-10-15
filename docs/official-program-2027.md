@@ -1,5 +1,7 @@
 # FTUCharm 2027 — bản chính thức local
 
+**Cập nhật15/10/2026:** người dùng yêu cầu gộp hai đợt trong cùng hạng vé và cho admin tự chỉnh giá, số vé sớm và lịch. Mốc100/600 cùng ngày bán dưới đây là mặc định ban đầu; tổng700 vé vẫn giữ. Source và migration mới được chuẩn bị/kiểm thử local theo [contract mới](unified-ticket-sale-phases-20261015.md), chưa áp migration/deploy online cho thay đổi này. Kết nối Sheet đã kích hoạt riêng theo [báo cáo](sheet-activation-20261015.md).
+
 Triển khai ngày 14/10/2026 theo kế hoạch được người dùng phê duyệt. Chạy local với Auth/database Supabase thật, Images/R2 local; chưa đưa website lên Internet. Nghiệm thu lịch sử 11/11 local/DEMO và các dữ liệu thử cũ được giữ nguyên.
 
 ## Khởi động

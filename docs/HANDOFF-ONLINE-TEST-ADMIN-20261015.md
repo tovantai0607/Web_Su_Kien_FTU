@@ -1,5 +1,7 @@
 # Bàn giao admin: kích hoạt mua vé, Google Sheet và vote DEMO
 
+**Cập nhật sau bàn giao15/10/2026:** người dùng yêu cầu hoàn thành kết nối Sheet; đã áp hai migration Sheets/quota (remote16), hoàn thành OAuth owner, cài ba trigger và kiểm tra đồng bộ hai chiều trên đơn DEMO. Xem [sheet-activation-20261015.md](sheet-activation-20261015.md). Hai migration vote và bộ xử lý ảnh vẫn chưa kích hoạt; bảng hiện trạng14 migration/chưa OAuth bên dưới là thời điểm bàn giao trước đó.
+
 **Yêu cầu mới nhất15/10/2026:** người dùng đã yêu cầu gộp nhánh bàn giao vào main và ghi rõ việc còn lại cho ảnh/Sheet. Hướng dẫn tiếp quản sau gộp nằm ở [NEXT-STEPS-SHEET-IMAGES.md](NEXT-STEPS-SHEET-IMAGES.md). Quyết định chỉ push nhánh/không merge trong mục lịch sử ngay dưới đã được thay; các bước migration/Function/OAuth/trigger vẫn do admin sở hữu dịch vụ thực hiện.
 
 ## Điểm tiếp quản
