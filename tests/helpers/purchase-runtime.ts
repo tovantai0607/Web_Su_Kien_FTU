@@ -48,6 +48,7 @@ const calls: Record<string, string[]> = {
     'p_sha256',
   ],
   read_vote_participation: ['p_round'],
+  read_demo_vote_leaderboard: ['p_round'],
   read_ticket_code_register: ['p_actor', 'p_aal', 'p_mode', 'p_page'],
   read_own_ticket_codes: ['p_user'],
   save_program_publication: ['p_actor', 'p_aal', 'p_data'],

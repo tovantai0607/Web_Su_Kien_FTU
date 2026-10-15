@@ -362,12 +362,20 @@ app.get('/api/voting/:id', async (c) => {
         .eq('session_id', sessions.data.id)
     : { data: [], error: null };
   dbError(eligible.error);
+  let demoLeaderboard = null;
+  if (c.env.DEMO_TEST_OFFER_SLUG && id === (await demoOffer(c.env)).round_id) {
+    const leaderboard = await service(c.env).rpc('read_demo_vote_leaderboard', { p_round: id });
+    // A pending migration is unavailable data, never a made-up zero count.
+    if (leaderboard.error && leaderboard.error.code !== 'PGRST202') dbError(leaderboard.error);
+    demoLeaderboard = leaderboard.data;
+  }
   return ok(c, {
     round,
     contestants,
     categories: categories.data,
     session: sessions.data,
     participation: participation.data ?? null,
+    demo_leaderboard: demoLeaderboard,
     eligible: eligible.data,
     server_time: new Date().toISOString(),
   });

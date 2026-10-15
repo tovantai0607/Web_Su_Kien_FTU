@@ -121,6 +121,10 @@ it('serves the approved DEMO catalog and vote round alongside an official homepa
     const rounds = await responseData<{ id: string }[]>(await call('/rounds'));
     expect(rounds.map((r) => r.id)).toEqual([fixture(20)]);
     expect((await call('/voting/' + fixture(20))).status).toBe(200);
+    const voting = await responseData<{ demo_leaderboard: { rows: unknown[]; session_id: null } }>(
+      await call('/voting/' + fixture(20)),
+    );
+    expect(voting.demo_leaderboard).toEqual({ rows: [], session_id: null });
     expect((await call('/purchases', { ...selection(), offer_id: fixture(99) })).status).toBe(403);
     expect((await call('/contestants/apply', {})).status).toBe(403);
     expect((await call('/purchases', selection())).status).toBe(200);
@@ -139,6 +143,7 @@ it('serves public vote participation through the privileged server client withou
     response,
   );
   expect(data.participation).toEqual({ participants: 0, votes: 0 });
+  expect((data as { demo_leaderboard?: unknown }).demo_leaderboard).toBeNull();
 });
 it('guards authentication, Origin, input, idempotency and body limits before DB writes', async () => {
   expect(

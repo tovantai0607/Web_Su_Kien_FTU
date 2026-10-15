@@ -1,5 +1,17 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Bàn giao admin khác ngày15/10/2026
+
+Người dùng rút việc tự kích hoạt vì tài khoản dịch vụ đang mở không thuộc họ: chỉ push code lên nhánh, phần online do admin khác tiếp quản. Đọc `docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md`. Chưa migration/deploy/fixture/vote/trigger trong lượt này; Supabase14 migration,4 pending. CLI login đã hủy/hết hạn. Đã lưu backup phạm vi nghiệp vụ/hàm mã hóa DPAPI local và đối chiếu10 bảng không đổi; không đưa backup/credentials vào Git. Kiểm tra local thứ tự áp4 pending sau registry cho cùng hàm/quyền với canonical. Không merge main vì nối auto-deploy; xác nhận kích hoạt trước đó không còn là chỉ dẫn tiếp tục tự deploy của lượt này.
+
+## Kiểm tra mua vé và BXH DEMO ngày15/10/2026
+
+Online vẫn health mode=live, catalog slug DEMO0 offer, vote DEMO404. Supabase6 đơn COMPLETED/15 vé DEMO nhưng0 thí sinh vòng/hạng mục/phiên/phiếu; chưa có Edge Function. Local đã bổ sung nút mua/vote DEMO trong admin và BXH tạm chỉ DEMO, giữ công bố LIVE. Migration mới `20261015081633_demo_vote_leaderboard` chỉ đọc, chưa áp remote; tổng4 migration pending. Đọc `docs/demo-vote-online-status-20261015.md`. Chưa push/deploy/migration, fixture/vote remote hoặc bật trigger Google trong lượt kiểm tra này.
+
+## Callback Google ngày15/10/2026
+
+Owner đã triển khai Apps Script private và yêu cầu dùng computer trên2 tab. Đã lưu FTU_SCRIPT_CALLBACK_URL và thêm đúng callback /exec vào Supabase Redirect URLs; reload xác minh toàn bộ URL,5 redirect gồm4 cũ, Site URL không đổi. Đọc `docs/apps-script-callback-20261015.md`. Chưa đăng nhập OAuth tích hợp/cài trigger; backend/migration/Edge vẫn chưa kích hoạt. Không dùng lịch sử “chưa có deployment Apps Script” bên dưới làm trạng thái hiện hành.
+
 ## Đồng bộ Git ngày15/10/2026
 
 Đã gộp main mới `5c39e54` (mobile scroll/QA) với phần Storage/kho mã/Sheet trên nhánh `codex/ticket-code-sheets-sync-20261015`, giữ cả hai phía test adapter. QA sau gộp:264 unit/database/browser đạt,1 native skip;53 E2E preview đạt/3 skip và24 E2E Auth/admin đạt; lint/typecheck/build/dry-run đạt. Lượt này chỉ push nhánh mới theo yêu cầu, không merge main/deploy/migration hoặc bật Google. DEMO hiện15 vé đã cấp sau đơn4 vé thử; xem `docs/git-sync-ticket-sheets-20261015.md` và báo cáo kho mã cho bằng chứng/giới hạn.

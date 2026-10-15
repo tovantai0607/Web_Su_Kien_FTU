@@ -1,5 +1,7 @@
 # FTUCharm • Duyên dáng Ngoại thương
 
+**Bàn giao online-test cho admin khác (15/10/2026):** đọc [các bước kích hoạt và nghiệm thu](docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md). Source mới có nút mua/vote DEMO và BXH tạm; Supabase hiện14 migration,4 pending, codec/Worker mới và trigger Sheet chưa kích hoạt. Lượt này chỉ push nhánh, không merge main hoặc deploy. Các hướng dẫn/trạng thái cũ phía dưới phải đối chiếu bàn giao hiện hành.
+
 **Bản chính thức 2027 local:** dùng `npm run dev:official` và `npm run dev -- --strictPort`; frontend tắt preview, chỉ hiển thị mùa `ftucharm-2027`. Đã công bố 11 mốc lịch và hai đợt vé 700 vé/vòng, trong đó tối đa 100 vé sớm; giá/QR/quota từng loại/ảnh/giờ vote chờ BTC. Xem [hướng dẫn chính thức](docs/official-program-2027.md). Các báo cáo DEMO và lịch cũ phía dưới là lịch sử; ngày cập nhật ảnh bán kết hiện hành là 10–11/04, chung kết 23/05/2027.
 
 Luồng vé hiện hành đã triển khai theo bổ sung: loại/combo → bảy thông tin → QR → ảnh → Hoàn tất, có quyền vote ngay theo số vé/hạng mục đúng vòng. Mùa2027; giữ quota30 phút; không cap10/đơn hoặc hạn tổng/tài khoản; không chọn ghế/check-in/provider/mail vé tự động. BTC cấu hình giá/quota/QR, bên khác đối chiếu và gửi mail thủ công.

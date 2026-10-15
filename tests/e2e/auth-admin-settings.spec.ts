@@ -156,6 +156,21 @@ async function setup(page: Page, access = { is_admin: true, aal: 'aal2' }) {
       settingsRequests++;
       return route.fulfill({ json: { data: config } });
     }
+    if (path === '/api/admin/purchase-offers')
+      return route.fulfill({
+        json: {
+          data: [
+            {
+              id: id(44),
+              slug: 'test-giao-dich-demo',
+              title: 'Vé thử',
+              mode: 'DEMO',
+              published: true,
+              round_id: id(20),
+            },
+          ],
+        },
+      });
     if (route.request().method() === 'PUT') {
       const body = route.request().postDataJSON();
       saved.push(body);
@@ -281,6 +296,14 @@ test('admin opens customer records with six columns, proof, CSV and database lin
   await page.getByRole('link', { name: 'Khách đã mua vé', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/ve$/);
   await expect(page.getByRole('heading', { name: 'Khách đã mua vé', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mua vé DEMO — Vé thử' })).toHaveAttribute(
+    'href',
+    '/ve/test-giao-dich-demo',
+  );
+  await expect(page.getByRole('link', { name: 'Thử vote và xem BXH DEMO' })).toHaveAttribute(
+    'href',
+    '/binh-chon?vong=' + id(20),
+  );
   await expect(page.getByRole('columnheader')).toHaveCount(6);
   await expect(page.getByText('customer@example.test', { exact: false })).toBeVisible();
   await expect(page.getByText('1 đơn đã Hoàn tất · trang 1')).toBeVisible();
@@ -390,4 +413,70 @@ test('ordinary users cannot request customer records through the direct admin UR
   await expect(page.getByRole('heading', { name: 'Trang này chưa được tìm thấy.' })).toBeVisible();
   expect(state.purchaseRequests).toBe(0);
   await expect(page.getByRole('columnheader')).toHaveCount(0);
+});
+
+test('DEMO ranking refreshes, switches category and fits mobile without exposing voter data', async ({
+  page,
+}, testInfo) => {
+  await setup(page);
+  const round = { id: id(20), title: 'Vòng thử DEMO', kind: 'semifinal' };
+  let votes = 0;
+  await page.route('**/api/rounds', (route) => route.fulfill({ json: { data: [round] } }));
+  await page.route('**/api/voting/' + round.id, (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          round,
+          contestants: [
+            {
+              id: id(61),
+              display_name: 'Nữ DEMO',
+              gender: 'female',
+              number: 1,
+              slug: 'demo-female',
+            },
+            { id: id(62), display_name: 'Nam DEMO', gender: 'male', number: 2, slug: 'demo-male' },
+          ],
+          categories: [
+            { id: id(71), gender: 'female', name: 'Nữ được yêu thích nhất' },
+            { id: id(72), gender: 'male', name: 'Nam được yêu thích nhất' },
+          ],
+          session: {
+            id: id(80),
+            state: 'OPEN',
+            open_at: new Date(Date.now() - 60000).toISOString(),
+            close_at: new Date(Date.now() + 600000).toISOString(),
+          },
+          eligible: [
+            { category_id: id(71), contestant_id: id(61) },
+            { category_id: id(72), contestant_id: id(62) },
+          ],
+          demo_leaderboard: {
+            session_id: id(80),
+            rows: [
+              { category_id: id(71), contestant_id: id(61), votes, rank: 1 },
+              { category_id: id(72), contestant_id: id(62), votes: 0, rank: 1 },
+            ],
+          },
+          participation: { participants: votes ? 1 : 0, votes },
+          server_time: new Date().toISOString(),
+        },
+      },
+    }),
+  );
+  await page.goto('/binh-chon?vong=' + round.id);
+  const board = page.getByRole('region', { name: 'Bảng xếp hạng DEMO' });
+  await expect(board.getByText('0 phiếu', { exact: true })).toBeVisible();
+  votes = 3;
+  await board.getByRole('button', { name: 'Cập nhật BXH' }).click();
+  await expect(board.getByText('3 phiếu', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Nam được yêu thích nhất', exact: true }).click();
+  await expect(board.getByText('0 phiếu', { exact: true })).toBeVisible();
+  await expect(board).not.toContainText('Nữ DEMO');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath('demo-ranking.png'), fullPage: true });
 });

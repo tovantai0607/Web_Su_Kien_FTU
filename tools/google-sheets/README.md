@@ -1,5 +1,13 @@
 # Đồng bộ bảng Data với Supabase
 
+## Bàn giao admin15/10/2026
+
+Người dùng yêu cầu chỉ push source, phần online do admin khác thực hiện bằng tài khoản của họ. Bắt đầu từ [bàn giao kích hoạt](../../docs/HANDOFF-ONLINE-TEST-ADMIN-20261015.md):4 migration pending, codec hosted/Worker chưa deploy, OAuth/trigger chưa bật. Callback đã cấu hình nhưng không đồng nghĩa Sheet tự đồng bộ. Giữ bảng/thư mục private và không dùng phiên đăng nhập của tài khoản khác.
+
+## Callback đã cấu hình qua giao diện ngày15/10/2026
+
+Owner đã triển khai Apps Script riêng. Theo yêu cầu điều khiển hai tab, đã lưu `FTU_SCRIPT_CALLBACK_URL` bằng URL `/exec` do người dùng cung cấp và thêm đúng URL này vào Supabase Redirect URLs. Đã tải lại để đối chiếu: thuộc tính callback khớp toàn bộ URL; Supabase có5 URL, giữ nguyên4 URL cũ và Site URL. Đây là cấu hình callback, chưa đăng nhập phiên tích hợp hoặc cài trigger. Backend mới/3 migration pending/Edge codec vẫn cần kích hoạt riêng trước nghiệm thu đồng bộ. Xem `docs/apps-script-callback-20261015.md`.
+
 ## Kho mã riêng từng vé15/10/2026
 
 Ba tab nguồn riêng: `Vé bán kết` chứa700BK, `Vé chung kết` chứa700CK, `Vé DEMO` chứa50DM, combo cùng đơn/loại gộp một dòng; vé đơn và mã chưa cấp giữ từng dòng. Bản chụp đã điền11 vé DEMO cũ. Mỗi mã5 chữ số sau prefix; mã đã cấp không dùng lại. Hai tab cũ đổi riêng headerA sang `Mã đơn`, vẫn dùng19 cột/UUID/revision để chỉnh đơn, không nhập mã pool vào cột mã đơn. Script mới cần24 headers đúng tab kho mã và endpoint `/api/admin/sheets/ticket-codes` đã deploy. Script đọc nguồn LIVE rồi tách BK/CK vào đúng tab, nguồn DEMO chỉ nhận DM. `installFtuSync()` cài thêm trigger `syncFtuTicketCodes` mỗi phút; chưa có trigger/deployment thật trong lượt tạo kho. Các tab kho mã là bản xem; chỉnh đơn ở Khách mua vé. Xem `docs/ticket-code-register-20261015.md`.

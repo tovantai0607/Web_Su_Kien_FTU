@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/Content';
 import PurchaseRecords from '../components/PurchaseRecords';
+import DemoTicketLinks from '../components/DemoTicketLinks';
 import './purchases.css';
 
 export default function PurchaseCustomers() {
@@ -32,6 +33,7 @@ export default function PurchaseCustomers() {
         email thủ công.
       </p>
       <PurchaseRecords admin />
+      <DemoTicketLinks />
     </div>
   );
 }
