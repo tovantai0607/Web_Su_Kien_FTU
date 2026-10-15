@@ -46,6 +46,10 @@ export async function enforceDemoWrite(request: Request, env: Env, principal?: P
   if (!env.DEMO_TEST_OFFER_SLUG || ['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
   await requireDemoAdmin(request, env, principal);
   const path = new URL(request.url).pathname;
+  // Preparing an image object does not create or publish a LIVE program record.
+  // The route still requires authenticated CONTENT_EDITOR/SUPER_ADMIN access.
+  // Keep every publication, registration and other LIVE mutation fenced below.
+  if (request.method === 'POST' && path === '/api/admin/public-images') return;
   const offer = await demoOffer(env);
   let allowed = false;
   if (

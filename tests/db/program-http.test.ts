@@ -188,38 +188,50 @@ it('QA-PERMISSIONS denies guests, ordinary users and editors without MFA before 
   expect((await db.query('select id from public.program_publications')).rows).toHaveLength(0);
 });
 it('QA-UPLOAD rejects absent online storage and invalid files; successful sanitized image stays draft', async () => {
-  const oldImages = env.IMAGES;
+  const oldScope = env.DEMO_TEST_OFFER_SLUG;
+  env.DEMO_TEST_OFFER_SLUG = 'test-giao-dich-demo';
   try {
-    env.IMAGES = undefined;
-    expect((await request('/admin/public-images', 'POST', {}, token(admin))).status).toBe(503);
-  } finally {
-    env.IMAGES = oldImages;
-  }
-  expect(
-    (await request('/admin/public-images', 'POST', { forged: true }, token(admin))).status,
-  ).toBe(400);
-  const image = await sharp({ create: { width: 8, height: 8, channels: 3, background: '#aa0000' } })
-    .png()
-    .toBuffer();
-  const uploaded = await app.request(
-    'http://localhost/api/admin/public-images',
-    {
-      method: 'POST',
-      headers: {
-        Origin: env.ALLOWED_ORIGIN,
-        Authorization: token(admin),
-        'Content-Type': 'image/png',
+    expect((await request('/admin/public-images', 'POST', {})).status).toBe(401);
+    expect((await request('/admin/public-images', 'POST', {}, token(owner))).status).toBe(403);
+    expect((await request('/admin/public-images', 'POST', {}, token(other))).status).toBe(403);
+    const oldImages = env.IMAGES;
+    try {
+      env.IMAGES = undefined;
+      expect((await request('/admin/public-images', 'POST', {}, token(admin))).status).toBe(503);
+    } finally {
+      env.IMAGES = oldImages;
+    }
+    expect(
+      (await request('/admin/public-images', 'POST', { forged: true }, token(admin))).status,
+    ).toBe(400);
+    const image = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: '#aa0000' },
+    })
+      .png()
+      .toBuffer();
+    const uploaded = await app.request(
+      'http://localhost/api/admin/public-images',
+      {
+        method: 'POST',
+        headers: {
+          Origin: env.ALLOWED_ORIGIN,
+          Authorization: token(admin),
+          'Content-Type': 'image/png',
+        },
+        body: new Uint8Array(image).buffer,
       },
-      body: new Uint8Array(image).buffer,
-    },
-    env,
-  );
-  expect(uploaded.status).toBe(200);
-  const result = (await data(uploaded)) as { photo_url: string };
-  expect(objects.size).toBe(1);
-  const stored = [...objects.values()][0];
-  expect((await sharp(Buffer.from(stored)).metadata()).format).toBe('webp');
-  expect((await request(result.photo_url.replace('/api', ''))).status).toBe(401);
+      env,
+    );
+    expect(uploaded.status).toBe(200);
+    const result = (await data(uploaded)) as { photo_url: string };
+    expect(objects.size).toBe(1);
+    const stored = [...objects.values()][0];
+    expect((await sharp(Buffer.from(stored)).metadata()).format).toBe('webp');
+    expect((await request(result.photo_url.replace('/api', ''))).status).toBe(401);
+    expect((await db.query('select id from public.program_publications')).rows).toHaveLength(0);
+  } finally {
+    env.DEMO_TEST_OFFER_SLUG = oldScope;
+  }
 });
 it('QA-BOUNDARY enforces origin, throttle and strict publication input', async () => {
   expect(

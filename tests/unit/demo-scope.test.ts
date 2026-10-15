@@ -91,3 +91,15 @@ it('fails closed when the configured DEMO offer is missing', async () => {
     enforceDemoWrite(request('purchases', { offer_id: offer.id }), env),
   ).rejects.toMatchObject({ status: 503 });
 });
+
+it('lets the authorized image route prepare bytes without permitting LIVE records or path lookalikes', async () => {
+  await expect(enforceDemoWrite(request('admin/public-images'), env)).resolves.toBeUndefined();
+  for (const r of [
+    request('admin/publications', { published: true }),
+    request('admin/publications', { published: false }),
+    request('admin/public-images/extra'),
+    request('media/upload'),
+    request('admin/public-images', {}, 'PUT'),
+  ])
+    await expect(enforceDemoWrite(r, env)).rejects.toMatchObject({ status: 403 });
+});
