@@ -38,6 +38,8 @@ const calls: Record<string, string[]> = {
   purchase_statistics: ['p_actor', 'p_aal'],
   manage_purchase_voting: ['p_actor', 'p_aal', 'p_session', 'p_action', 'p_reason'],
   edit_sheet_purchase: ['p_actor', 'p_aal', 'p_request', 'p_data'],
+  edit_ticket_code_row: ['p_actor', 'p_aal', 'p_request', 'p_data'],
+  read_purchase_ticket_codes: ['p_actor', 'p_aal', 'p_request'],
   register_sheet_purchase_evidence: [
     'p_actor',
     'p_aal',

@@ -40,6 +40,230 @@ async function proof(p: Purchase) {
 }
 const finish = async (p: Purchase, evidence?: string) =>
   rpc('complete_purchase', [owner, p.id, evidence ?? (await proof(p))]);
+
+async function rowEdit(p: Purchase, bundle = 1, revision = 0) {
+  const rows = (
+    await db.query<{ code: string; ticket_id: string }>(
+      `select s.code,s.ticket_id from ftu_sales_private.ticket_code_slots s
+      join public.tickets t on t.id=s.ticket_id join ftu_sales_private.ticket_line_history h on h.ticket_id=t.id
+      where t.purchase_id=$1 and t.status='issued' and (h.line->>'bundle_size')::int=$2 order by s.code`,
+      [p.id, bundle],
+    )
+  ).rows;
+  return {
+    operation_id: crypto.randomUUID(),
+    expected_revision: revision,
+    codes: rows.map((r) => r.code),
+    ticket_ids: rows.map((r) => r.ticket_id),
+    buyer: Object.fromEntries(Object.keys(selection().buyer).map((k) => [k, ''])),
+    evidence_id: null,
+  };
+}
+
+it('clears individual contact/proof fields without revoking a ticket or changing its owner', async () => {
+  await configure();
+  const p = await reserve();
+  await finish(p);
+  const input = await rowEdit(p);
+  input.buyer = { ...selection().buyer, facebook: '' };
+  const result = await rpc<Purchase & { revision: number }>('edit_ticket_code_row', [
+    admin,
+    'aal1',
+    p.id,
+    input,
+  ]);
+  expect(result).toMatchObject({
+    status: 'COMPLETED',
+    quantity: 1,
+    evidence_id: null,
+    buyer: { facebook: '' },
+    revision: 1,
+  });
+  expect(
+    (
+      await db.query<{ user_id: string; status: string }>(
+        'select user_id,status from public.tickets where purchase_id=$1',
+        [p.id],
+      )
+    ).rows[0],
+  ).toEqual({ user_id: owner, status: 'issued' });
+  expect(await rpc('edit_ticket_code_row', [admin, 'aal1', p.id, input])).toEqual(result);
+});
+
+it('releases a whole Combo3 only, keeps the other single and shared contact, and reuses codes with fresh identities', async () => {
+  await configure();
+  const data = selection();
+  data.lines.push({ ...data.lines[0], bundle_size: 3 });
+  const p = await rpc('reserve_purchase', [owner, data, crypto.randomUUID(), 'a'.repeat(64)]);
+  await finish(p);
+  const input = await rowEdit(p, 3);
+  const result = await rpc<Purchase>('edit_ticket_code_row', [admin, 'aal1', p.id, input]);
+  expect(result).toMatchObject({ status: 'COMPLETED', quantity: 1, buyer: selection().buyer });
+  expect(result.evidence_id).not.toBeNull();
+  expect(
+    (
+      await db.query<{ status: string; n: number }>(
+        'select status,count(*)::int n from public.tickets where purchase_id=$1 group by status order by status',
+        [p.id],
+      )
+    ).rows,
+  ).toEqual([
+    { status: 'issued', n: 1 },
+    { status: 'void', n: 3 },
+  ]);
+  const nextData = selection();
+  nextData.lines[0].bundle_size = 3;
+  const next = await rpc('reserve_purchase', [
+    other,
+    nextData,
+    crypto.randomUUID(),
+    'b'.repeat(64),
+  ]);
+  const id = crypto.randomUUID();
+  await rpc('attach_purchase_evidence', [
+    other,
+    next.id,
+    id,
+    `private/purchases/${other}/${next.id}/${id}.webp`,
+    100,
+  ]);
+  await rpc('complete_purchase', [other, next.id, id]);
+  const after = await rowEdit(next, 3);
+  expect(after.codes).toEqual(input.codes);
+  expect(after.ticket_ids.every((id) => !input.ticket_ids.includes(id))).toBe(true);
+  expect(
+    (
+      await db.query<{ n: number }>(
+        'select count(*)::int n from ftu_sales_private.ticket_code_history where released_at is not null',
+      )
+    ).rows[0].n,
+  ).toBe(3);
+  // Retrying a previous release must not clear the new buyer, even after reassignment.
+  expect(await rpc('edit_ticket_code_row', [admin, 'aal1', p.id, input])).toEqual(result);
+  await expect(
+    rpc('edit_ticket_code_row', [
+      admin,
+      'aal1',
+      next.id,
+      { ...after, ticket_ids: input.ticket_ids },
+    ]),
+  ).rejects.toThrow('STALE_TICKET_ASSIGNMENT');
+});
+
+it('empties the last single to a CLEARED purchase, restores quota once, and never reactivates the old ticket', async () => {
+  await configure();
+  const p = await reserve();
+  await finish(p);
+  const input = await rowEdit(p);
+  const result = await rpc<Purchase>('edit_ticket_code_row', [admin, 'aal1', p.id, input]);
+  expect(result).toMatchObject({
+    status: 'CLEARED',
+    quantity: 0,
+    total_vnd: 0,
+    lines: [],
+    evidence_id: null,
+  });
+  expect(
+    (
+      await db.query<{ sold_quantity: number }>(
+        'select sold_quantity from public.purchase_products where id=$1',
+        [fixture(50)],
+      )
+    ).rows[0].sold_quantity,
+  ).toBe(0);
+  expect(
+    (
+      await db.query<{ ticket_id: null }>(
+        'select ticket_id from ftu_sales_private.ticket_code_slots where code=$1',
+        [input.codes[0]],
+      )
+    ).rows[0].ticket_id,
+  ).toBeNull();
+  expect(await rpc('edit_ticket_code_row', [admin, 'aal1', p.id, input])).toEqual(result);
+  await expect(finish(p)).rejects.toThrow();
+  const next = await reserve();
+  await finish(next);
+  expect((await rowEdit(next)).codes).toEqual(input.codes);
+  await db.exec('savepoint rollback_guard');
+  await expect(
+    db.exec(await readFile('supabase/rollbacks/20261016134929_sheet_ticket_recycling.sql', 'utf8')),
+  ).rejects.toThrow('ROLLBACK_BLOCKED_RETAIN_RECYCLED_TICKETS');
+  await db.exec('rollback to savepoint rollback_guard;release savepoint rollback_guard');
+});
+
+it('clears a customer order containing singles and a combo atomically and preserves retry identity', async () => {
+  await configure();
+  const data = selection(2);
+  data.lines.push({ ...data.lines[0], quantity: 1, bundle_size: 3 });
+  const p = await rpc('reserve_purchase', [owner, data, crypto.randomUUID(), 'a'.repeat(64)]);
+  const done = await finish(p);
+  const input = {
+    operation_id: crypto.randomUUID(),
+    expected_revision: 0,
+    code: done.code,
+    buyer: Object.fromEntries(Object.keys(selection().buyer).map((k) => [k, ''])),
+    lines: data.lines,
+    evidence_id: null,
+  };
+  const result = await rpc<Purchase>('edit_sheet_purchase', [admin, 'aal1', p.id, input]);
+  expect(result).toMatchObject({ status: 'CLEARED', quantity: 0, evidence_id: null, lines: [] });
+  expect(await rpc('edit_sheet_purchase', [admin, 'aal1', p.id, input])).toEqual(result);
+  expect(
+    (
+      await db.query<{ n: number }>(
+        'select count(*)::int n from ftu_sales_private.ticket_code_slots where ticket_id is not null',
+      )
+    ).rows[0].n,
+  ).toBe(0);
+});
+
+it('blocks releasing a voted combo and rejects incomplete groups, stale revisions and nonstaff', async () => {
+  await configure();
+  const p = await reserve(1, 3);
+  await finish(p);
+  const input = await rowEdit(p, 3);
+  await expect(rpc('edit_ticket_code_row', [owner, 'aal2', p.id, input])).rejects.toThrow(
+    'FORBIDDEN',
+  );
+  await expect(
+    rpc('edit_ticket_code_row', [admin, 'aal1', p.id, { ...input, expected_revision: 1 }]),
+  ).rejects.toThrow('SHEET_REVISION_CONFLICT');
+  await expect(
+    rpc('edit_ticket_code_row', [
+      admin,
+      'aal1',
+      p.id,
+      { ...input, codes: input.codes.slice(0, 1), ticket_ids: input.ticket_ids.slice(0, 1) },
+    ]),
+  ).rejects.toThrow('INVALID_TICKET_GROUP');
+  await rpc('prepare_gender_voting', [admin, 'aal1', fixture(20)]);
+  const session = await rpc<{ id: string }>('open_gender_voting', [admin, 'aal1', fixture(20)]);
+  const cat = (
+    await db.query<{ id: string }>(
+      "select id from public.vote_categories where round_id=$1 and gender='male'",
+      [fixture(20)],
+    )
+  ).rows[0].id;
+  await rpc('cast_category_vote', [
+    owner,
+    fixture(20),
+    input.ticket_ids[0],
+    fixture(60),
+    cat,
+    session.id,
+  ]);
+  await expect(rpc('edit_ticket_code_row', [admin, 'aal1', p.id, input])).rejects.toThrow(
+    'VOTED_TICKET_IMMUTABLE',
+  );
+  expect(
+    (
+      await db.query<{ n: number }>(
+        "select count(*)::int n from public.tickets where purchase_id=$1 and status='issued'",
+        [p.id],
+      )
+    ).rows[0].n,
+  ).toBe(3);
+});
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
@@ -320,6 +544,47 @@ it('installs independently on the thirteen-migration remote baseline without req
       [offerId, 'DM', 50, 600],
     );
     expect(result.rows[0].data).toMatchObject({ count: 50, assigned: 0 });
+  } finally {
+    await baseline.close();
+  }
+});
+
+it('installs recycling on the verified seventeen-migration remote baseline without activating unrelated pending features', async () => {
+  const baseline = new PGlite();
+  try {
+    await baseline.exec(
+      "create schema auth;create role anon;create role authenticated;create role service_role bypassrls;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;",
+    );
+    const pending = ['20261015024905', '20261015081633', '20261015102130'];
+    for (const file of (await readdir('supabase/migrations'))
+      .filter((f) => f.endsWith('.sql') && !pending.some((p) => f.startsWith(p)))
+      .sort())
+      await baseline.exec(
+        (await readFile('supabase/migrations/' + file, 'utf8')).replace(
+          'create extension if not exists pgcrypto;',
+          '',
+        ),
+      );
+    await baseline.exec(await readFile('tests/fixtures/purchases.sql', 'utf8'));
+    await baseline.query('select public.configure_ticket_code_stock($1,$2,$3,$4)', [
+      offerId,
+      'DM',
+      50,
+      600,
+    ]);
+    const result = (
+      await baseline.query<{ data: { editing_version: number } }>(
+        'select public.read_ticket_code_register($1,$2,$3,$4) data',
+        [admin, 'aal1', 'DEMO', 0],
+      )
+    ).rows[0].data;
+    expect(result.editing_version).toBe(1);
+    const allowed = (
+      await baseline.query<{ allowed: boolean }>(
+        "select has_function_privilege('anon','public.edit_ticket_code_row(uuid,text,uuid,jsonb)','EXECUTE') allowed",
+      )
+    ).rows[0].allowed;
+    expect(allowed).toBe(false);
   } finally {
     await baseline.close();
   }

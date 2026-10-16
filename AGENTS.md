@@ -1,5 +1,11 @@
 # Hướng dẫn phát triển website sự kiện FTU
 
+## Sửa Sheet và tái bán mã vé được chốt ngày 16/10/2026
+
+Người dùng chốt: quản trị được xóa từng trường người mua/minh chứng qua Sheet và web; mã vé không được xóa/sửa. Xóa hết bảy trường người mua và minh chứng của một dòng kho mã thì thu hồi cả dòng vé/nhóm combo, trả quota, đưa mã về kho để bán lại. Nếu bất kỳ vé trong nhóm đã vote thì chặn toàn bộ. Nhóm khác trong đơn giữ thông tin chung. Bán lại tạo UUID/token vé mới, không chuyển quyền của chủ cũ; giữ audit/lịch sử. Đây là ngoại lệ quản trị thay quy tắc không tái sử dụng mã đã cấp; không mở chức năng hủy/hoàn tiền cho khách.
+
+Thay đổi được phát triển trên nhánh `codex/sheet-ticket-reuse-20261016`; người dùng đã yêu cầu push và gộp main ngày16/10. Đọc `docs/sheet-ticket-recycling-20261016.md`. Migration `20261016134929_sheet_ticket_recycling.sql`, Worker và Apps Script cần kích hoạt đồng bộ sau backup/review; không suy ra merge/deploy Worker là database và Script đã cập nhật. Chỉ thử dữ liệu giả/DEMO, giữ hàng rào online-test và không làm sạch đơn LIVE trong lượt này.
+
 ## Bổ sung ngày 15/10/2026: giữ bản nháp trong tab
 
 Người dùng đã xác nhận cho phép giữ tạm nội dung form trong sessionStorage của tab để không mất khi xem thể lệ hoặc đăng nhập Google; xóa khi gửi thành công, đăng xuất hoặc đóng tab. Xác nhận này thay giới hạn không lưu nháp PII vào browser storage ở hướng dẫn cũ bên dưới cho riêng bản nháp đăng ký này. Không lưu mật khẩu, token, CAPTCHA, consent, file ảnh hoặc đưa bản nháp lên server. Không dùng localStorage cho nội dung form; tách/clear khi đổi tài khoản.

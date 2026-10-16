@@ -1,5 +1,7 @@
 # Đối chiếu yêu cầu bổ sung FTUCharm
 
+**Xác nhận16/10/2026:** quản trị được xóa từng trường người mua/minh chứng qua Sheet và web; mã vé bất biến. Xóa sạch bảy trường và minh chứng một dòng kho mã sẽ thu hồi cả dòng vé/nhóm combo, trả quota, đưa mã về kho. Chặn cả nhóm có vé đã vote. Bán lại dùng UUID/token mới, không phục hồi vé/quyền của chủ cũ; giữ lịch sử/audit. Nhóm còn lại giữ thông tin chung. Đây là ngoại lệ quản trị thay giới hạn không tái dùng mã, không mở hủy/hoàn tiền tự động. Source local và hướng dẫn kích hoạt ở `docs/sheet-ticket-recycling-20261016.md` tại root.
+
 **Xác nhận15/10/2026 về DEMO:** mua/vote DEMO chỉ cho tài khoản quản trị đã đăng nhập, gồm truy cập link/API trực tiếp. Mặc định công khai xem hai đêm LIVE theo lịch2027; admin mở DEMO bằng link riêng. Giá/QR LIVE chưa có hiển thị chờ BTC cấu hình, không dùng100k hoặc QR thử làm dữ liệu thật. Bảo toàn lịch sử/Sheet và hàng rào ghi DEMO của online-test. Chi tiết: `docs/admin-demo-official-catalog-20261015.md` tại root.
 
 **Xác nhận15/10/2026 về hai đợt bán:** một hạng vé có chung bộ chọn mua, giá và hạn mức theo đợt do server quyết định; không hiển thị hai thẻ EARLY/NORMAL trùng tên. Admin được chỉnh giá vé/combo, số vé sớm và thời gian hai đợt. Con số100 sớm/600 thường và các ngày bán bên dưới là mặc định ban đầu, không còn bị khóa; tổng700 LIVE/vòng vẫn giữ nguyên. Giữ đơn/vé/phiếu, giá đã chốt, quota30phút và kiểm tra số đang giữ/đã bán. Contract và bằng chứng mới: `docs/unified-ticket-sale-phases-20261015.md` ở root.

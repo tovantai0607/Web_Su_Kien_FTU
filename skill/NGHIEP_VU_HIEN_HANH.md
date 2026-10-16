@@ -1,5 +1,9 @@
 # Nghiệp vụ hiện hành theo file bổ sung
 
+## Chỉnh sửa và làm sạch vé — xác nhận16/10/2026
+
+Admin/nhân sự quản lý vé được xóa từng trường liên hệ hoặc minh chứng qua Sheet/web; mã vé giữ nguyên. Xóa hết bảy trường người mua và minh chứng một dòng kho mã thì thu hồi cả dòng vé/nhóm combo và trả quota để bán lại cùng mã. Chặn cả nhóm khi có vé đã vote. Nhóm khác trong đơn giữ thông tin chung. Tài khoản sở hữu không đổi khi sửa email liên hệ; khi bán lại tạo UUID/token mới, vô hiệu quyền cũ và giữ audit/lịch sử. Đây là ngoại lệ quản trị mới, không là hủy/hoàn tiền cho khách. Chi tiết, bằng chứng local và bước kích hoạt remote: `docs/sheet-ticket-recycling-20261016.md`.
+
 ## Phân tách DEMO và hai đêm chính thức — xác nhận15/10/2026
 
 Mua/vote DEMO chỉ dành cho tài khoản đăng nhập có quyền quản trị, kiểm tra ở cả giao diện và API. Khách, tài khoản thường và trang công khai mặc định của admin đều xem hai đêm bán kết25/04/2027, chung kết23/05/2027 theo lịch bán chính thức; admin mở thử DEMO từ trang quản trị. Hạng vé chưa có giá hiển thị chờ cập nhật, QR/giá thật BTC bổ sung sau; không nhận đơn khi cấu hình chưa đủ. Không xóa lịch sử DEMO hoặc thay đổi cơ chế Sheet. Chi tiết/bằng chứng: `docs/admin-demo-official-catalog-20261015.md`.

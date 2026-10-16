@@ -130,7 +130,7 @@ export type Purchase = {
   code: string;
   offer_id: string;
   round_id: string;
-  status: 'HELD' | 'EXPIRED' | 'COMPLETED';
+  status: 'HELD' | 'EXPIRED' | 'COMPLETED' | 'CLEARED';
   buyer: Buyer;
   lines: PurchaseLine[];
   quantity: number;
