@@ -91,6 +91,63 @@ afterAll(async () => {
   objects.clear();
   await db.close();
 });
+it('edits and releases a protected ticket group through HTTP, reflecting contact and quota changes on the web API', async () => {
+  const staff = (path: string, body?: unknown) =>
+    request(path, body, admin, { Authorization: token(admin, 'aal2') });
+  await db.exec('begin');
+  try {
+    await db.query('select public.configure_ticket_code_stock($1,$2,$3,$4)', [
+      fixture(40),
+      'DM',
+      50,
+      600,
+    ]);
+    const p = await responseData<Purchase>(await request('/purchases', selection()));
+    const proof = crypto.randomUUID();
+    await db.query('select public.attach_purchase_evidence($1,$2,$3,$4,$5)', [
+      owner,
+      p.id,
+      proof,
+      `private/purchases/${owner}/${p.id}/${proof}.webp`,
+      100,
+    ]);
+    await request(`/purchases/${p.id}/complete`, { evidence_id: proof });
+    const path = `/admin/sheets/purchases/${p.id}/ticket-group`;
+    const records = await responseData<{ code: string; ticket_id: string }[]>(
+      await staff(`/admin/sheets/purchases/${p.id}/ticket-groups`),
+    );
+    expect(records).toHaveLength(1);
+    const body = {
+      operation_id: crypto.randomUUID(),
+      expected_revision: 0,
+      codes: records.map((r) => r.code),
+      ticket_ids: records.map((r) => r.ticket_id),
+      buyer: { ...selection().buyer, facebook: '' },
+      evidence_id: null,
+    };
+    expect((await request(path, body, owner)).status).toBe(403);
+    expect((await staff(path, { ...body, user_id: other })).status).toBe(400);
+    expect((await staff(path, body)).status).toBe(200);
+    const me = await responseData<Purchase>(await request('/purchases/' + p.id));
+    expect(me.buyer.facebook).toBe('');
+    expect(me.evidence_id).toBeNull();
+    const empty = {
+      ...body,
+      operation_id: crypto.randomUUID(),
+      expected_revision: 1,
+      buyer: Object.fromEntries(Object.keys(body.buyer).map((k) => [k, ''])),
+    };
+    expect((await staff(path, empty)).status).toBe(200);
+    expect((await responseData<Purchase>(await request('/purchases/' + p.id))).status).toBe(
+      'CLEARED',
+    );
+    expect(
+      await responseData<unknown[]>(await staff(`/admin/sheets/purchases/${p.id}/ticket-groups`)),
+    ).toEqual([]);
+  } finally {
+    await db.exec('rollback');
+  }
+});
 it('serves both official nights publicly, restricts DEMO to admins, and fences writes before mutation', async () => {
   const scoped = {
     ...env,

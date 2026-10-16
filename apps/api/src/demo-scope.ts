@@ -81,7 +81,7 @@ export async function enforceDemoWrite(request: Request, env: Env, principal?: P
         input.round_id === offer.round_id;
   } else if (request.method === 'POST') {
     const purchase = path.match(
-      /^\/api\/(?:purchases|admin\/sheets\/purchases)\/([a-f0-9-]{36})(?:\/(?:evidence|complete))?$/i,
+      /^\/api\/(?:purchases|admin\/sheets\/purchases)\/([a-f0-9-]{36})(?:\/(?:evidence|complete|ticket-group))?$/i,
     );
     const session = path.match(
       /^\/api\/admin\/vote-sessions\/([a-f0-9-]{36})\/(?:open|close|finalize|publish|reopen)$/i,

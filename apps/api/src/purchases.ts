@@ -7,6 +7,7 @@ import {
   offerConfigSchema,
   purchaseSelectionSchema,
   sheetPurchaseEditSchema,
+  ticketCodeEditSchema,
 } from '@ftu/shared';
 import {
   authorize,
@@ -47,6 +48,9 @@ function failure(error: { message: string } | null) {
     SHEET_REVISION_CONFLICT: [409, 'Đơn đã được người khác sửa. Tải lại dữ liệu trước khi gửi.'],
     SHEET_BELOW_VOTED_TICKETS: [409, 'Không giảm số vé xuống dưới số vé đã dùng để vote.'],
     INVALID_SHEET_EDIT: [409, 'Chỉ sửa đơn đã Hoàn tất với đúng thông tin được phép.'],
+    VOTED_TICKET_IMMUTABLE: [409, 'Vé đã vote: không thể làm sạch hoặc bán lại.'],
+    STALE_TICKET_ASSIGNMENT: [409, 'Mã đã chuyển sang lượt cấp khác. Tải lại trước khi sửa.'],
+    INVALID_TICKET_GROUP: [409, 'Chọn đầy đủ một dòng vé hoặc nhóm combo.'],
     LEGACY_VOTE_RECONCILIATION_REQUIRED: [
       409,
       'Cần đối chiếu hạng mục của phiếu cũ trước khi chốt.',
@@ -326,10 +330,10 @@ purchases.get('/admin/sheets/purchases', async (c) => {
   let query = service(c.env)
     .from('purchase_requests')
     .select(
-      'id,code,buyer,lines,quantity,total_vnd,evidence_id,offer_id,round_id,revision,completed_at',
+      'id,code,buyer,lines,quantity,total_vnd,evidence_id,offer_id,round_id,revision,completed_at,status',
       { count: 'exact' },
     )
-    .eq('status', 'COMPLETED');
+    .in('status', ['COMPLETED', 'CLEARED']);
   if (c.env.DEMO_TEST_OFFER_SLUG) query = query.eq('offer_id', (await demoOffer(c.env)).id);
   const { data, error, count } = await query
     .order('completed_at')
@@ -363,6 +367,30 @@ purchases.post('/admin/sheets/purchases/:id', async (c) => {
     p_aal: principal.aal,
     p_request: id(c.req.param('id')),
     p_data: input,
+  });
+  failure(error);
+  return c.json({ data });
+});
+purchases.post('/admin/sheets/purchases/:id/ticket-group', async (c) => {
+  const principal = c.get('principal');
+  await authorize(principal, c.env, ['TICKET_STAFF']);
+  const input = await json(c.req.raw, ticketCodeEditSchema);
+  const { data, error } = await service(c.env).rpc('edit_ticket_code_row', {
+    p_actor: principal.id,
+    p_aal: principal.aal,
+    p_request: id(c.req.param('id')),
+    p_data: input,
+  });
+  failure(error);
+  return c.json({ data });
+});
+purchases.get('/admin/sheets/purchases/:id/ticket-groups', async (c) => {
+  const principal = c.get('principal');
+  await authorize(principal, c.env, ['TICKET_STAFF']);
+  const { data, error } = await service(c.env).rpc('read_purchase_ticket_codes', {
+    p_actor: principal.id,
+    p_aal: principal.aal,
+    p_request: id(c.req.param('id')),
   });
   failure(error);
   return c.json({ data });

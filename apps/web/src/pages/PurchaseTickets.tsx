@@ -292,7 +292,9 @@ function Checkout({ offer }: { offer: Offer }) {
   }, 0);
   const editable = !purchase;
   const expired = purchase
-    ? purchase.status === 'EXPIRED' || (purchase.status === 'HELD' && remaining === 0)
+    ? purchase.status === 'CLEARED' ||
+      purchase.status === 'EXPIRED' ||
+      (purchase.status === 'HELD' && remaining === 0)
     : preview && demoExpiresAt !== null && remaining === 0;
   function confirmSelection() {
     setError('');
@@ -412,8 +414,16 @@ function Checkout({ offer }: { offer: Offer }) {
       )}
       {expired && step !== 4 ? (
         <Card>
-          <h2>Đã hết hạn giữ vé</h2>
-          <p>Vé được trả về quota. Vui lòng chọn lại; chuyển tiền sau hạn không tự cấp thêm vé.</p>
+          <h2>
+            {purchase?.status === 'CLEARED'
+              ? 'Vé đã được quản trị trả về kho'
+              : 'Đã hết hạn giữ vé'}
+          </h2>
+          <p>
+            {purchase?.status === 'CLEARED'
+              ? 'Đơn này không còn vé hoặc lượt bình chọn. Bạn có thể đặt một đơn mới.'
+              : 'Vé được trả về quota. Vui lòng chọn lại; chuyển tiền sau hạn không tự cấp thêm vé.'}
+          </p>
           <Button
             onClick={() => {
               setPurchase(null);

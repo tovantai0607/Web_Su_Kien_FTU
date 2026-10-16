@@ -76,11 +76,15 @@ it('allows an admin only within the existing DEMO purchase and session scope', a
     request('votes', { round_id: offer.round_id }),
     request(`purchases/${offer.round_id}/complete`),
     request(`admin/sheets/purchases/${offer.round_id}`),
+    request(`admin/sheets/purchases/${offer.round_id}/ticket-group`),
     request(`admin/vote-sessions/${offer.round_id}/close`),
     request(`admin/rounds/${offer.round_id}/voting-settings`, {}, 'PUT'),
   ])
     await expect(enforceDemoWrite(r, env)).resolves.toBeUndefined();
   state.present = false;
+  await expect(
+    enforceDemoWrite(request(`admin/sheets/purchases/${offer.round_id}/ticket-group`), env),
+  ).rejects.toMatchObject({ status: 403 });
   await expect(
     enforceDemoWrite(request(`purchases/${offer.round_id}/evidence`), env),
   ).rejects.toMatchObject({ status: 403 });

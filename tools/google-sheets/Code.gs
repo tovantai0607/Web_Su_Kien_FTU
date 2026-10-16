@@ -7,6 +7,7 @@ const FTU_SYNC_TAB = '_Đồng bộ';
 const FTU_OPERATIONS_TAB = '_Lệnh đồng bộ';
 const FTU_SOURCE_TAB = 'Database hiện hành';
 const FTU_CODE_TABS = { BK: 'Vé bán kết', CK: 'Vé chung kết', DM: 'Vé DEMO' };
+const FTU_CODE_SYNC_TAB = '_Mã vé đồng bộ';
 const FTU_PROOF_IMAGE_ORIGINS = new Map(); // Execution-local native cell references, no URLs.
 const FTU_CODE_HEADERS = [
   'Mã vé / nhóm',
@@ -33,6 +34,7 @@ const FTU_CODE_HEADERS = [
   '_request_id',
   '_round_id',
   '_sequences',
+  '_revision',
 ];
 const FTU_HEADERS = [
   'Mã đơn',
@@ -351,6 +353,7 @@ function ftuCodeRows_(records) {
       record.request_id || '',
       record.round_id,
       members.map((member) => member.sequence).join('\n'),
+      record.revision == null ? '' : record.revision,
     ].map((value) =>
       typeof value === 'string' && /^[\s\u0000-\u001f]*[=+@-]/.test(value) ? "'" + value : value,
     );
@@ -393,16 +396,186 @@ function syncFtuTicketCodes() {
       if (records.some((record) => prefixes.indexOf(record.prefix) === -1))
         throw new Error('Tiền tố mã vé không khớp phạm vi nguồn.');
       prefixes.forEach((prefix) => {
-        writeFtuTicketCodeTab_(
-          book,
-          prefix,
-          records.filter((record) => record.prefix === prefix),
-        );
+        try {
+          const changed = syncFtuCodeEdits_(book, prefix);
+          // The edit may release or change a purchase; never render the stale pre-edit records.
+          const latest = changed ? [] : records.filter((row) => row.prefix === prefix);
+          for (let page = 0; changed; page++) {
+            const data = ftuApi_('/admin/sheets/ticket-codes?mode=' + mode + '&page=' + page);
+            latest.push(...data.rows.filter((row) => row.prefix === prefix));
+            if ((page + 1) * 200 >= data.count) break;
+          }
+          const refreshed = writeFtuTicketCodeTab_(book, prefix, latest);
+          if (
+            refreshed !== false &&
+            PropertiesService.getScriptProperties().getProperty('FTU_CODE_EDITS') === 'true'
+          )
+            book.getSheetByName(FTU_CODE_TABS[prefix]).getRange(1, 4).setNote('');
+        } catch (error) {
+          if (PropertiesService.getScriptProperties().getProperty('FTU_CODE_EDITS') !== 'true')
+            throw error;
+          book
+            .getSheetByName(FTU_CODE_TABS[prefix])
+            .getRange(1, 4)
+            .setNote('Chưa lưu: ' + error.message);
+        }
       });
     });
   } finally {
     lock.releaseLock();
   }
+}
+
+// Enable only after migration + Worker activation. Existing edits must first be resolved.
+function enableFtuTicketEditing() {
+  const book = SpreadsheetApp.openById(FTU_SHEET_ID);
+  assertPrivateFtuSheet_();
+  if (ftuApi_('/admin/sheets/ticket-codes?mode=DEMO&page=0').editing_version !== 1)
+    throw new Error('Chưa áp migration/cập nhật Worker cho chức năng làm sạch vé.');
+  Object.keys(FTU_CODE_TABS).forEach((prefix) => {
+    const sheet = book.getSheetByName(FTU_CODE_TABS[prefix]);
+    if (sheet.getMaxColumns() < 25)
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 25 - sheet.getMaxColumns());
+    sheet.getRange(1, 25).setValue('_revision');
+    const description = 'FTU mã vé bất biến';
+    let protection = sheet
+      .getProtections(SpreadsheetApp.ProtectionType.SHEET)
+      .find((p) => p.getDescription() === description);
+    if (!protection) protection = sheet.protect().setDescription(description);
+    const owner = Session.getEffectiveUser();
+    protection.addEditor(owner);
+    protection.removeEditors(
+      protection.getEditors().filter((u) => u.getEmail() !== owner.getEmail()),
+    );
+    if (protection.canDomainEdit()) protection.setDomainEdit(false);
+    protection.setUnprotectedRanges([sheet.getRange(2, 6, sheet.getMaxRows() - 1, 8)]);
+    sheet.hideColumns(21, 5);
+  });
+  syncFtuTicketCodes();
+  PropertiesService.getScriptProperties().setProperty('FTU_CODE_EDITS', 'true');
+  syncFtuTicketCodes(); // First enabled refresh records the read-only baseline.
+}
+function ftuCodeEditValues_(row) {
+  return row.slice(5, 13).map((value, index) => {
+    if (index === 7 && value && typeof value.getAltTextDescription === 'function')
+      return String(value.getAltTextDescription()).replace(/^FTU_PROOF:/, '');
+    return String(value == null ? '' : value);
+  });
+}
+function ftuCodeIdentity_(row) {
+  return JSON.stringify([row[0], row[1], row[20], row[21], row[24]]);
+}
+function ftuCodeBaseline_(book, prefix) {
+  let tab = book.getSheetByName(FTU_CODE_SYNC_TAB + ' ' + prefix);
+  if (!tab) {
+    tab = book.insertSheet(FTU_CODE_SYNC_TAB + ' ' + prefix);
+    if (tab.getMaxColumns() < 28)
+      tab.insertColumnsAfter(tab.getMaxColumns(), 28 - tab.getMaxColumns());
+    tab
+      .getRange(1, 1, 1, 28)
+      .setValues([FTU_CODE_HEADERS.concat(['_prefix', '_operation', '_payload'])]);
+    protectFtuInternal_(tab);
+    tab.hideSheet();
+  }
+  return tab;
+}
+function readFtuCodeBaseline_(book, prefix) {
+  const tab = ftuCodeBaseline_(book, prefix);
+  return tab.getLastRow() < 2 ? [] : tab.getRange(2, 1, tab.getLastRow() - 1, 28).getValues();
+}
+function saveFtuCodeBaseline_(book, prefix, rows) {
+  const tab = ftuCodeBaseline_(book, prefix),
+    old = tab.getLastRow() - 1;
+  const values = rows.map((row) => row.concat([prefix, '', '']));
+  const count = Math.max(old, values.length);
+  if (!count) return;
+  if (tab.getMaxRows() < count + 1)
+    tab.insertRowsAfter(tab.getMaxRows(), count + 1 - tab.getMaxRows());
+  tab
+    .getRange(2, 1, count, 28)
+    .setValues(
+      values.concat(Array.from({ length: count - values.length }, () => Array(28).fill(''))),
+    );
+}
+function syncFtuCodeEdits_(book, prefix) {
+  if (PropertiesService.getScriptProperties().getProperty('FTU_CODE_EDITS') !== 'true')
+    return false;
+  let changed = false;
+  const sheet = book.getSheetByName(FTU_CODE_TABS[prefix]),
+    tab = ftuCodeBaseline_(book, prefix);
+  const before = readFtuCodeBaseline_(book, prefix);
+  const rows =
+    sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 25).getValues();
+  before.forEach((base, index) => {
+    if (!base[1]) return;
+    const row = rows.find((r) => String(r[1]) === String(base[1]));
+    if (!row) throw new Error('Không xóa hàng hoặc mã vé. Chỉ xóa các ô thông tin và minh chứng.');
+    if (ftuCodeIdentity_(row) !== ftuCodeIdentity_(base))
+      throw new Error('Không sửa mã vé hoặc khóa nội bộ.');
+    const edited = ftuCodeEditValues_(row);
+    if (JSON.stringify(edited) === JSON.stringify(ftuCodeEditValues_(base)) && !base[26]) return;
+    if (!base[21] || !base[20]) throw new Error('Mã trống chưa có người mua để chỉnh sửa.');
+    let operation = String(base[26] || Utilities.getUuid()),
+      payload;
+    if (base[27]) payload = JSON.parse(base[27]);
+    else {
+      let evidence = edited[7] || null;
+      if (evidence && !/^[a-f0-9-]{36}$/i.test(evidence))
+        evidence = uploadFtuProof_(base[21], evidence, operation);
+      payload = {
+        operation_id: operation,
+        expected_revision: Number(base[24]),
+        codes: String(base[1]).split('\n'),
+        ticket_ids: String(base[20]).split('\n'),
+        buyer: Object.fromEntries(
+          ['name', 'school', 'cohort_class', 'student_id', 'email', 'phone', 'facebook'].map(
+            (k, i) => [k, edited[i]],
+          ),
+        ),
+        evidence_id: evidence,
+      };
+      if (JSON.stringify(payload).length > 45000)
+        throw new Error('Nhóm quá lớn; quản lý trong web admin.');
+      // Persist identity and payload before sending: a timeout must retry the same operation.
+      tab.getRange(index + 2, 27, 1, 2).setValues([[operation, JSON.stringify(payload)]]);
+    }
+    let result;
+    try {
+      result = ftuApi_('/admin/sheets/purchases/' + base[21] + '/ticket-group', 'post', payload);
+    } catch (error) {
+      // A known validation/conflict response did not commit. A timeout/5xx stays pending.
+      if ([400, 403, 404, 409].includes(error.status))
+        tab.getRange(index + 2, 27, 1, 2).setValues([['', '']]);
+      throw error;
+    }
+    changed = true;
+    // Keep any new local edits made while the HTTP call was in flight.
+    const live = sheet.getRange(rows.indexOf(row) + 2, 1, 1, 25).getValues()[0];
+    if (JSON.stringify(ftuCodeEditValues_(live)) !== JSON.stringify(edited))
+      throw new Error('Database đã lưu; còn chỉnh sửa mới cần đối chiếu trước khi làm mới.');
+    tab.getRange(index + 2, 6, 1, 8).setValues([edited]);
+    tab.getRange(index + 2, 27, 1, 2).setValues([['', '']]);
+    // Other rows in the same order share revision; do not silently rebase a competing edit.
+    sheet.getRange(rows.indexOf(row) + 2, 4).setNote('Đã lưu database revision ' + result.revision);
+  });
+  return changed;
+}
+function canRefreshFtuCodeTab_(book, prefix) {
+  if (PropertiesService.getScriptProperties().getProperty('FTU_CODE_EDITS') !== 'true') return true;
+  const sheet = book.getSheetByName(FTU_CODE_TABS[prefix]),
+    before = readFtuCodeBaseline_(book, prefix);
+  const rows =
+    sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 25).getValues();
+  return before
+    .filter((r) => r[1])
+    .every((base) => {
+      const row = rows.find((r) => String(r[1]) === String(base[1]));
+      if (!row || ftuCodeIdentity_(row) !== ftuCodeIdentity_(base) || base[26]) return false;
+      if (JSON.stringify(ftuCodeEditValues_(row)) !== JSON.stringify(ftuCodeEditValues_(base)))
+        return false;
+      // These fields are changed through the structured customer editor, not by clearing identifiers.
+      return JSON.stringify(row.slice(13, 20)) === JSON.stringify(base.slice(13, 20));
+    });
 }
 
 function writeFtuTicketCodeTab_(book, prefix, records) {
@@ -413,6 +586,15 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
   if (headers.some((value, index) => value !== FTU_CODE_HEADERS[index]))
     throw new Error('Cấu trúc tab mã vé không khớp.');
   const rows = ftuCodeRows_(records);
+  // Do not overwrite pending/conflicting edits, including edits made during HTTP calls.
+  if (!canRefreshFtuCodeTab_(book, prefix)) {
+    sheet
+      .getRange(1, 4)
+      .setNote(
+        'Còn chỉnh sửa/xung đột chưa lưu. Giữ nguyên mã vé; sửa loại/số lượng/combo tại Khách mua vé.',
+      );
+    return false;
+  }
   const previousLength = Math.max(0, sheet.getLastRow() - 1);
   const current = previousLength ? sheet.getRange(2, 2, previousLength, 1).getValues() : [];
   const sourceCodes = new Set(records.map((record) => record.code));
@@ -434,11 +616,14 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
     sheet.insertRowsAfter(sheet.getMaxRows(), length + 1 - sheet.getMaxRows());
   if (length) {
     const output = rows.concat(
-      Array.from({ length: length - rows.length }, () => Array(24).fill('')),
+      Array.from({ length: length - rows.length }, () => Array(FTU_CODE_HEADERS.length).fill('')),
     );
     writeFtuProofData_(sheet, output, 13, 2);
     linkFtuProofRows_(sheet, rows, 13, 2);
   }
+  if (PropertiesService.getScriptProperties().getProperty('FTU_CODE_EDITS') === 'true')
+    saveFtuCodeBaseline_(book, prefix, rows);
+  return true;
 }
 
 // Keep the UUID as the cell value: signatures and manual proof edits depend on it.
@@ -446,17 +631,27 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
 // Existing editable customer cells are never rewritten by a background refresh.
 function linkFtuProofRows_(sheet, rows, column, startRow) {
   const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  const targets = rows.map((row, index) => ({ value: row[column - 1], index }))
+  const targets = rows
+    .map((row, index) => ({ value: row[column - 1], index }))
     .filter((item) => typeof item.value === 'string' && valid.test(item.value));
   if (!targets.length) return;
-  const base = String(PropertiesService.getScriptProperties().getProperty('FTU_API_BASE_URL') || '').replace(/\/$/, '');
+  const base = String(
+    PropertiesService.getScriptProperties().getProperty('FTU_API_BASE_URL') || '',
+  ).replace(/\/$/, '');
   if (!/^https:\/\/[a-z0-9.-]+$/.test(base)) throw new Error('Thiếu URL HTTPS để xem minh chứng.');
   targets.forEach((item) => {
     const cell = sheet.getRange(startRow + item.index, column);
-    if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') === 'true' &&
-        ftuProofImageId_(cell.getValue())) return;
-    cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(item.value)
-      .setLinkUrl(base + '/minh-chung/' + item.value.toLowerCase()).build());
+    if (
+      PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') === 'true' &&
+      ftuProofImageId_(cell.getValue())
+    )
+      return;
+    cell.setRichTextValue(
+      SpreadsheetApp.newRichTextValue()
+        .setText(item.value)
+        .setLinkUrl(base + '/minh-chung/' + item.value.toLowerCase())
+        .build(),
+    );
   });
 }
 
@@ -464,19 +659,24 @@ function linkFtuProofRows_(sheet, rows, column, startRow) {
 // UUIDs remain canonical in the database and the editable customer column I.
 function ftuProofImageId_(value) {
   if (!value || typeof value.getAltTextDescription !== 'function') return null;
-  const match = String(value.getAltTextDescription()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
+  const match = String(value.getAltTextDescription()).match(
+    /^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i,
+  );
   return match ? match[1].toLowerCase() : null;
 }
 function readFtuProofImages_(sheet, column) {
   const images = new Map();
   if (sheet && sheet.getLastRow() >= 2)
-    sheet.getRange(2, column, sheet.getLastRow() - 1, 1).getValues().forEach((row, index) => {
-      const id = ftuProofImageId_(row[0]);
-      if (id) {
-        images.set(id, row[0]);
-        FTU_PROOF_IMAGE_ORIGINS.set(row[0], sheet.getRange(index + 2, column));
-      }
-    });
+    sheet
+      .getRange(2, column, sheet.getLastRow() - 1, 1)
+      .getValues()
+      .forEach((row, index) => {
+        const id = ftuProofImageId_(row[0]);
+        if (id) {
+          images.set(id, row[0]);
+          FTU_PROOF_IMAGE_ORIGINS.set(row[0], sheet.getRange(index + 2, column));
+        }
+      });
   return images;
 }
 function fetchFtuProofImage_(id) {
@@ -487,21 +687,26 @@ function fetchFtuProofImage_(id) {
     muteHttpExceptions: true,
   });
   const bytes = response.getContent();
-  if (response.getResponseCode() !== 200 || bytes.length > 2097152 ||
-      response.getBlob().getContentType().split(';')[0] !== 'image/jpeg')
+  if (
+    response.getResponseCode() !== 200 ||
+    bytes.length > 2097152 ||
+    response.getBlob().getContentType().split(';')[0] !== 'image/jpeg'
+  )
     throw new Error('Chưa tải được bản ảnh riêng tư cho Sheet.');
   try {
     return SpreadsheetApp.newCellImage()
       .setSourceUrl('data:image/jpeg;base64,' + Utilities.base64Encode(bytes))
       .setAltTextTitle('Minh chứng chuyển khoản — nhấp để xem lớn')
-      .setAltTextDescription('FTU_PROOF:' + id.toLowerCase()).build();
+      .setAltTextDescription('FTU_PROOF:' + id.toLowerCase())
+      .build();
   } catch {
     // Provider errors can contain the data URI. Never log the original exception.
     throw new Error('Chưa chèn được ảnh vào ô Sheet.');
   }
 }
 function embedFtuProofRows_(sheet, rows, column, startRow) {
-  if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true') return rows;
+  if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true')
+    return rows;
   const images = readFtuProofImages_(sheet, column);
   let remaining = 3; // Backfill gradually; unchanged images do not call the API again.
   return rows.map((row, index) => {
@@ -510,7 +715,11 @@ function embedFtuProofRows_(sheet, rows, column, startRow) {
     if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return result;
     if (!images.has(id) && remaining > 0) {
       remaining--;
-      try { images.set(id, fetchFtuProofImage_(id)); } catch { /* Keep UUID/link and retry next minute. */ }
+      try {
+        images.set(id, fetchFtuProofImage_(id));
+      } catch {
+        /* Keep UUID/link and retry next minute. */
+      }
     }
     if (images.has(id)) {
       result[column - 1] = images.get(id);
@@ -525,7 +734,8 @@ function writeFtuImageColumn_(sheet, values, column, startRow) {
   let first = 0;
   const flushPlain = (end) => {
     if (end > first)
-      sheet.getRange(startRow + first, column, end - first, 1)
+      sheet
+        .getRange(startRow + first, column, end - first, 1)
         .setValues(values.slice(first, end).map((value) => [value]));
   };
   values.forEach((value, index) => {
@@ -537,8 +747,7 @@ function writeFtuImageColumn_(sheet, values, column, startRow) {
       const origin = FTU_PROOF_IMAGE_ORIGINS.get(value);
       if (origin && ftuProofImageId_(origin.getValue()) === id)
         origin.copyTo(cell, { contentsOnly: true });
-      else
-        cell.setValue(origin ? fetchFtuProofImage_(id) : value);
+      else cell.setValue(origin ? fetchFtuProofImage_(id) : value);
     }
     first = index + 1;
   });
@@ -551,13 +760,20 @@ function writeFtuProofData_(sheet, rows, column, startRow) {
     return;
   }
   if (column > 1)
-    sheet.getRange(startRow, 1, rows.length, column - 1)
+    sheet
+      .getRange(startRow, 1, rows.length, column - 1)
       .setValues(rows.map((row) => row.slice(0, column - 1)));
   const after = rows[0].length - column;
   if (after > 0)
-    sheet.getRange(startRow, column + 1, rows.length, after)
+    sheet
+      .getRange(startRow, column + 1, rows.length, after)
       .setValues(rows.map((row) => row.slice(column)));
-  writeFtuImageColumn_(sheet, output.map((row) => row[column - 1]), column, startRow);
+  writeFtuImageColumn_(
+    sheet,
+    output.map((row) => row[column - 1]),
+    column,
+    startRow,
+  );
 }
 function mirrorFtuCustomerProofImages_(book) {
   if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true') return;
@@ -566,12 +782,21 @@ function mirrorFtuCustomerProofImages_(book) {
   const header = sheet.getRange(1, 20);
   if (header.getValue() && header.getValue() !== 'Ảnh minh chứng')
     throw new Error('Cột T đã có dữ liệu khác; không ghi đè.');
-  header.setValue('Ảnh minh chứng').setNote('Ảnh hiển thị từ database. Sửa minh chứng ở cột I; nhấp ô ảnh để xem lớn.');
+  header
+    .setValue('Ảnh minh chứng')
+    .setNote('Ảnh hiển thị từ database. Sửa minh chứng ở cột I; nhấp ô ảnh để xem lớn.');
   sheet.setColumnWidth(20, 210);
   const rows = ftuRows_();
-  const previews = rows.map((row) => [row[8] === row[17] && images.has(row[8]) ? images.get(row[8]) : '']);
+  const previews = rows.map((row) => [
+    row[8] === row[17] && images.has(row[8]) ? images.get(row[8]) : '',
+  ]);
   if (previews.length) {
-    writeFtuImageColumn_(sheet, previews.map((row) => row[0]), 20, 2);
+    writeFtuImageColumn_(
+      sheet,
+      previews.map((row) => row[0]),
+      20,
+      2,
+    );
     previews.forEach((row, index) => {
       if (row[0] && sheet.getRowHeight(index + 2) < 100) sheet.setRowHeight(index + 2, 100);
     });
@@ -654,8 +879,11 @@ function ftuApi_(path, method, body) {
   } catch (_) {
     throw new Error('API không trả dữ liệu JSON.');
   }
-  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300)
-    throw new Error(result.error || 'Không đồng bộ được dữ liệu.');
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    const error = new Error(result.error || 'Không đồng bộ được dữ liệu.');
+    error.status = response.getResponseCode();
+    throw error;
+  }
   return result.data;
 }
 
@@ -689,6 +917,35 @@ function ftuRow_(purchase, line) {
     purchase.evidence_id,
     line.product_id,
   ];
+}
+function ftuPurchaseRows_(purchase) {
+  if (purchase.status !== 'CLEARED') return purchase.lines.map((line) => ftuRow_(purchase, line));
+  const row = Array(19).fill('');
+  row[0] = purchase.code;
+  row[10] = 0;
+  row[12] = 0;
+  row[13] = 'Đã làm sạch';
+  row[14] = new Date();
+  row[15] = purchase.id;
+  row[16] = purchase.revision;
+  return [row];
+}
+function replaceCleanFtuOrder_(purchase, expected) {
+  const sheet = ftuSheet_(),
+    all = ftuRows_();
+  const positions = all.map((row, i) => (row[15] === purchase.id ? i : -1)).filter((i) => i >= 0);
+  const current = positions.map((i) => all[i]);
+  if (editableSignature_(current) !== expected) return false;
+  const rows = ftuPurchaseRows_(purchase);
+  for (let i = 0; i < Math.max(positions.length, rows.length); i++) {
+    const position = positions[i] === undefined ? sheet.getLastRow() + 1 : positions[i] + 2;
+    if (sheet.getMaxRows() < position)
+      sheet.insertRowsAfter(sheet.getMaxRows(), position - sheet.getMaxRows());
+    sheet
+      .getRange(position, 1, 1, 19)
+      .setValues([(rows[i] || Array(19).fill('')).map(safeFtuCell_)]);
+  }
+  return true;
 }
 
 function syncFtuPurchases() {
@@ -739,11 +996,18 @@ function syncFtuPurchases() {
       if (pending[purchase.id] || dirty[purchase.id]) {
         return;
       }
-      const rows = purchase.lines.map((line) => ftuRow_(purchase, line));
+      const rows = ftuPurchaseRows_(purchase);
       if (current.length) {
         // Google cells have no compare-and-set with user edits. Background reads never
         // replace existing editable cells, even when a delayed edit trigger has not fired.
         if (editableSignature_(current) !== editableSignature_(rows)) {
+          if (
+            baseline[purchase.id] === editableSignature_(current) &&
+            replaceCleanFtuOrder_(purchase, baseline[purchase.id])
+          ) {
+            baseline[purchase.id] = editableSignature_(rows);
+            return;
+          }
           markFtuRows_(purchase.id, 'Database đã đổi — cần đối chiếu, giữ nguyên ô đang sửa');
           return;
         }
@@ -779,16 +1043,19 @@ function mirrorFtuDatabase_(purchases) {
     protectFtuInternal_(sheet);
     sheet.setFrozenRows(1);
   }
-  const rows = purchases.flatMap((purchase) =>
-    purchase.lines.map((line) => ftuRow_(purchase, line)),
-  );
+  const rows = purchases.flatMap((purchase) => ftuPurchaseRows_(purchase));
   if (sheet.getMaxRows() < rows.length + 1)
     sheet.insertRowsAfter(sheet.getMaxRows(), rows.length + 1 - sheet.getMaxRows());
   const old = sheet.getLastRow();
   sheet.getRange(1, 1, 1, 19).setValues([FTU_HEADERS]);
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   if (rows.length)
-    writeFtuProofData_(sheet, rows.map((row) => row.map(safeFtuCell_)), 9, 2);
+    writeFtuProofData_(
+      sheet,
+      rows.map((row) => row.map(safeFtuCell_)),
+      9,
+      2,
+    );
   linkFtuProofRows_(sheet, rows, 9, 2);
   if (old > rows.length + 1)
     sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 19).clearContent();
@@ -859,7 +1126,7 @@ function updateFtuMetadata_(id, purchase) {
   const current = ftuRows_();
   const changed =
     editableSignature_(current.filter((row) => row[15] === id)) !==
-    editableSignature_(purchase.lines.map((line) => ftuRow_(purchase, line)));
+    editableSignature_(ftuPurchaseRows_(purchase));
   current.forEach((row, index) => {
     if (row[15] !== id) return;
     const line = purchase.lines.find(
@@ -955,8 +1222,9 @@ function writeFtuOrder_(id, operation) {
     return { product_id: product.id, bundle_size: size, quantity: count / size };
   });
   // Replacing a proof requires uploading a new file through the protected API, not trusting a cell URL.
-  let evidence = String(first[17]);
-  if (String(first[8]) !== evidence) evidence = uploadFtuProof_(id, String(first[8]), operation);
+  let evidence = String(first[8]) ? String(first[17]) : null;
+  if (first[8] && String(first[8]) !== evidence)
+    evidence = uploadFtuProof_(id, String(first[8]), operation);
   const result = ftuApi_('/admin/sheets/purchases/' + id, 'post', {
     operation_id: operation,
     expected_revision: Number(first[16]),
@@ -966,9 +1234,9 @@ function writeFtuOrder_(id, operation) {
     evidence_id: evidence,
   });
   const baseline = readFtuBaseline_();
-  const updated = result.lines.map((line) => ftuRow_(result, line));
+  const updated = ftuPurchaseRows_(result);
   // Keep edits made while the HTTP request was in flight. Only protected metadata is written.
-  updateFtuMetadata_(id, result);
+  if (!replaceCleanFtuOrder_(result, editableSignature_(rows))) updateFtuMetadata_(id, result);
   baseline[id] = editableSignature_(updated);
   writeFtuBaseline_(baseline);
 }

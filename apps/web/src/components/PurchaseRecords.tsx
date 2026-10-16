@@ -5,6 +5,7 @@ import type { Buyer, Purchase } from '@ftu/shared';
 import { api, supabase } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { DataState } from './Content';
+import TicketBuyerEditor from './TicketBuyerEditor';
 
 export type PurchaseRow = Pick<
   Purchase,
@@ -30,7 +31,8 @@ const buyerLabels: Record<keyof Buyer, string> = {
 };
 export default function PurchaseRecords({ admin = false }: { admin?: boolean }) {
   const { user } = useAuth(),
-    [page, setPage] = useState(0);
+    [page, setPage] = useState(0),
+    [editing, setEditing] = useState('');
   const q = useQuery({
     queryKey: ['purchase-records', admin, user?.id, page],
     queryFn: async () => {
@@ -42,11 +44,16 @@ export default function PurchaseRecords({ admin = false }: { admin?: boolean }) 
       return { rows, count: rows.length };
     },
     enabled: !!user,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
     retry: false,
   });
   return (
     <>
       <DataState query={q} />
+      {admin && editing && (
+        <TicketBuyerEditor purchaseId={editing} onClose={() => setEditing('')} />
+      )}
       {q.isSuccess && !q.data.rows.length && (
         <EmptyState title="Chưa có đơn Hoàn tất">
           Thông tin xuất hiện sau khi lưu ảnh và Hoàn tất thành công.
@@ -96,7 +103,14 @@ export default function PurchaseRecords({ admin = false }: { admin?: boolean }) 
               <tbody>
                 {q.data.rows.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.code}</td>
+                    <td>
+                      {r.code}
+                      {admin && (
+                        <Button variant="outline" onClick={() => setEditing(r.id)}>
+                          Sửa thông tin vé
+                        </Button>
+                      )}
+                    </td>
                     <td>
                       {(Object.keys(buyerLabels) as (keyof Buyer)[]).map((key) => (
                         <div key={key}>

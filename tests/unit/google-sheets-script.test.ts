@@ -59,6 +59,136 @@ it('embeds only server proof UUIDs, reuses embedded bytes and preserves the inpu
   expect(rows[0][0]).toBe(first);
   expect(rows[1][0]).toBe(second);
 });
+
+it('sends an empty buyer and cleared image as an explicit group release, retaining codes and ticket identities', () => {
+  const code = script({ FTU_CODE_EDITS: 'true' });
+  const before = Array(28).fill('');
+  before[0] = before[1] = 'DM00012';
+  before[5] = 'OLD';
+  before[12] = '3140570a-3633-4ba2-892b-cc447c1cb35e';
+  before[20] = '98010000-0000-4000-8000-000000000123';
+  before[21] = '98010000-0000-4000-8000-000000000124';
+  before[24] = 3;
+  const row = before.slice(0, 25);
+  row[5] = '';
+  row[12] = '';
+  let payload: Record<string, unknown> | undefined;
+  const pending: unknown[][][] = [];
+  const sheet = {
+    getLastRow: () => 2,
+    getRange: (_r: number, _c: number, _n?: number, _w?: number) => ({
+      getValues: () => [row],
+      setNote: () => undefined,
+    }),
+  };
+  const hidden = { getRange: () => ({ setValues: (values: unknown[][]) => pending.push(values) }) };
+  code.ftuCodeBaseline_ = () => hidden;
+  code.readFtuCodeBaseline_ = () => [before];
+  code.Utilities.getUuid = () => '98010000-0000-4000-8000-000000000125';
+  code.ftuApi_ = (path: string, _method: string, body: Record<string, unknown>) => {
+    expect(path).toContain('/ticket-group');
+    payload = body;
+    return { revision: 4 };
+  };
+  expect(code.syncFtuCodeEdits_({ getSheetByName: () => sheet }, 'DM')).toBe(true);
+  expect(payload).toMatchObject({
+    expected_revision: 3,
+    codes: ['DM00012'],
+    ticket_ids: [before[20]],
+    evidence_id: null,
+    buyer: {
+      name: '',
+      school: '',
+      cohort_class: '',
+      student_id: '',
+      email: '',
+      phone: '',
+      facebook: '',
+    },
+  });
+  expect(pending[0][0][0]).toBe('98010000-0000-4000-8000-000000000125');
+});
+
+it('keeps an uncertain ticket-row operation payload for exact retry after a timeout', () => {
+  const code = script({ FTU_CODE_EDITS: 'true' });
+  const base = Array(28).fill('');
+  base[0] = base[1] = 'DM00012';
+  base[5] = 'OLD';
+  base[20] = 'ticket';
+  base[21] = 'request';
+  base[24] = 0;
+  const row = base.slice(0, 25);
+  row[5] = 'NEW';
+  const hidden = {
+    getRange: () => ({
+      setValues: (values: unknown[][]) => {
+        base[26] = values[0][0];
+        base[27] = values[0][1];
+      },
+    }),
+  };
+  const sheet = { getLastRow: () => 2, getRange: () => ({ getValues: () => [row] }) };
+  code.ftuCodeBaseline_ = () => hidden;
+  code.readFtuCodeBaseline_ = () => [base];
+  code.Utilities.getUuid = () => 'fixed-operation';
+  const bodies: unknown[] = [];
+  code.ftuApi_ = (_path: string, _method: string, body: unknown) => {
+    bodies.push(body);
+    throw new Error('timeout');
+  };
+  expect(() => code.syncFtuCodeEdits_({ getSheetByName: () => sheet }, 'DM')).toThrow('timeout');
+  row[5] = 'ANOTHER EDIT';
+  expect(() => code.syncFtuCodeEdits_({ getSheetByName: () => sheet }, 'DM')).toThrow('timeout');
+  expect(bodies[1]).toEqual(bodies[0]);
+  expect(base[26]).toBe('fixed-operation');
+});
+
+it('represents a fully cleared purchase without proof, PII or sellable rights', () => {
+  const code = script();
+  const rows = code.ftuPurchaseRows_({
+    id: 'request',
+    code: 'FTC-KEEP',
+    status: 'CLEARED',
+    quantity: 0,
+    revision: 4,
+    lines: [],
+  });
+  expect(rows).toHaveLength(1);
+  expect(rows[0][0]).toBe('FTC-KEEP');
+  expect(rows[0].slice(1, 10)).toEqual(Array(9).fill(''));
+  expect(rows[0][10]).toBe(0);
+  expect(rows[0][15]).toBe('request');
+  expect(rows[0][16]).toBe(4);
+});
+
+it('allocates all 28 hidden baseline columns before writing and protects the internal sheet', () => {
+  const code = script();
+  let columns = 26,
+    protectedTab = false,
+    hidden = false;
+  const tab = {
+    getMaxColumns: () => columns,
+    insertColumnsAfter: (_after: number, count: number) => {
+      columns += count;
+    },
+    getRange: (_r: number, _c: number, _rows: number, width: number) => {
+      expect(width).toBeLessThanOrEqual(columns);
+      return { setValues: () => undefined };
+    },
+    hideSheet: () => {
+      hidden = true;
+    },
+  };
+  code.protectFtuInternal_ = () => {
+    protectedTab = true;
+  };
+  expect(code.ftuCodeBaseline_({ getSheetByName: () => null, insertSheet: () => tab }, 'DM')).toBe(
+    tab,
+  );
+  expect(columns).toBe(28);
+  expect(protectedTab).toBe(true);
+  expect(hidden).toBe(true);
+});
 it('limits failed/new image requests per refresh and keeps the UUID fallback for retry', () => {
   const code = script({ FTU_EMBED_PROOFS: 'true' });
   let calls = 0;
@@ -426,7 +556,7 @@ it('blocks activation with a loopback API or missing auth rather than pretending
   const code = script({ FTU_API_BASE_URL: 'http://127.0.0.1:5173' });
   expect(() => code.ftuConfig_()).toThrow('Thiếu cấu hình');
 });
-it('a background refresh preserves editable cells when the database differs, without rewriting or reordering rows', () => {
+it('a background refresh preserves locally edited cells when the database also differs', () => {
   const code = script();
   const purchase = {
     id: 'order',
@@ -454,6 +584,8 @@ it('a background refresh preserves editable cells when the database differs, wit
   };
   const current = purchase.lines.map((line) => code.ftuRow_(purchase, line));
   const baseline = { order: code.editableSignature_(current) };
+  current[0][5] = 'local-edit@example.test';
+  code.Utilities.getUuid = () => 'pending-operation';
   const messages: string[] = [];
   code.LockService = {
     getScriptLock: () => ({ tryLock: () => true, releaseLock: () => undefined }),
@@ -475,8 +607,8 @@ it('a background refresh preserves editable cells when the database differs, wit
     rows: [{ ...purchase, buyer: { ...purchase.buyer, email: 'new@example.test' } }],
   });
   code.syncFtuPurchases();
-  expect(current[0][5]).toBe('test@example.test');
-  expect(messages[0]).toContain('Database đã đổi');
+  expect(current[0][5]).toBe('local-edit@example.test');
+  expect(messages[0]).toContain('đang chờ');
 });
 it('retries an uncertain operation from its saved snapshot even if Sheet cells have since changed', () => {
   const code = script();
@@ -601,6 +733,7 @@ it('writes the correct bundle count, buyer, proof and revision after inserting t
   code.readFtuBaseline_ = () => ({});
   code.writeFtuBaseline_ = () => undefined;
   code.updateFtuMetadata_ = () => undefined;
+  code.replaceCleanFtuOrder_ = () => false;
   let payload: unknown;
   code.ftuApi_ = (path: string, _method?: string, body?: unknown) => {
     if (path === '/admin/purchase-offers')
