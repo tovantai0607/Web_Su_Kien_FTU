@@ -253,6 +253,16 @@ it('completes the real HTTP->SQL flow with a private, transformed proof and idem
   expect(evidence.headers.get('Content-Type')).toBe('image/webp');
   expect(evidence.headers.get('Cache-Control')).toContain('no-store');
   expect((await request('/purchase-evidence/' + proof.id, undefined, other)).status).toBe(403);
+  expect((await request('/purchase-evidence/' + proof.id + '?view=sheet')).status).toBe(403);
+  const sheetImage = await app.request(
+    '/api/purchase-evidence/' + proof.id + '?view=sheet',
+    { headers: { Authorization: token(admin, 'aal2') } },
+    env,
+  );
+  expect(sheetImage.status).toBe(200);
+  expect(sheetImage.headers.get('Content-Type')).toBe('image/jpeg');
+  expect(sheetImage.headers.get('Cache-Control')).toContain('no-store');
+  expect((await sharp(Buffer.from(await sheetImage.arrayBuffer())).metadata()).format).toBe('jpeg');
   for (let i = 0; i < 2; i++) {
     const completed = await request(`/purchases/${purchase.id}/complete`, {
       evidence_id: proof.id,
