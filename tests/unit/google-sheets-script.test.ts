@@ -70,6 +70,68 @@ it('limits failed/new image requests per refresh and keeps the UUID fallback for
   expect(code.embedFtuProofRows_({ getLastRow: () => 1 }, rows, 1, 2)).toEqual(rows);
   expect(calls).toBe(3);
 });
+it('writes native images individually, preserves cached cells and bulk-writes only plain data', () => {
+  const code = script();
+  const id = '34fb6f94-f308-470f-8e84-e7370c544ff9';
+  const image = { getAltTextDescription: () => 'FTU_PROOF:' + id };
+  const cells = new Map<string, unknown>([['3:2', image]]);
+  const bulk: unknown[][] = [];
+  const singles: string[] = [];
+  const sheet = {
+    getRange: (row: number, column: number) => ({
+      getValue: () => cells.get(`${row}:${column}`),
+      setValue: (value: unknown) => {
+        cells.set(`${row}:${column}`, value);
+        singles.push(`${row}:${column}`);
+      },
+      setValues: (values: unknown[][]) => {
+        if (values.flat().includes(image)) throw new Error('Sheets rejects bulk native images');
+        bulk.push(...values);
+      },
+    }),
+  };
+  code.embedFtuProofRows_ = () => [
+    ['order', image, 3],
+    ['order', image, 1],
+    ['unused', '', 0],
+  ];
+  const rows = [
+    ['order', id, 3],
+    ['order', id, 1],
+    ['unused', '', 0],
+  ];
+  code.writeFtuProofData_(sheet, rows, 2, 2);
+  expect(singles).toEqual(['2:2']);
+  expect(cells.get('2:2')).toBe(image);
+  expect(cells.get('3:2')).toBe(image);
+  expect(bulk).toEqual([['order'], ['order'], ['unused'], [3], [1], [0], ['']]);
+  expect(rows[0][1]).toBe(id);
+});
+it('copies cached native images between cells without serializing them into setValue', () => {
+  const code = script();
+  const id = '34fb6f94-f308-470f-8e84-e7370c544ff9';
+  const image = { getAltTextDescription: () => 'FTU_PROOF:' + id };
+  let copied: unknown;
+  const target = {
+    getValue: () => '',
+    setValue: () => {
+      throw new Error('Native image needs copyTo');
+    },
+  };
+  const source = {
+    getLastRow: () => 2,
+    getRange: () => ({
+      getValues: () => [[image]],
+      getValue: () => image,
+      copyTo: (cell: unknown, options: unknown) => {
+        copied = { cell, options };
+      },
+    }),
+  };
+  const cache = code.readFtuProofImages_(source, 9);
+  code.writeFtuImageColumn_({ getRange: () => target }, [cache.get(id)], 20, 2);
+  expect(copied).toEqual({ cell: target, options: { contentsOnly: true } });
+});
 it('adds private website proof links while preserving UUID cell values and skipping blanks or user edits', () => {
   const code = script({ FTU_API_BASE_URL: 'https://ftucharm-test.bancotaima1235.workers.dev' });
   const id = '34fb6f94-f308-470f-8e84-e7370c544ff9';
