@@ -31,6 +31,42 @@ function script(properties: Record<string, string> = {}) {
   vm.runInContext(readFileSync('tools/google-sheets/Code.gs', 'utf8'), context);
   return context;
 }
+it('adds private website proof links while preserving UUID cell values and skipping blanks or user edits', () => {
+  const code = script({ FTU_API_BASE_URL: 'https://ftucharm-test.bancotaima1235.workers.dev' });
+  const id = '34fb6f94-f308-470f-8e84-e7370c544ff9';
+  const writes: unknown[] = [];
+  code.SpreadsheetApp = {
+    newRichTextValue: () => {
+      let text = '',
+        url = '';
+      const builder = {
+        setText: (v: string) => {
+          text = v;
+          return builder;
+        },
+        setLinkUrl: (v: string) => {
+          url = v;
+          return builder;
+        },
+        build: () => ({ text, url }),
+      };
+      return builder;
+    },
+  };
+  const sheet = {
+    getRange: (row: number, column: number) => ({
+      setRichTextValue: (v: unknown) => writes.push({ row, column, value: v }),
+    }),
+  };
+  code.linkFtuProofRows_(sheet, [[id], [''], ['drive-file-replacement']], 1, 10);
+  expect(writes).toEqual([
+    {
+      row: 10,
+      column: 1,
+      value: { text: id, url: 'https://ftucharm-test.bancotaima1235.workers.dev/minh-chung/' + id },
+    },
+  ]);
+});
 it('renders a Combo3 as one row while retaining each member code and leaving unassigned buyers blank', () => {
   const code = script();
   const base = {

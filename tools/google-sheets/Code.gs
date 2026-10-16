@@ -436,7 +436,25 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
       Array.from({ length: length - rows.length }, () => Array(24).fill('')),
     );
     sheet.getRange(2, 1, length, 24).setValues(output);
+    linkFtuProofRows_(sheet, rows, 13, 2);
   }
+}
+
+// Keep the UUID as the cell value: signatures and manual proof edits depend on it.
+// Apply rich links only to server-owned views or newly appended customer rows.
+// Existing editable customer cells are never rewritten by a background refresh.
+function linkFtuProofRows_(sheet, rows, column, startRow) {
+  const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const targets = rows.map((row, index) => ({ value: row[column - 1], index }))
+    .filter((item) => typeof item.value === 'string' && valid.test(item.value));
+  if (!targets.length) return;
+  const base = String(PropertiesService.getScriptProperties().getProperty('FTU_API_BASE_URL') || '').replace(/\/$/, '');
+  if (!/^https:\/\/[a-z0-9.-]+$/.test(base)) throw new Error('Thiếu URL HTTPS để xem minh chứng.');
+  targets.forEach((item) => {
+    const cell = sheet.getRange(startRow + item.index, column);
+    cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(item.value)
+      .setLinkUrl(base + '/minh-chung/' + item.value.toLowerCase()).build());
+  });
 }
 
 function assertPrivateFtuSheet_() {
@@ -609,6 +627,7 @@ function syncFtuPurchases() {
         sheet
           .getRange(appendRow, 1, rows.length, 19)
           .setValues(rows.map((row) => row.map(safeFtuCell_)));
+        linkFtuProofRows_(sheet, rows, 9, appendRow);
         appendRow += rows.length;
       }
       baseline[purchase.id] = editableSignature_(rows);
@@ -638,6 +657,7 @@ function mirrorFtuDatabase_(purchases) {
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   if (rows.length)
     sheet.getRange(2, 1, rows.length, 19).setValues(rows.map((row) => row.map(safeFtuCell_)));
+  linkFtuProofRows_(sheet, rows, 9, 2);
   if (old > rows.length + 1)
     sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 19).clearContent();
   sheet.hideColumns(16, 4);
