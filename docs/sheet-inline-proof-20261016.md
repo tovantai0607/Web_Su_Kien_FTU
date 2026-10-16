@@ -15,6 +15,8 @@ API `/api/purchase-evidence/:id?view=sheet` giữ kiểm tra Auth/ownership/DEMO
 
 `tools/google-sheets/Code.gs` tái dùng CellImage đã nhúng theo UUID trong alt text, tối đa ba ảnh mới cho mỗi bản xem mỗi lượt để backfill dần. Luồng refresh không ghi đè các ô khách đang sửa; ảnh cột T chỉ phản ánh minh chứng đã đồng bộ. Hai trigger mỗi phút hiện có được giữ; không thêm trigger ghi database.
 
+Kiểm tra online phát hiện Google báo lỗi dịch vụ khi bulk `setValues` chứa nhiều ảnh và khi ghi lại đối tượng CellImage đã đọc từ ô khác. Bản sửa ghi các khối dữ liệu thường riêng, chèn ảnh mới từng ô và dùng `copyTo(contentsOnly)` cho ảnh đã nhúng; giữ nguyên ô có đúng UUID ảnh. Nếu nguồn bị thay trong lúc đổi thứ tự, tải lại đúng UUID từ API riêng tư, không sao chép nhầm ảnh. Có kiểm thử hồi quy không cho truyền ảnh vào bulk write và kiểm tra sao chép native.
+
 `tools/google-sheets/ProofViewer.gs` đặt trong project gắn với bảng Data, tách khỏi project đồng bộ độc lập. Chỉ dùng quyền bảng hiện tại và UI, không chứa credentials, đọc Drive khác hoặc gọi API database. Khung xem trong sidebar kiểm tra ô được chọn mỗi hai giây khi đang hiển thị, không chồng request; chọn ảnh khác mở hộp xem ngay trong Sheet. Có nút tạm dừng. Menu Minh chứng → Xem ảnh đang chọn mở lại ảnh hiện tại. Không dùng simple trigger onSelectionChange vì Google không cho trigger này mở hộp thoại.
 
 ## Kích hoạt và khôi phục

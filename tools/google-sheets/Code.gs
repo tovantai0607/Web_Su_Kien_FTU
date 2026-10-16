@@ -7,6 +7,7 @@ const FTU_SYNC_TAB = '_Đồng bộ';
 const FTU_OPERATIONS_TAB = '_Lệnh đồng bộ';
 const FTU_SOURCE_TAB = 'Database hiện hành';
 const FTU_CODE_TABS = { BK: 'Vé bán kết', CK: 'Vé chung kết', DM: 'Vé DEMO' };
+const FTU_PROOF_IMAGE_ORIGINS = new Map(); // Execution-local native cell references, no URLs.
 const FTU_CODE_HEADERS = [
   'Mã vé / nhóm',
   'Mã vé thành viên',
@@ -435,7 +436,7 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
     const output = rows.concat(
       Array.from({ length: length - rows.length }, () => Array(24).fill('')),
     );
-    sheet.getRange(2, 1, length, 24).setValues(embedFtuProofRows_(sheet, output, 13, 2));
+    writeFtuProofData_(sheet, output, 13, 2);
     linkFtuProofRows_(sheet, rows, 13, 2);
   }
 }
@@ -469,9 +470,12 @@ function ftuProofImageId_(value) {
 function readFtuProofImages_(sheet, column) {
   const images = new Map();
   if (sheet && sheet.getLastRow() >= 2)
-    sheet.getRange(2, column, sheet.getLastRow() - 1, 1).getValues().forEach((row) => {
+    sheet.getRange(2, column, sheet.getLastRow() - 1, 1).getValues().forEach((row, index) => {
       const id = ftuProofImageId_(row[0]);
-      if (id) images.set(id, row[0]);
+      if (id) {
+        images.set(id, row[0]);
+        FTU_PROOF_IMAGE_ORIGINS.set(row[0], sheet.getRange(index + 2, column));
+      }
     });
   return images;
 }
@@ -515,6 +519,46 @@ function embedFtuProofRows_(sheet, rows, column, startRow) {
     return result;
   });
 }
+// Sheets can fail a multi-row setValues containing CellImages. Keep native
+// images out of bulk writes, and preserve unchanged image cells in place.
+function writeFtuImageColumn_(sheet, values, column, startRow) {
+  let first = 0;
+  const flushPlain = (end) => {
+    if (end > first)
+      sheet.getRange(startRow + first, column, end - first, 1)
+        .setValues(values.slice(first, end).map((value) => [value]));
+  };
+  values.forEach((value, index) => {
+    const id = ftuProofImageId_(value);
+    if (!id) return;
+    flushPlain(index);
+    const cell = sheet.getRange(startRow + index, column);
+    if (ftuProofImageId_(cell.getValue()) !== id) {
+      const origin = FTU_PROOF_IMAGE_ORIGINS.get(value);
+      if (origin && ftuProofImageId_(origin.getValue()) === id)
+        origin.copyTo(cell, { contentsOnly: true });
+      else
+        cell.setValue(origin ? fetchFtuProofImage_(id) : value);
+    }
+    first = index + 1;
+  });
+  flushPlain(values.length);
+}
+function writeFtuProofData_(sheet, rows, column, startRow) {
+  const output = embedFtuProofRows_(sheet, rows, column, startRow);
+  if (!output.some((row) => ftuProofImageId_(row[column - 1]))) {
+    sheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
+    return;
+  }
+  if (column > 1)
+    sheet.getRange(startRow, 1, rows.length, column - 1)
+      .setValues(rows.map((row) => row.slice(0, column - 1)));
+  const after = rows[0].length - column;
+  if (after > 0)
+    sheet.getRange(startRow, column + 1, rows.length, after)
+      .setValues(rows.map((row) => row.slice(column)));
+  writeFtuImageColumn_(sheet, output.map((row) => row[column - 1]), column, startRow);
+}
 function mirrorFtuCustomerProofImages_(book) {
   if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true') return;
   const sheet = book.getSheetByName(FTU_TAB);
@@ -527,7 +571,7 @@ function mirrorFtuCustomerProofImages_(book) {
   const rows = ftuRows_();
   const previews = rows.map((row) => [row[8] === row[17] && images.has(row[8]) ? images.get(row[8]) : '']);
   if (previews.length) {
-    sheet.getRange(2, 20, previews.length, 1).setValues(previews);
+    writeFtuImageColumn_(sheet, previews.map((row) => row[0]), 20, 2);
     previews.forEach((row, index) => {
       if (row[0] && sheet.getRowHeight(index + 2) < 100) sheet.setRowHeight(index + 2, 100);
     });
@@ -744,7 +788,7 @@ function mirrorFtuDatabase_(purchases) {
   sheet.getRange(1, 1, 1, 19).setValues([FTU_HEADERS]);
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   if (rows.length)
-    sheet.getRange(2, 1, rows.length, 19).setValues(embedFtuProofRows_(sheet, rows.map((row) => row.map(safeFtuCell_)), 9, 2));
+    writeFtuProofData_(sheet, rows.map((row) => row.map(safeFtuCell_)), 9, 2);
   linkFtuProofRows_(sheet, rows, 9, 2);
   if (old > rows.length + 1)
     sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 19).clearContent();
