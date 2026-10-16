@@ -50,6 +50,20 @@ it('reads only an embedded proof image in a known column of the authorized workb
   ])
     expect(code.ftuViewerProof_(range(options))).toBeNull();
 });
+it('opens selection metadata without accessing the authenticated image URL in a simple trigger', () => {
+  const selected = range();
+  selected.getValue = () => ({
+    valueType: 'IMAGE',
+    getAltTextDescription: () => 'FTU_PROOF:' + id,
+    getContentUrl: () => {
+      throw new Error('Not available to a simple trigger');
+    },
+  });
+  expect(viewer().ftuViewerProof_(selected, true)).toEqual({ id });
+  const html = viewer().ftuViewerHtml_({ id, cell: [203, 11, 13] });
+  expect(html).toContain('loadFtuProofImage(203,11,13,"' + id + '")');
+  expect(html).not.toContain('src="undefined"');
+});
 it('escapes image attributes and keeps the web fallback fixed without credentials', () => {
   const html = viewer().ftuViewerHtml_({
     id,
