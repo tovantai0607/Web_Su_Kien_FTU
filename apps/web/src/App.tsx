@@ -16,6 +16,7 @@ const Account = lazy(() => import('./pages/Account'));
 const Voting = lazy(() => import('./pages/Voting'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Tickets = lazy(() => import('./pages/PurchaseTickets'));
+const PurchaseEvidence = lazy(() => import('./pages/PurchaseEvidence'));
 function ScrollReset() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -150,6 +151,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/ve" element={<Tickets />} />
               <Route path="/ve/:eventSlug" element={<Tickets />} />
+              <Route path="/minh-chung/:id" element={<PurchaseEvidence />} />
               <Route path="/dang-ky" element={<Registration />} />
               <Route path="/tai-khoan/*" element={<Account />} />
               <Route path="/binh-chon" element={<Voting />} />

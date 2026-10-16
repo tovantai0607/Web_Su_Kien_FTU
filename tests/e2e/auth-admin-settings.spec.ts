@@ -209,6 +209,55 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/\/tai-khoan\/ho-so$/);
 }
 
+test('a Sheet proof link returns to the private image after Google login without exposing it anonymously', async ({
+  page,
+}) => {
+  await setup(page, { is_admin: true, aal: 'aal1' });
+  const proof = id(91);
+  let reads = 0;
+  await page.route('**/api/purchase-evidence/' + proof, (route) => {
+    reads++;
+    expect(route.request().headers().authorization).toMatch(/^Bearer /);
+    return route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    });
+  });
+  await page.goto('/minh-chung/' + proof);
+  await expect(page.getByRole('heading', { name: 'Đăng nhập để xem ảnh' })).toBeVisible();
+  expect(reads).toBe(0);
+  await page.getByRole('link', { name: 'Đăng nhập để xem ảnh' }).click();
+  await page.getByRole('button', { name: 'Đăng nhập bằng Google' }).click();
+  await expect(page).toHaveURL(new RegExp('/minh-chung/' + proof + '$'));
+  await expect(page.getByAltText('Minh chứng chuyển khoản của đơn vé')).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .getByAltText('Minh chứng chuyển khoản của đơn vé')
+        .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  expect(reads).toBe(1);
+});
+
+test('a proof link shows access denial and never displays an image when the API denies ownership', async ({
+  page,
+}) => {
+  await setup(page, { is_admin: false, aal: 'aal1' });
+  const proof = id(92);
+  await page.route('**/api/purchase-evidence/' + proof, (route) =>
+    route.fulfill({ status: 403, json: { error: 'Forbidden' } }),
+  );
+  await page.goto('/minh-chung/' + proof);
+  await page.getByRole('link', { name: 'Đăng nhập để xem ảnh' }).click();
+  await page.getByRole('button', { name: 'Đăng nhập bằng Google' }).click();
+  await expect(page.getByText('Không tải được ảnh; kiểm tra quyền và thử lại.')).toBeVisible();
+  await expect(page.getByAltText('Minh chứng chuyển khoản của đơn vé')).toHaveCount(0);
+});
+
 test('registration draft survives a Google PKCE round trip and is cleared on logout', async ({
   page,
 }) => {

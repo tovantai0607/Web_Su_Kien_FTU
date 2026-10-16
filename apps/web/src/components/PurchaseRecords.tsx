@@ -150,8 +150,8 @@ export default function PurchaseRecords({ admin = false }: { admin?: boolean }) 
     </>
   );
 }
-export function EvidenceImage({ id }: { id: string }) {
-  const [show, setShow] = useState(false),
+export function EvidenceImage({ id, initialOpen = false }: { id: string; initialOpen?: boolean }) {
+  const [show, setShow] = useState(initialOpen),
     [url, setUrl] = useState(''),
     [error, setError] = useState('');
   useEffect(() => {

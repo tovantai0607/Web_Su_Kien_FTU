@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { normalizeEmail, passwordError, safeAuthError } from '../lib/auth-policy';
 import { Turnstile } from './Turnstile';
 import { registrationDrafts } from '../lib/registration-draft';
+import { beginEvidenceLogin, evidenceLoginReturn } from '../lib/evidence-return';
 
 type Mode = 'login' | 'signup' | 'forgot' | 'reset' | 'mfa';
 const titles: Record<Mode, string> = {
@@ -18,7 +19,7 @@ const titles: Record<Mode, string> = {
   mfa: 'Xác thực hai bước',
 };
 export default function AuthForm() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { recovery, error: sessionError } = useAuth();
   const initial: Mode = pathname.endsWith('dat-lai-mat-khau')
@@ -63,6 +64,7 @@ export default function AuthForm() {
     }
     setBusy(true);
     try {
+      beginEvidenceLogin(new URLSearchParams(search).get('minh-chung'));
       const result = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -134,7 +136,12 @@ export default function AuthForm() {
         setCode('');
         if (result.error)
           throw new Error(safeAuthError(result.error, 'Mã không hợp lệ hoặc đã hết hạn.'));
-        navigate(registrationDrafts.consumeLoginReturn() ?? '/tai-khoan/ho-so', { replace: true });
+        navigate(
+          evidenceLoginReturn(true) ??
+            registrationDrafts.consumeLoginReturn() ??
+            '/tai-khoan/ho-so',
+          { replace: true },
+        );
       } else if (resend) {
         const result = await supabase.auth.resend({
           type: 'signup',
@@ -176,6 +183,7 @@ export default function AuthForm() {
         }
         setMessage('Kiểm tra email để xác minh tài khoản.');
       } else {
+        beginEvidenceLogin(new URLSearchParams(search).get('minh-chung'));
         const result = await supabase.auth.signInWithPassword({
           email: address,
           password,
@@ -198,9 +206,14 @@ export default function AuthForm() {
           setFactor(enrolled.id);
           setMode('mfa');
         } else
-          navigate(registrationDrafts.consumeLoginReturn() ?? '/tai-khoan/ho-so', {
-            replace: true,
-          });
+          navigate(
+            evidenceLoginReturn(true) ??
+              registrationDrafts.consumeLoginReturn() ??
+              '/tai-khoan/ho-so',
+            {
+              replace: true,
+            },
+          );
       }
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Không thể kết nối. Vui lòng thử lại.');

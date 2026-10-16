@@ -4,6 +4,7 @@ import { Card, ErrorState } from '@ftu/ui';
 import { useAuth } from '../lib/auth';
 import BrandMark from './BrandMark';
 import { registrationDrafts } from '../lib/registration-draft';
+import { evidenceLoginReturn } from '../lib/evidence-return';
 
 /** detectSessionInUrl in the single Supabase client owns PKCE exchange, including StrictMode. */
 export default function OAuthCallback() {
@@ -11,8 +12,10 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
   const [denied] = useState(() => new URLSearchParams(window.location.search).has('error'));
   const [timedOut, setTimedOut] = useState(false);
-  const [returnTo] = useState(() =>
-    registrationDrafts.hasLoginReturn() ? '/dang-ky' : '/tai-khoan/ho-so',
+  const [returnTo] = useState(
+    () =>
+      evidenceLoginReturn() ??
+      (registrationDrafts.hasLoginReturn() ? '/dang-ky' : '/tai-khoan/ho-so'),
   );
   useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), 20000);
@@ -20,7 +23,8 @@ export default function OAuthCallback() {
   }, []);
   useEffect(() => {
     if (!loading && !denied && !error && user) {
-      registrationDrafts.consumeLoginReturn();
+      if (returnTo.startsWith('/minh-chung/')) evidenceLoginReturn(true);
+      else registrationDrafts.consumeLoginReturn();
       navigate(returnTo, { replace: true });
     }
     if (!loading) window.history.replaceState(window.history.state, '', window.location.pathname);
