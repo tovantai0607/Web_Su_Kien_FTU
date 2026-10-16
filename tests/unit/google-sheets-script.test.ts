@@ -44,7 +44,7 @@ it('embeds only server proof UUIDs, reuses embedded bytes and preserves the inpu
   };
   const sheet = {
     getLastRow: () => 2,
-    getRange: () => ({ getValues: () => [[cached]] }),
+    getRange: () => ({ getValues: () => [[cached]], setNote: () => undefined }),
     getRowHeight: () => 120,
   };
   const rows = [

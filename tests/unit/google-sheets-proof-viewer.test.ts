@@ -22,6 +22,7 @@ function range(
     getNumColumns: () => 1,
     getRow: () => 11,
     getColumn: () => options.column ?? 13,
+    getNote: () => 'FTU_PROOF:' + id,
     getSheet: () => ({
       getName: () => options.sheet ?? 'Vé DEMO',
       getParent: () => ({

@@ -510,6 +510,7 @@ function embedFtuProofRows_(sheet, rows, column, startRow) {
     }
     if (images.has(id)) {
       result[column - 1] = images.get(id);
+      sheet.getRange(startRow + index, column).setNote('FTU_PROOF:' + id);
       if (sheet.getRowHeight(startRow + index) < 100) sheet.setRowHeight(startRow + index, 100);
     }
     return result;
@@ -526,7 +527,13 @@ function mirrorFtuCustomerProofImages_(book) {
   sheet.setColumnWidth(20, 210);
   const rows = ftuRows_();
   const previews = rows.map((row) => [row[8] === row[17] && images.has(row[8]) ? images.get(row[8]) : '']);
-  if (previews.length) sheet.getRange(2, 20, previews.length, 1).setValues(previews);
+  if (previews.length) {
+    sheet.getRange(2, 20, previews.length, 1).setValues(previews);
+    sheet.getRange(2, 20, previews.length, 1).setNotes(previews.map((row) => [row[0] ? 'FTU_PROOF:' + ftuProofImageId_(row[0]) : '']));
+    previews.forEach((row, index) => {
+      if (row[0] && sheet.getRowHeight(index + 2) < 100) sheet.setRowHeight(index + 2, 100);
+    });
+  }
 }
 function enableFtuProofImages() {
   assertPrivateFtuSheet_();

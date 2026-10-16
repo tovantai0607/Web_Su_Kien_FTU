@@ -18,12 +18,15 @@ function ftuViewerProof_(range, metadataOnly) {
   if (sheet.getParent().getId() !== '1n6nbwjErwOCsh-auVyOUmVP5jTIRsud45ADYdRhXViU') return null;
   const column = { 'Khách mua vé': 20, 'Database hiện hành': 9, 'Vé bán kết': 13, 'Vé chung kết': 13, 'Vé DEMO': 13 }[sheet.getName()];
   if (range.getColumn() !== column) return null;
+  if (metadataOnly) {
+    const marker = String(range.getNote()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
+    return marker ? { id: marker[1].toLowerCase() } : null;
+  }
   const image = range.getValue();
   if (!image || image.valueType !== SpreadsheetApp.ValueType.IMAGE) return null;
   const match = String(image.getAltTextDescription()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
   if (!match) return null;
   const id = match[1].toLowerCase();
-  if (metadataOnly) return { id };
   // Google gives a short-lived content URL for the already embedded image.
   // It is sent only to the authorized Sheet user's dialog, never saved/logged.
   const src = image.getContentUrl();
