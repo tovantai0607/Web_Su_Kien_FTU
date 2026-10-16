@@ -435,7 +435,7 @@ function writeFtuTicketCodeTab_(book, prefix, records) {
     const output = rows.concat(
       Array.from({ length: length - rows.length }, () => Array(24).fill('')),
     );
-    sheet.getRange(2, 1, length, 24).setValues(output);
+    sheet.getRange(2, 1, length, 24).setValues(embedFtuProofRows_(sheet, output, 13, 2));
     linkFtuProofRows_(sheet, rows, 13, 2);
   }
 }
@@ -452,9 +452,95 @@ function linkFtuProofRows_(sheet, rows, column, startRow) {
   if (!/^https:\/\/[a-z0-9.-]+$/.test(base)) throw new Error('Thiếu URL HTTPS để xem minh chứng.');
   targets.forEach((item) => {
     const cell = sheet.getRange(startRow + item.index, column);
+    if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') === 'true' &&
+        ftuProofImageId_(cell.getValue())) return;
     cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(item.value)
       .setLinkUrl(base + '/minh-chung/' + item.value.toLowerCase()).build());
   });
+}
+
+// Images are embedded bytes inside the restricted workbook, never public URLs.
+// UUIDs remain canonical in the database and the editable customer column I.
+function ftuProofImageId_(value) {
+  if (!value || typeof value.getAltTextDescription !== 'function') return null;
+  const match = String(value.getAltTextDescription()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
+  return match ? match[1].toLowerCase() : null;
+}
+function readFtuProofImages_(sheet, column) {
+  const images = new Map();
+  if (sheet && sheet.getLastRow() >= 2)
+    sheet.getRange(2, column, sheet.getLastRow() - 1, 1).getValues().forEach((row) => {
+      const id = ftuProofImageId_(row[0]);
+      if (id) images.set(id, row[0]);
+    });
+  return images;
+}
+function fetchFtuProofImage_(id) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Mã ảnh không hợp lệ.');
+  const config = ftuConfig_();
+  const response = UrlFetchApp.fetch(config.base + '/api/purchase-evidence/' + id + '?view=sheet', {
+    headers: { Authorization: 'Bearer ' + ftuToken_(), Origin: config.base },
+    muteHttpExceptions: true,
+  });
+  const bytes = response.getContent();
+  if (response.getResponseCode() !== 200 || bytes.length > 2097152 ||
+      response.getBlob().getContentType().split(';')[0] !== 'image/jpeg')
+    throw new Error('Chưa tải được bản ảnh riêng tư cho Sheet.');
+  try {
+    return SpreadsheetApp.newCellImage()
+      .setSourceUrl('data:image/jpeg;base64,' + Utilities.base64Encode(bytes))
+      .setAltTextTitle('Minh chứng chuyển khoản — nhấp để xem lớn')
+      .setAltTextDescription('FTU_PROOF:' + id.toLowerCase()).build();
+  } catch {
+    // Provider errors can contain the data URI. Never log the original exception.
+    throw new Error('Chưa chèn được ảnh vào ô Sheet.');
+  }
+}
+function embedFtuProofRows_(sheet, rows, column, startRow) {
+  if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true') return rows;
+  const images = readFtuProofImages_(sheet, column);
+  let remaining = 3; // Backfill gradually; unchanged images do not call the API again.
+  return rows.map((row, index) => {
+    const result = row.slice();
+    const id = row[column - 1];
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return result;
+    if (!images.has(id) && remaining > 0) {
+      remaining--;
+      try { images.set(id, fetchFtuProofImage_(id)); } catch { /* Keep UUID/link and retry next minute. */ }
+    }
+    if (images.has(id)) {
+      result[column - 1] = images.get(id);
+      if (sheet.getRowHeight(startRow + index) < 100) sheet.setRowHeight(startRow + index, 100);
+    }
+    return result;
+  });
+}
+function mirrorFtuCustomerProofImages_(book) {
+  if (PropertiesService.getScriptProperties().getProperty('FTU_EMBED_PROOFS') !== 'true') return;
+  const sheet = book.getSheetByName(FTU_TAB);
+  const images = readFtuProofImages_(book.getSheetByName(FTU_SOURCE_TAB), 9);
+  const header = sheet.getRange(1, 20);
+  if (header.getValue() && header.getValue() !== 'Ảnh minh chứng')
+    throw new Error('Cột T đã có dữ liệu khác; không ghi đè.');
+  header.setValue('Ảnh minh chứng').setNote('Ảnh hiển thị từ database. Sửa minh chứng ở cột I; nhấp ô ảnh để xem lớn.');
+  sheet.setColumnWidth(20, 210);
+  const rows = ftuRows_();
+  const previews = rows.map((row) => [row[8] === row[17] && images.has(row[8]) ? images.get(row[8]) : '']);
+  if (previews.length) {
+    sheet.getRange(2, 20, previews.length, 1).setValues(previews);
+    previews.forEach((row, index) => {
+      if (row[0] && sheet.getRowHeight(index + 2) < 100) sheet.setRowHeight(index + 2, 100);
+    });
+  }
+}
+function enableFtuProofImages() {
+  assertPrivateFtuSheet_();
+  const sample = ftuRows_().find((row) => /^[0-9a-f-]{36}$/i.test(String(row[17])));
+  if (!sample) throw new Error('Chưa có minh chứng để kiểm tra kết nối.');
+  fetchFtuProofImage_(sample[17]); // Verify the deployed authenticated image endpoint first.
+  PropertiesService.getScriptProperties().setProperty('FTU_EMBED_PROOFS', 'true');
+  syncFtuPurchases();
+  syncFtuTicketCodes();
 }
 
 function assertPrivateFtuSheet_() {
@@ -634,6 +720,8 @@ function syncFtuPurchases() {
     });
     // Existing/unknown rows are never removed or reordered by the background job.
     writeFtuBaseline_(baseline);
+    if (props.getProperty('FTU_EMBED_PROOFS') === 'true')
+      mirrorFtuCustomerProofImages_(SpreadsheetApp.openById(FTU_SHEET_ID));
     props.setProperty('FTU_LAST_SUCCESS', new Date().toISOString());
   } finally {
     lock.releaseLock();
@@ -656,7 +744,7 @@ function mirrorFtuDatabase_(purchases) {
   sheet.getRange(1, 1, 1, 19).setValues([FTU_HEADERS]);
   sheet.getRange(1, 1, sheet.getMaxRows(), 10).setNumberFormat('@');
   if (rows.length)
-    sheet.getRange(2, 1, rows.length, 19).setValues(rows.map((row) => row.map(safeFtuCell_)));
+    sheet.getRange(2, 1, rows.length, 19).setValues(embedFtuProofRows_(sheet, rows.map((row) => row.map(safeFtuCell_)), 9, 2));
   linkFtuProofRows_(sheet, rows, 9, 2);
   if (old > rows.length + 1)
     sheet.getRange(rows.length + 2, 1, old - rows.length - 1, 19).clearContent();

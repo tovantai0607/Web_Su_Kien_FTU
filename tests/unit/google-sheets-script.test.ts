@@ -31,6 +31,45 @@ function script(properties: Record<string, string> = {}) {
   vm.runInContext(readFileSync('tools/google-sheets/Code.gs', 'utf8'), context);
   return context;
 }
+it('embeds only server proof UUIDs, reuses embedded bytes and preserves the input rows', () => {
+  const code = script({ FTU_EMBED_PROOFS: 'true' });
+  const first = '34fb6f94-f308-470f-8e84-e7370c544ff9';
+  const second = 'f9e14357-a912-4a0e-84d8-a64742ac6da6';
+  const cached = { getAltTextDescription: () => 'FTU_PROOF:' + first };
+  const fetched = { getAltTextDescription: () => 'FTU_PROOF:' + second };
+  const calls: string[] = [];
+  code.fetchFtuProofImage_ = (id: string) => {
+    calls.push(id);
+    return fetched;
+  };
+  const sheet = {
+    getLastRow: () => 2,
+    getRange: () => ({ getValues: () => [[cached]], setNote: () => undefined }),
+    getRowHeight: () => 120,
+  };
+  const rows = [
+    [first, 'buyer'],
+    [second, 'same proof'],
+    [second, 'combo'],
+    ['', 'unissued'],
+  ];
+  const result = code.embedFtuProofRows_(sheet, rows, 1, 2);
+  expect(result.map((row: unknown[]) => row[0])).toEqual([cached, fetched, fetched, '']);
+  expect(calls).toEqual([second]);
+  expect(rows[0][0]).toBe(first);
+  expect(rows[1][0]).toBe(second);
+});
+it('limits failed/new image requests per refresh and keeps the UUID fallback for retry', () => {
+  const code = script({ FTU_EMBED_PROOFS: 'true' });
+  let calls = 0;
+  code.fetchFtuProofImage_ = () => {
+    calls++;
+    throw new Error('offline');
+  };
+  const rows = Array.from({ length: 5 }, (_, n) => ['34fb6f94-f308-470f-8e84-e7370c544ff' + n]);
+  expect(code.embedFtuProofRows_({ getLastRow: () => 1 }, rows, 1, 2)).toEqual(rows);
+  expect(calls).toBe(3);
+});
 it('adds private website proof links while preserving UUID cell values and skipping blanks or user edits', () => {
   const code = script({ FTU_API_BASE_URL: 'https://ftucharm-test.bancotaima1235.workers.dev' });
   const id = '34fb6f94-f308-470f-8e84-e7370c544ff9';

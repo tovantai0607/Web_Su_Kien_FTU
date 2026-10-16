@@ -255,9 +255,32 @@ purchases.get('/purchase-evidence/:id', async (c) => {
     await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
   const object = await proofStorage(c.env).get(data.object_key);
   if (!object) throw new HTTPException(404, { message: 'Không tìm thấy ảnh.' });
-  return new Response(object, {
+  // Google Sheets cannot embed the stored WebP. Return a bounded derivative only
+  // after the exact same ownership/DEMO checks; never return a public storage URL.
+  let body: BodyInit = object;
+  let mime = data.mime;
+  if (c.req.query('view') === 'sheet') {
+    await authorize(c.get('principal'), c.env, ['TICKET_STAFF']);
+    if (!c.env.IMAGES)
+      throw new HTTPException(503, { message: 'Bản ảnh cho Sheet chưa sẵn sàng.' });
+    try {
+      const result = await (
+        await c.env.IMAGES.input(object.stream())
+          .transform({ width: 1200, height: 1600, fit: 'scale-down' })
+          .output({ format: 'image/jpeg', quality: 85, anim: false })
+      ).response();
+      const bytes = await result.arrayBuffer();
+      if (!result.ok || !bytes.byteLength || bytes.byteLength > 2097152)
+        throw new Error('Invalid Sheet derivative');
+      body = bytes;
+      mime = 'image/jpeg';
+    } catch {
+      throw new HTTPException(503, { message: 'Chưa tạo được bản ảnh cho Sheet.' });
+    }
+  }
+  return new Response(body, {
     headers: {
-      'Content-Type': data.mime,
+      'Content-Type': mime,
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     },

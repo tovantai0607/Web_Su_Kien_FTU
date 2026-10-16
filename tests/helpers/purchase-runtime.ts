@@ -238,14 +238,21 @@ export function localEnvironment(origin = 'http://127.0.0.1:5173') {
         return sharp(b).metadata();
       },
       input: (stream: ReadableStream) => ({
-        transform: () => ({
-          output: async () => {
+        transform: (options?: { width?: number; height?: number }) => ({
+          output: async (output?: { format?: string }) => {
             const b = Buffer.from(await new Response(stream).arrayBuffer());
+            const resized = sharp(b).resize({
+              width: options?.width ?? 1600,
+              height: options?.height,
+              withoutEnlargement: true,
+              fit: 'inside',
+            });
             const clean = new Uint8Array(
-              await sharp(b)
-                .resize({ width: 1600, withoutEnlargement: true })
-                .webp({ quality: 85 })
-                .toBuffer(),
+              await (
+                output?.format === 'image/jpeg'
+                  ? resized.jpeg({ quality: 85 })
+                  : resized.webp({ quality: 85 })
+              ).toBuffer(),
             );
             return { response: () => new Response(clean) };
           },
