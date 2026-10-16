@@ -51,7 +51,7 @@ it('reads only an embedded proof image in a known column of the authorized workb
   ])
     expect(code.ftuViewerProof_(range(options))).toBeNull();
 });
-it('opens selection metadata without accessing the authenticated image URL in a simple trigger', () => {
+it('polls selection metadata without requesting an expiring image URL', () => {
   const selected = range();
   selected.getValue = () => ({
     valueType: 'IMAGE',

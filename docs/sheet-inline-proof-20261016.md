@@ -15,11 +15,11 @@ API `/api/purchase-evidence/:id?view=sheet` giữ kiểm tra Auth/ownership/DEMO
 
 `tools/google-sheets/Code.gs` tái dùng CellImage đã nhúng theo UUID trong alt text, tối đa ba ảnh mới cho mỗi bản xem mỗi lượt để backfill dần. Luồng refresh không ghi đè các ô khách đang sửa; ảnh cột T chỉ phản ánh minh chứng đã đồng bộ. Hai trigger mỗi phút hiện có được giữ; không thêm trigger ghi database.
 
-`tools/google-sheets/ProofViewer.gs` đặt trong project gắn với bảng Data, tách khỏi project đồng bộ độc lập. Chỉ dùng quyền bảng hiện tại và UI, không chứa credentials, đọc Drive khác hoặc gọi API database. Menu Minh chứng → Xem ảnh đang chọn là đường mở lớn trong bảng. Handler chọn ô hỗ trợ tự mở khi môi trường Google cho phép; không coi việc lưu source là đã kiểm chứng thao tác này.
+`tools/google-sheets/ProofViewer.gs` đặt trong project gắn với bảng Data, tách khỏi project đồng bộ độc lập. Chỉ dùng quyền bảng hiện tại và UI, không chứa credentials, đọc Drive khác hoặc gọi API database. Khung xem trong sidebar kiểm tra ô được chọn mỗi hai giây khi đang hiển thị, không chồng request; chọn ảnh khác mở hộp xem ngay trong Sheet. Có nút tạm dừng. Menu Minh chứng → Xem ảnh đang chọn mở lại ảnh hiện tại. Không dùng simple trigger onSelectionChange vì Google không cho trigger này mở hộp thoại.
 
 ## Kích hoạt và khôi phục
 
-Sau khi API đã deploy đúng commit, lưu Code.gs vào project đồng bộ, giữ Script Properties và trigger. Chạy `enableFtuProofImages()` một lần: hàm kiểm tra API ảnh trước khi bật `FTU_EMBED_PROOFS=true`. Lưu ProofViewer.gs vào project bound của Data; owner cho phép hai scope current-document/UI. Tải lại bảng để xuất hiện menu và handler chọn ô.
+Sau khi API đã deploy đúng commit, lưu Code.gs vào project đồng bộ, giữ Script Properties và trigger. Chạy `enableFtuProofImages()` một lần: hàm kiểm tra API ảnh trước khi bật `FTU_EMBED_PROOFS=true`. Lưu ProofViewer.gs vào project bound của Data; owner cho phép hai scope current-document/UI. Trong màn hình Triggers của project bound, thêm một trigger `openFtuProofWatcher`, nguồn From spreadsheet, sự kiện On open, deployment Head. Không cài lại trigger đồng bộ mỗi phút. Tải lại bảng để khung xem tự mở; có thể bật lại qua menu Minh chứng → Bật xem ảnh khi chọn ô. Chọn lại chính ô đang chọn không đổi selection; dùng menu xem ảnh hoặc chọn ô khác rồi chọn lại.
 
 Nếu cần khôi phục: xóa riêng thuộc tính FTU_EMBED_PROOFS hoặc đặt false. Refresh kế tiếp trả bản xem nguồn/kho mã về UUID; dữ liệu database không đổi. Cột T là phần ảnh bổ sung; không xóa ảnh gốc, đơn, mã vé hoặc phiếu. Bản sao source cũ giữ trong output local, không đưa Script Properties vào Git.
 

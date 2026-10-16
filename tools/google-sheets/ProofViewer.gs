@@ -3,11 +3,31 @@
 // The standalone synchronizer owns Auth; this viewer only reads embedded images.
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Minh chứng')
+    .addItem('Bật xem ảnh khi chọn ô', 'openFtuProofWatcher')
     .addItem('Xem ảnh đang chọn', 'showFtuProof').addToUi();
 }
-function onSelectionChange(event) {
-  if (!event || !event.range || event.range.getNumRows() !== 1 || event.range.getNumColumns() !== 1) return;
-  try { showFtuProof_(event.range); } catch { /* Menu remains available if Google skips/restricts a simple trigger. */ }
+function openFtuProofWatcher() {
+  SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutput(ftuProofWatcherHtml_()).setTitle('Xem minh chứng'));
+}
+function selectedFtuProof() {
+  const range = SpreadsheetApp.getActiveRange();
+  const proof = ftuViewerProof_(range, true);
+  return proof ? { id: proof.id, cell: [range.getSheet().getSheetId(), range.getRow(), range.getColumn()] } : null;
+}
+function openSelectedFtuProof(sheetId, row, column, expectedId) {
+  if (![sheetId, row, column].every(Number.isSafeInteger) || row < 2 || column < 1) return;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetById(sheetId);
+  if (!sheet || row > sheet.getMaxRows() || column > sheet.getMaxColumns()) return;
+  const range = sheet.getRange(row, column);
+  const proof = ftuViewerProof_(range, true);
+  const active = SpreadsheetApp.getActiveRange();
+  if (proof && proof.id === expectedId && active && active.getSheet().getSheetId() === sheetId &&
+      active.getRow() === row && active.getColumn() === column) showFtuProof_(range);
+}
+function ftuProofWatcherHtml_() {
+  return '<!doctype html><html lang="vi"><head><style>body{font:15px Arial,sans-serif;padding:12px;color:#333}button{padding:10px;cursor:pointer}</style></head><body>' +
+    '<h3>Xem minh chứng tại chỗ</h3><p>Chọn ô có ảnh trong bảng. Ảnh lớn sẽ mở ngay trong Sheet, không chuyển tab.</p><button id="toggle">Tạm dừng tự mở</button><p id="status" role="status">Đang theo dõi ô được chọn…</p>' +
+    '<script>let paused=false,busy=false,last="";const status=document.getElementById("status");const toggle=document.getElementById("toggle");toggle.onclick=()=>{paused=!paused;toggle.textContent=paused?"Bật tự mở ảnh":"Tạm dừng tự mở";last="";};const later=()=>{busy=false;setTimeout(poll,2000);};const fail=()=>{status.textContent="Lần đầu, mở menu Minh chứng và cấp quyền Google để xem ảnh.";later();};function poll(){if(paused||document.hidden||busy){setTimeout(poll,2000);return;}busy=true;google.script.run.withSuccessHandler(data=>{const key=data?JSON.stringify(data):"";if(!key||key===last){last=key;later();return;}last=key;status.textContent="Đang mở ảnh trong bảng…";google.script.run.withSuccessHandler(()=>{status.textContent="Chọn ảnh khác để xem tiếp.";later();}).withFailureHandler(fail).openSelectedFtuProof(...data.cell,data.id);}).withFailureHandler(fail).selectedFtuProof();}poll();</script></body></html>';
 }
 function showFtuProof() {
   showFtuProof_(SpreadsheetApp.getActiveRange());
@@ -18,23 +38,19 @@ function ftuViewerProof_(range, metadataOnly) {
   if (sheet.getParent().getId() !== '1n6nbwjErwOCsh-auVyOUmVP5jTIRsud45ADYdRhXViU') return null;
   const column = { 'Khách mua vé': 20, 'Database hiện hành': 9, 'Vé bán kết': 13, 'Vé chung kết': 13, 'Vé DEMO': 13 }[sheet.getName()];
   if (range.getColumn() !== column) return null;
-  if (metadataOnly) {
-    const marker = String(range.getNote()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
-    return marker ? { id: marker[1].toLowerCase() } : null;
-  }
   const image = range.getValue();
   if (!image || image.valueType !== SpreadsheetApp.ValueType.IMAGE) return null;
   const match = String(image.getAltTextDescription()).match(/^FTU_PROOF:([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
   if (!match) return null;
   const id = match[1].toLowerCase();
+  if (metadataOnly) return { id };
   // Google gives a short-lived content URL for the already embedded image.
   // It is sent only to the authorized Sheet user's dialog, never saved/logged.
   const src = image.getContentUrl();
   if (!/^https:\/\/(?:[a-z0-9-]+\.)*googleusercontent\.com\//i.test(src)) return null;
   return { src, id };
 }
-// google.script.run executes with the viewing user's authorization. A simple
-// selection trigger cannot call CellImage.getContentUrl directly.
+// Read short-lived image URLs only when a dialog is opened, not while polling.
 function loadFtuProofImage(sheetId, row, column, expectedId) {
   if (![sheetId, row, column].every(Number.isSafeInteger) || row < 2 || column < 1) return null;
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetById(sheetId);
