@@ -103,10 +103,10 @@ describe('sensitive account actions with fake provider', () => {
     expect(state.auth.reauthenticate).toHaveBeenCalledOnce();
     expect(state.auth.signOut).not.toHaveBeenCalled();
   });
-  it('shows logout failure without reporting a successful session revocation', async () => {
-    state.auth.signOut.mockResolvedValue({ error: { status: 503 } });
+  it('does not expose logout actions in account security', () => {
     open();
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng xuất mọi thiết bị' }));
-    expect(await screen.findByText('Không thể thu hồi phiên. Hãy thử lại.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Đăng xuất/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Đăng xuất/ })).toBeNull();
+    expect(state.auth.signOut).not.toHaveBeenCalled();
   });
 });

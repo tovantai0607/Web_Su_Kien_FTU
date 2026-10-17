@@ -258,7 +258,7 @@ test('a proof link shows access denial and never displays an image when the API 
   await expect(page.getByAltText('Minh chứng chuyển khoản của đơn vé')).toHaveCount(0);
 });
 
-test('registration draft survives a Google PKCE round trip and is cleared on logout', async ({
+test('registration draft survives a Google PKCE round trip without exposing logout actions', async ({
   page,
 }) => {
   const state = await setup(page, { is_admin: false, aal: 'aal1' });
@@ -302,12 +302,8 @@ test('registration draft survives a Google PKCE round trip and is cleared on log
     'QA nháp Google',
   );
   await page.locator('.account-link').click();
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
-  await expect
-    .poll(() => page.evaluate(() => sessionStorage.getItem('ftucharm-registration-draft-v1')))
-    .toBeNull();
-  await page.goto('/dang-ky');
-  await expect(page.getByLabel('Họ và tên', { exact: true })).toHaveValue('');
+  await expect(page.getByRole('button', { name: /^Đăng xuất/ })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Đăng xuất/ })).toHaveCount(0);
 });
 test('admin edits the early allocation and phase schedule with both prices grouped by ticket type', async ({
   page,
