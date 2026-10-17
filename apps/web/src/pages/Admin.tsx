@@ -233,10 +233,10 @@ export default function Admin() {
       <aside className="admin-nav">
         <h2>FTUCHARM Studio</h2>
         <p>Ban tổ chức</p>
-        <Link className="text-link" to="/admin/cau-hinh">
+        <Link className="admin-action-link" to="/admin/cau-hinh">
           Cấu hình vote và vé
         </Link>
-        <Link className="text-link" to="/admin/ve">
+        <Link className="admin-action-link" to="/admin/ve">
           Khách đã mua vé
         </Link>
         {tabs.map(([value, label, Icon]) => (

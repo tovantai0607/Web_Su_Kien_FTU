@@ -75,12 +75,14 @@ export default function AdminSettings() {
   const round = rounds.find((r) => r.id === roundId) ?? rounds[0];
   return (
     <div className="page-shell admin-settings">
-      <Link className="text-link" to="/admin">
-        Về tổng quan quản trị
-      </Link>
-      <Link className="text-link" to="/admin/ve">
-        Khách đã mua vé
-      </Link>
+      <nav className="admin-action-bar" aria-label="Điều hướng quản trị">
+        <Link className="admin-action-link" to="/admin">
+          Về tổng quan quản trị
+        </Link>
+        <Link className="admin-action-link" to="/admin/ve">
+          Khách đã mua vé
+        </Link>
+      </nav>
       <PageTitle
         title="Cấu hình vote và vé"
         description="Thời gian theo giờ Việt Nam (UTC+7). Mọi thay đổi được ghi vào lịch sử quản trị."

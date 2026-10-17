@@ -1,13 +1,13 @@
 :root {
   color-scheme: dark;
   --primary: #a7090e;
-  --background: #180609;
-  --section: #290b10;
-  --surface: #3a1017;
-  --accent: #4c1922;
-  --ink: #f5e9e6;
-  --muted: #cbb4b4;
-  --border: #986d72;
+  --background: #300c12;
+  --section: #41121b;
+  --surface: #531d27;
+  --accent: #682a35;
+  --ink: #fff4ef;
+  --muted: #e0c6c5;
+  --border: #ad8589;
   --rose: #f0b8b7;
   --pink: #bd777b;
   --pearl: var(--background);
@@ -47,6 +47,51 @@
 .auth-google {
   margin-bottom: 20px;
 }
+.admin-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.admin-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.admin-action-link:hover {
+  background: var(--accent);
+  border-color: var(--ink);
+}
+.admin-action-primary {
+  width: 100%;
+  background: var(--primary);
+  color: #fff4ef;
+}
+.admin-action-primary:hover {
+  background: #87090e;
+}
+.admin-nav .admin-action-link {
+  width: 100%;
+  margin-bottom: 12px;
+}
+@media (max-width: 600px) {
+  .admin-action-bar .admin-action-link {
+    flex: 1 1 100%;
+  }
+}
 .auth-google .button {
   width: 100%;
 }
@@ -65,7 +110,7 @@
   background: #87090e;
 }
 .luminous-hero {
-  background: radial-gradient(ellipse at 82% 50%, #580d1940, transparent 55%), var(--background);
+  background: radial-gradient(ellipse at 82% 50%, #a7090e30, transparent 60%), var(--background);
   isolation: isolate;
 }
 .ribbon-field {
@@ -329,7 +374,7 @@ body {
 .button-primary,
 .finale-banner .button-primary {
   background: var(--primary);
-  color: var(--ink);
+  color: #fff4ef;
   box-shadow: none;
 }
 .button-primary:hover,
@@ -372,7 +417,7 @@ body {
   background: var(--primary);
 }
 .luminous-hero::before {
-  background: linear-gradient(90deg, #18060990, transparent 72%);
+  background: linear-gradient(90deg, #300c1240, transparent 72%);
 }
 .luminous-copy h1 .hero-name {
   color: var(--champagne);
@@ -418,7 +463,7 @@ body {
   color: var(--muted);
 }
 .journey {
-  background: var(--section);
+  background: var(--background);
 }
 .journey-feature {
   background: var(--surface);
