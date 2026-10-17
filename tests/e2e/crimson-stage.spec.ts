@@ -70,7 +70,7 @@ test('blocked WebGL preserves content, dark background and working navigation', 
   await expect(page.getByRole('heading', { name: /Duyên dáng Ngoại thương/ })).toBeVisible();
   await expect(page.locator('.stage-crown img')).toBeVisible();
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(
-    'rgb(24, 6, 9)',
+    'rgb(48, 12, 18)',
   );
   if (isMobile) await page.getByRole('button', { name: 'Mở menu', exact: true }).click();
   await page
