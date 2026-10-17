@@ -268,6 +268,19 @@ export default function AccountSecurity() {
             Mở quản trị
           </Link>
         )}
+        <Button
+          variant="outline"
+          className="account-logout"
+          disabled={busy}
+          onClick={() =>
+            void run(async () => {
+              const result = await supabase!.auth.signOut({ scope: 'local' });
+              if (result.error) throw new Error('Không thể đăng xuất. Hãy thử lại.');
+            })
+          }
+        >
+          Đăng xuất
+        </Button>
       </Card>
     </div>
   );
