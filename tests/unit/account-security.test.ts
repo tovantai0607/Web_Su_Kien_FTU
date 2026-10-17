@@ -103,10 +103,11 @@ describe('sensitive account actions with fake provider', () => {
     expect(state.auth.reauthenticate).toHaveBeenCalledOnce();
     expect(state.auth.signOut).not.toHaveBeenCalled();
   });
-  it('does not expose logout actions in account security', () => {
+  it('shows a logout error when the provider cannot end the current session', async () => {
+    state.auth.signOut.mockResolvedValue({ error: { status: 503 } });
     open();
-    expect(screen.queryByRole('button', { name: /^Đăng xuất/ })).toBeNull();
-    expect(screen.queryByRole('link', { name: /^Đăng xuất/ })).toBeNull();
-    expect(state.auth.signOut).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /^Đăng xuất$/ }));
+    expect(await screen.findByText('Không thể đăng xuất. Hãy thử lại.')).toBeTruthy();
+    expect(state.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 });

@@ -83,6 +83,10 @@
 .admin-action-primary:hover {
   background: #87090e;
 }
+.account-logout {
+  width: 100%;
+  margin-top: 16px;
+}
 .admin-nav .admin-action-link {
   width: 100%;
   margin-bottom: 12px;
