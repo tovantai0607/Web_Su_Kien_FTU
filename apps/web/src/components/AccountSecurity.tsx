@@ -261,36 +261,13 @@ export default function AccountSecurity() {
         {error && <ErrorState message={error} />}
         <p role="status">{message}</p>
         {access?.is_admin && (
-          <Link to={access.default_admin_path ?? '/admin/cau-hinh'} className="text-link">
+          <Link
+            to={access.default_admin_path ?? '/admin/cau-hinh'}
+            className="admin-action-link admin-action-primary"
+          >
             Mở quản trị
           </Link>
         )}
-        <div className="auth-links">
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                const result = await supabase!.auth.signOut({ scope: 'local' });
-                if (result.error) throw new Error('Không thể đăng xuất. Hãy thử lại.');
-              })
-            }
-          >
-            Đăng xuất
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onClick={() =>
-              void run(async () => {
-                const result = await supabase!.auth.signOut({ scope: 'global' });
-                if (result.error) throw new Error('Không thể thu hồi phiên. Hãy thử lại.');
-              })
-            }
-          >
-            Đăng xuất mọi thiết bị
-          </Button>
-        </div>
       </Card>
     </div>
   );

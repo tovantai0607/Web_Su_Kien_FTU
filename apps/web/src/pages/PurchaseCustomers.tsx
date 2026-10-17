@@ -7,15 +7,15 @@ import './purchases.css';
 export default function PurchaseCustomers() {
   return (
     <div className="page-shell purchase-admin">
-      <nav aria-label="Điều hướng quản trị" className="purchase-actions">
-        <Link className="text-link" to="/admin">
+      <nav aria-label="Điều hướng quản trị" className="admin-action-bar">
+        <Link className="admin-action-link" to="/admin">
           Tổng quan quản trị
         </Link>
-        <Link className="text-link" to="/admin?muc=purchase-data">
+        <Link className="admin-action-link" to="/admin?muc=purchase-data">
           Cấu hình hạng vé và combo
         </Link>
         <a
-          className="text-link"
+          className="admin-action-link"
           href="https://supabase.com/dashboard/project/ifgtyslifgegwcguysbb/editor"
           target="_blank"
           rel="noreferrer"
